@@ -61,9 +61,13 @@ write_ufo(
 
 ## Options
 Lossless glyph scaling
+
 Compressed UFO output (direct-to-disk UFOZ)
+
 features.fea table additions (AFDKO)
+
 MakeOTF parts/batch command (AFDKO)
+
 OpenType and kerning group import to features.fea
 
 ## Kerning options
@@ -131,8 +135,8 @@ All glyph hints may be omitted by setting 'hints_ignore' to True and vertical hi
 ## AFDKO options
 GlyphOrderAndAliasDB (GOADB) and FontMenuNameDB files can be generated for use with MakeOTF. The GOADB can be generated using a provided GOADB file path, derived from the FL font's encoding, or the order of the source font. Optionally, the first 256 characters can be filled from the Windows 1252 or Mac OS Roman codepages. The first character of a generated GOADB file will always start with the '.notdef' glyph. The OS/2, hhea, head, and name tables will be added to the features file. If a GOADB file is provided, it is not checked for correctness. A batch command to run MakeOTF for each generated instance or all instances using the arguments 'afdko_makeotf_cmd' and 'afdko_makeotf_batch_cmd', respectively.
 
-  # FDK arguments
-  There are several explicit keyword agruments to enable specific makeotf switches. For those not available via a keyword agrument, they should be defined as a list of strings and passed to the 'afdko_args' argument.
+## FDK arguments
+There are several explicit keyword agruments to enable specific makeotf switches. For those not available via a keyword agrument, they should be defined as a list of strings and passed to the 'afdko_args' argument.
 
 ## UFOZ options
 UFOs can be written as a .ufoz archive. By default, the archive is written in compressed mode. Setting 'ufoz_compress' to False will write an uncompressed .ufoz.
