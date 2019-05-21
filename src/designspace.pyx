@@ -2,18 +2,17 @@
 # cython: wraparound=False, boundscheck=False
 # cython: infer_types=True, cdivision=True
 # cython: optimize.use_switch=True, optimize.unpack_method_calls=True
-from __future__ import (absolute_import, division, print_function,
-	unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from tools cimport element, int_float
 
 import os
 
-from vfb_ufo3 import tools
-from vfb_ufo3.constants import XML_DECLARATION, AXIS_TAGS
-from vfb_ufo3.future import items, open, range, str, zip
-
 from FL import fl
+
+from vfb2ufo import tools
+from vfb2ufo.constants import *
+from vfb2ufo.future import *
 
 cdef list designspace_axis(unicode tag, default_value):
 
@@ -22,12 +21,13 @@ cdef list designspace_axis(unicode tag, default_value):
 	'''
 
 	cdef:
-		unicode attrs = (f'default="{default_value}" minimum="0" maximum="1000" name="{tag.lower()}"'
-			f' tag="{AXIS_TAGS[tag]}"')
+		unicode attrs = (f'default="{default_value}" minimum="0" maximum="1000"'
+			f' name="{tag.lower()}" tag="{AXIS_TAGS[tag]}"')
 
 	elems = element('labelname', attrs='xml:lang="en"', text=tag, elems=None)
 
 	return element('axis', attrs=attrs, text=None, elems=[elems])
+
 
 cdef list designspace_location(list dimensions):
 
@@ -36,6 +36,7 @@ cdef list designspace_location(list dimensions):
 	'''
 
 	return element('location', attrs=None, text=None, elems=dimensions)
+
 
 cdef unicode designspace_dimension(unicode name, value):
 
@@ -47,6 +48,7 @@ cdef unicode designspace_dimension(unicode name, value):
 		unicode	attrs = f'name="{name.lower()}" xvalue="{int_float(value)}"'
 
 	return element('dimension', attrs=attrs, text=None, elems=None)
+
 
 cdef list designspace_source(
 	unicode filename,
@@ -83,6 +85,7 @@ cdef list designspace_source(
 
 	return element('source', attrs=attrs, text=None, elems=elems)
 
+
 cdef list designspace_instance(
 	unicode familyname,
 	unicode filename,
@@ -104,6 +107,7 @@ cdef list designspace_instance(
 
 	return element('instance', attrs=attrs, text=None, elems=location)
 
+
 cdef list designspace_axes(list axes):
 
 	'''
@@ -111,6 +115,7 @@ cdef list designspace_axes(list axes):
 	'''
 
 	return element('axes', attrs=None, text=None, elems=axes)
+
 
 cdef list designspace_instances(list instances):
 
@@ -120,6 +125,7 @@ cdef list designspace_instances(list instances):
 
 	return element('instances', attrs=None, text=None, elems=instances)
 
+
 cdef list designspace_sources(list sources):
 
 	'''
@@ -127,6 +133,7 @@ cdef list designspace_sources(list sources):
 	'''
 
 	return element('sources', attrs=None, text=None, elems=sources)
+
 
 def designspace(ufo):
 

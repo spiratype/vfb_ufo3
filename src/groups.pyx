@@ -2,14 +2,14 @@
 # cython: wraparound=False
 # cython: infer_types=True, cdivision=True
 # cython: optimize.use_switch=True, optimize.unpack_method_calls=True
-from __future__ import (absolute_import, division, print_function,
-	unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
 import xml.etree.cElementTree as etree
 
 from FL import fl
-from vfb_ufo3.future import items, open, range, str, zip
+
+from vfb2ufo.future import *
 
 def rename_groups(ufo, font):
 
@@ -24,6 +24,7 @@ def rename_groups(ufo, font):
 		import_groups_plist_path = os.path.basename(ufo.groups.import_groups_plist_path)
 		print(f'\n  Importing groups from {import_groups_plist_path}')
 		import_groups_plist(ufo, font)
+
 
 cdef _rename_font_groups(object ufo, object font):
 
@@ -62,6 +63,7 @@ cdef _rename_font_groups(object ufo, object font):
 	_master_groups(ufo, font)
 	_update_font_groups(ufo, font)
 
+
 cdef rename_font_groups(object ufo, object font):
 
 	'''
@@ -89,6 +91,7 @@ cdef rename_font_groups(object ufo, object font):
 
 	_master_groups(ufo, font)
 	_update_font_groups(ufo, font)
+
 
 cdef tuple _groups_from_kern_feature(object ufo, object font):
 
@@ -119,6 +122,7 @@ cdef tuple _groups_from_kern_feature(object ufo, object font):
 
 	return firsts, seconds
 
+
 cdef tuple _kern_groups_with_kerning(
 	object ufo,
 	object font,
@@ -148,6 +152,7 @@ cdef tuple _kern_groups_with_kerning(
 
 	return kern_groups, list(firsts_set), list(seconds_set), first_seconds
 
+
 cdef tuple _kern_groups_with_no_kerning(
 	object ufo,
 	object font,
@@ -170,6 +175,7 @@ cdef tuple _kern_groups_with_no_kerning(
 			if kern_class not in current_groups]
 
 	return kern_classes, kern_groups_no_kerning
+
 
 cdef tuple _final_kern_groups(
 	object ufo,
@@ -203,6 +209,7 @@ cdef tuple _final_kern_groups(
 					seconds.append(group_name)
 
 	return firsts, seconds, first_seconds
+
 
 cdef _build_font_groups(
 	object ufo,
@@ -246,6 +253,7 @@ cdef _build_font_groups(
 				ufo.kern_groups[second_group_name] = group_glyphs
 		else:
 			ufo.ot_groups[group_name] = group_glyphs
+
 
 cdef import_flc(object ufo, object font):
 
@@ -307,6 +315,7 @@ cdef import_flc(object ufo, object font):
 	_master_groups(ufo, font)
 	_update_font_groups(ufo, font)
 
+
 cdef import_groups_plist(object ufo, object font):
 
 	'''
@@ -358,6 +367,7 @@ cdef import_groups_plist(object ufo, object font):
 	_master_groups(ufo, font)
 	_update_font_groups(ufo, font)
 
+
 cdef tuple _group_key_glyph(list group_glyphs):
 
 	'''
@@ -388,6 +398,7 @@ cdef tuple _group_key_glyph(list group_glyphs):
 
 	return key_glyph, ' '.join(group_glyphs), no_key_glyph
 
+
 cdef _update_font_groups(object ufo, object font):
 
 	cdef:
@@ -411,6 +422,7 @@ cdef _update_font_groups(object ufo, object font):
 				font.SetClassFlags(i, 0, 1)
 
 	fl.UpdateFont(ufo.master_copy)
+
 
 cdef _master_groups(object ufo, object font):
 

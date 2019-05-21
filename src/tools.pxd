@@ -2,7 +2,7 @@
 from __future__ import (absolute_import, division, print_function,
 	unicode_literals)
 
-from vfb_ufo3.constants import OT_FEATURES
+from vfb2ufo.constants import OT_FEATURES
 
 # -------------
 #  value tools
@@ -188,8 +188,12 @@ cdef inline list fea_lookup(
 
 	cdef:
 		tuple valid_lookupflags = (
-			'RightToLeft', 'IgnoreBaseGlyphs', 'IgnoreLigatures',
-			'IgnoreMarks', 'MarkAttachmentType', 'UseMarkFilteringSet'
+			'RightToLeft',
+			'IgnoreBaseGlyphs',
+			'IgnoreLigatures',
+			'IgnoreMarks',
+			'MarkAttachmentType',
+			'UseMarkFilteringSet',
 			)
 		unicode value_str = '\n  '.join(value)
 		unicode flags
@@ -225,7 +229,7 @@ cdef inline list fea_table(list value, unicode tag):
 
 cdef inline unicode fea_string(unicode string, int platform):
 
-	string = ''.join([char for char in string if ord(char) < 255])
+	string = ''.join([character for character in string if ord(character) < 255])
 	string = string.replace('\\', '\\x5c').replace('"', '\\x22')
 	string = string.encode('ascii', 'backslashreplace').decode('ascii')
 	if platform == 3:

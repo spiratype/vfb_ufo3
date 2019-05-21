@@ -2,8 +2,7 @@
 # cython: boundscheck=False
 # cython: infer_types=True, cdivision=True
 # cython: optimize.use_switch=True, optimize.unpack_method_calls=True
-from __future__ import (absolute_import, division, print_function,
-	unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import collections
 import contextlib
@@ -16,13 +15,9 @@ import zipfile
 
 from FL import fl, Feature, Font
 
-from vfb_ufo3 import fontinfo
-from vfb_ufo3 import groups
-from vfb_ufo3 import vfb
-from vfb_ufo3.constants import (FL_ENC_HEADER, FLC_HEADER,
-	FLC_GROUP_MARKER, FLC_GLYPHS_MARKER, FLC_KERNING_MARKER, FLC_END_MARKER,
-	WIN_1252, MACOS_ROMAN, OT_FEATURES, OT_SCRIPTS, OT_LANGUAGES)
-from vfb_ufo3.future import items, open, range, str, zip
+from vfb2ufo import fontinfo, groups, vfb
+from vfb2ufo.constants import *
+from vfb2ufo.future import *
 
 # --------
 #  errors
@@ -140,6 +135,7 @@ cdef list GOADB_from_encoding(object ufo):
 
 	if ufo.afdko.GOADB_win1252:
 		first_256 = WIN_1252
+
 	if ufo.afdko.GOADB_macos_roman:
 		first_256 = MACOS_ROMAN
 
@@ -156,8 +152,10 @@ cdef list GOADB_from_encoding(object ufo):
 
 	goadb_names = [glyph for glyph in ufo.glyph_order
 		if glyph not in set(first_256_names)]
+
 	glyph_uni_dict = {str(glyph.name): glyph.unicode
 		for glyph in font.glyphs}
+
 	for glyph in goadb_names:
 		glyph_unicode = glyph_uni_dict[glyph]
 		if glyph_unicode:
@@ -170,6 +168,7 @@ cdef list GOADB_from_encoding(object ufo):
 			goadb_uni_names.append(None)
 
 	return list(zip(first_256_names + goadb_names, first_256_uni_names + goadb_uni_names))
+
 
 cdef font_encoding(object font, object ufo):
 
@@ -212,11 +211,12 @@ cdef font_encoding(object font, object ufo):
 	if ufo.afdko.parts:
 		if ufo.afdko.GOADB_path:
 			temp_GOADB_path = user_path('__GOADB__', temp=True)
-			shutil.copy(ufo.afdko.GOADB_path, temp_GOADB_path)
+			shutil.copy2(ufo.afdko.GOADB_path, temp_GOADB_path)
 			with open(temp_GOADB_path, 'r') as f:
 				ufo.afdko.GOADB = str(f.read()).strip().splitlines()
 		else:
 			ufo.afdko.GOADB = GOADB_from_encoding(ufo)
+
 
 def master_names_values(font):
 
@@ -227,19 +227,22 @@ def master_names_values(font):
 	axes_n = len(font.axis)
 	layers = 2 ** axes_n
 
-	ax0 = (0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1)
-	ax1 = (0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1)
-	ax2 = (0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1)
-	ax3 = (0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1)
+	a_0 = (0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1)
+	a_1 = (0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1)
+	a_2 = (0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1)
+	a_3 = (0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1)
+
+	axes = zip(a_0[:layers], a_1[:layers], a_2[:layers], a_3[:layers])
 
 	axes_shorts = [[f'{axis[1]}{i}' for i in range(2)] for axis in font.axis]
-	axis_matrix = [i[:axes_n]
-		for i in zip(ax0[:layers], ax1[:layers], ax2[:layers], ax3[:layers])]
+	axis_matrix = [i[:axes_n] for i in axes]
+
 	master_values = [tuple([j * 1000 for j in i]) for i in axis_matrix]
 	names = [[axes_shorts[i][j]
 		for i, j in enumerate(vector)] for vector in axis_matrix]
 
 	return master_values, names
+
 
 cdef write_flc(object ufo, object font):
 
@@ -284,6 +287,7 @@ cdef write_flc(object ufo, object font):
 
 	write_file(flc_export_path, '\n'.join(flc_file))
 
+
 def check_paths(ufo):
 
 	'''
@@ -325,6 +329,7 @@ def check_paths(ufo):
 					else:
 						raise UserWarning(f"{instance_ufo_path} already exists.\n"
 							"Please remove directory or set 'force_overwrite' to True")
+
 
 def add_master_copy(master, ufo):
 	# add master copy of source font
@@ -435,6 +440,7 @@ def add_master_copy(master, ufo):
 	check_paths(ufo)
 
 	ufo.start = 1
+
 
 def add_instance(ufo, masters, instance_value, instance_name, instance_attrs):
 
@@ -680,6 +686,7 @@ def write_file(path, text):
 	with open(path, 'w', encoding='utf_8') as f:
 		f.write(text + '\n')
 
+
 def write_ufoz(ufo):
 
 	'''
@@ -735,6 +742,7 @@ def user_path(filename_path=None, path=None, temp=False):
 	else:
 		return os.path.join(path, filename_path)
 
+
 def make_dir(path):
 
 	'''
@@ -747,6 +755,7 @@ def make_dir(path):
 
 	with ignored(OSError):
 		os.makedirs(path)
+
 
 cpdef remove_file(path):
 
@@ -778,21 +787,29 @@ def time_string(duration, precision=1, simple_output=False):
 	_nanosecond_ = 'nsec'
 
 	def hours_time(hours, minutes, seconds):
+
 		# hour times
+
 		if simple_output:
 			return hours, minutes, seconds
 		else:
 			return f'{hours} {_hour_} {minutes} {_minute_} {seconds} {_second_}'
 
+
 	def minutes_time(minutes, seconds, duration):
+
 		# minute times
+
 		if simple_output :
 			return minutes, seconds
 		else:
 			return f'{minutes} {_minute_} {seconds} {_second_}'
 
+
 	def seconds_time(seconds, duration):
+
 		# short times
+
 		str_seconds = str(duration)
 		if str_seconds.count('.0000'):
 			seconds = str_seconds[:str_seconds.find('.')] + '.000'
@@ -801,29 +818,39 @@ def time_string(duration, precision=1, simple_output=False):
 		else:
 			return f'{seconds} {_second_}'
 
+
 	def milliseconds_time(milliseconds, duration):
+
 		# very short times
+
 		milliseconds = int(round(milliseconds))
 		if simple_output:
 			return int(round(milliseconds))
 		else:
 			return f'{milliseconds} {_millisecond_}'
 
+
 	def microseconds_time(microseconds, duration):
+
 		# very very short times
+
 		microseconds = int(round(microseconds))
 		if simple_output:
 			return int(round(microseconds))
 		else:
 			return f'{microseconds} {_microsecond_}'
 
+
 	def nanoseconds_time(nanoseconds, duration):
-		# very very short times
+
+		# very very very short times
+
 		nanoseconds = int(round(nanoseconds))
 		if simple_output:
 			return round(duration, 9)
 		else:
 			return f'{nanoseconds} {_nanosecond_}'
+
 
 	if 1 > duration >= 1e-9:
 		milliseconds = duration * 1e3
@@ -839,8 +866,7 @@ def time_string(duration, precision=1, simple_output=False):
 					return nanoseconds_time(nanoseconds, duration)
 
 	if 3600 > duration >= 1:
-			minutes = duration // 60
-			seconds = duration % 60
+			minutes, seconds = duration // 60, duration % 60
 			if 59 > minutes >= 1:
 				return minutes_time(minutes, round(seconds, precision), duration)
 			else:
@@ -848,8 +874,7 @@ def time_string(duration, precision=1, simple_output=False):
 				return seconds_time(seconds, duration)
 
 	if duration >= 3600:
-		hours = duration // 3600
-		minutes = duration % 3600
+		hours, minutes = duration // 3600, duration % 3600
 		seconds = round(duration % 3600, precision)
 		return hours_time(hours, minutes, seconds)
 
@@ -877,14 +902,15 @@ cdef tuple glif_name(unicode glyph_name, bint release_mode):
 			'\x15', '\x16', '\x17', '\x18', '\x19', '\x1a', '\x1b',
 			'\x1c', '\x1d', '\x1e', '\x1f', '\x7f',
 			}
-
 		set invalid_names = {
 			'lpt1', 'lpt2', 'lpt3', 'a:-z:', 'com1', 'com2', 'com3',
 			'com4', 'con', 'prn', 'aux', 'nul', 'clock$',
 			}
 
+
 	regex_production = re.compile('[A-Za-z_\-\+\*\:\~\^\!][A-Za-z0-9_.\-\+\*\:\~\^\!]* *$')
 	regex_release = re.compile('[A-Za-z_][A-Za-z0-9_.]* *$')
+
 
 	def verify_glyph_name(glyph_name, release_mode):
 		if release_mode:
@@ -902,6 +928,7 @@ cdef tuple glif_name(unicode glyph_name, bint release_mode):
 				"  Valid production glyph name character set:\n"
 				"  A-Z, a-z, 0-9, and [_ . - + * : ~ ^ !]")
 			return glyph_name
+
 
 	def check_glyph_name(glyph_name, release_mode):
 		if glyph_name == '.notdef':

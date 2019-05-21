@@ -2,8 +2,7 @@
 # cython: wraparound=False, boundscheck=False
 # cython: infer_types=True, cdivision=True
 # cython: optimize.use_switch=True, optimize.unpack_method_calls=True
-from __future__ import (absolute_import, division, print_function,
-	unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from tools cimport int_float, element
 
@@ -12,30 +11,15 @@ import datetime
 import math
 import os
 
-from vfb_ufo3.constants import (CODEPAGES, UNICODE_RANGES, FL_WIN_CHARSET,
-	REVERSED_FL_WIN_CHARSET, WIDTHS, REVERSED_WIDTHS, FL_STYLES,
-	REVERSED_FL_STYLES, WEIGHTS, REVERSED_WEIGHTS, WEIGHT_CODES,
-	FLC_HEADER, FLC_GROUP_MARKER, FLC_GLYPHS_MARKER,
-	FLC_KERNING_MARKER, FLC_END_MARKER, WIN_1252, MACOS_ROMAN,
-	CONFIGURABLE_ATTRIBUTES, STRING_ATTRIBUTES, INT_ATTRIBUTES,
-	FLOAT_ATTRIBUTES, INT_FLOAT_ATTRIBUTES, BOOL_ATTRIBUTES,
-	INT_LIST_ATTRIBUTES, INT_FLOAT_LIST_ATTRIBUTES)
-from vfb_ufo3.future import items, open, range, str, zip
-
 from FL import fl
 
-NOMINAL_WIDTH_GLYPH_SET = (
-	'period', 'comma', 'exclam', 'question', 'colon',
-	'semicolon', 'space', 'zero', 'one', 'two', 'three',
-	'four', 'five', 'six', 'seven', 'eight', 'nine',
-	'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-	'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-	'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
-	'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-	)
+from vfb2ufo.constants import *
+from vfb2ufo.future import *
 
 class info_lib(object):
+
 	__slots__ = ['key', 'value', 'value_type', 'layered', 'scalable', 'element']
+
 	def __init__(
 		self,
 		key,
@@ -43,7 +27,8 @@ class info_lib(object):
 		value_type='str',
 		layered=0,
 		scalable=0,
-		scale=0.0,):
+		scale=0.0,
+		):
 
 		'''
 		convert byte strings to unicode
@@ -59,8 +44,9 @@ class info_lib(object):
 		if key == 'openTypeNameDescription':
 			if not value:
 				value = ''
-		if value != None:
-			if scalable and scale :
+
+		if value is not None:
+			if scalable and scale:
 				if value_type == 'int':
 					value = int(round(value * scale))
 				if value_type == 'int_float':
@@ -182,6 +168,7 @@ class info_lib(object):
 		self.layered = layered
 		self.scalable = scalable
 
+
 def set_attributes(ufo, font, instance_attributes):
 
 	'''
@@ -199,31 +186,31 @@ def set_attributes(ufo, font, instance_attributes):
 		else:
 			if key in STRING_ATTRIBUTES:
 				if not isinstance(value, (bytes, unicode)):
-					raise AttributeError(f"'{value}' is not a valid value for UFO attribute '{key}'\n"
+					raise TypeError(f"'{value}' is not a valid value for UFO attribute '{key}'\n"
 						f"'{key}' must be a string value")
 
 			elif key in INT_ATTRIBUTES:
 				if not isinstance(value, int):
-					raise AttributeError(f"'{value}' is not a valid value for UFO attribute '{key}'\n"
+					raise TypeError(f"'{value}' is not a valid value for UFO attribute '{key}'\n"
 						f"'{key}' must be an integer value")
 
 				if key == 'postscriptWindowsCharacterSet':
 					if value < 1 or value > 20:
-						raise AttributeError(f"'{value}' is not a valid value for UFO attribute '{key}'\n"
+						raise TypeError(f"'{value}' is not a valid value for UFO attribute '{key}'\n"
 							f"'{key}' must be an integer between 1 and 20")
 				elif key == 'openTypeOS2WidthClass':
 					if value < 1 or value > 9:
-						raise AttributeError(f"'{value}' is not a valid value for UFO attribute '{key}'\n"
+						raise TypeError(f"'{value}' is not a valid value for UFO attribute '{key}'\n"
 							f"'{key}' must be an integer between 1 and 9")
 
 			elif key in FLOAT_ATTRIBUTES:
 				if not isinstance(value, float):
-					raise AttributeError(f"'{value}' is not a valid value for UFO attribute '{key}'\n"
+					raise TypeError(f"'{value}' is not a valid value for UFO attribute '{key}'\n"
 						f"'{key}' must be a float value")
 
 			elif key in INT_FLOAT_ATTRIBUTES:
 				if not isinstance(value, (int, float)):
-					raise AttributeError(f"'{value}' is not a valid value for UFO attribute '{key}'\n"
+					raise TypeError(f"'{value}' is not a valid value for UFO attribute '{key}'\n"
 						f"'{key}' must be an integer or float value")
 
 			elif key in BOOL_ATTRIBUTES:
@@ -233,186 +220,175 @@ def set_attributes(ufo, font, instance_attributes):
 
 			elif key in INT_LIST_ATTRIBUTES:
 				if not isinstance(value, list):
-					raise AttributeError(f"'{value}' is not a valid value for UFO attribute '{key}'\n"
+					raise TypeError(f"'{value}' is not a valid value for UFO attribute '{key}'\n"
 						f"'{key}' must be a list")
 				else:
 					for item in value:
 						if not isinstance(item, int):
-							raise AttributeError(f"'{value}' contains an valid value ('{item}') for UFO attribute '{key}'\n"
+							raise TypeError(f"'{value}' contains an valid value ('{item}') for UFO attribute '{key}'\n"
 								f"'{key}' items must be integers")
 
 				if key == 'openTypeOS2Panose':
 					if len(value) != len(font.panose):
-						raise AttributeError(f"'{key}' must be a list of {len(font.panose)} integers")
+						raise TypeError(f"'{key}' must be a list of {len(font.panose)} integers")
 				elif key == 'openTypeOS2FamilyClass':
 					if len(value) != 2:
-						raise AttributeError(f"'{key}' must be a list of 2 integers")
+						raise TypeError(f"'{key}' must be a list of 2 integers")
 					else:
 						for item in value:
 							if item > 0 or item < 14:
-								raise AttributeError(f"'{key}' integers must be values between 0 and 14")
+								raise TypeError(f"'{key}' integers must be values between 0 and 14")
 				elif key == 'openTypeOS2CodePageRanges':
 					for item in value:
 						if item not in CODEPAGES:
-							raise AttributeError(f"'{key}' requires codepages from the ulCodePageRange1-2 OS/2 specification")
+							raise TypeError(f"'{key}' requires codepages from the ulCodePageRange1-2 OS/2 specification")
 				elif key == 'openTypeOS2UnicodeRanges':
 					for item in value:
 						if item not in UNICODE_RANGES:
-							raise AttributeError(f"'{key}' requires codepages from the ulCodePageRange1-4 OS/2 specification")
+							raise TypeError(f"'{key}' requires codepages from the ulCodePageRange1-4 OS/2 specification")
 
 			elif key in INT_FLOAT_LIST_ATTRIBUTES:
 				if not isinstance(value, list):
-					raise AttributeError(f"'{value}' is not a valid value for UFO attribute '{key}'\n'{key}' must be a list")
+					raise TypeError(f"'{value}' is not a valid value for UFO attribute '{key}'\n'{key}' must be a list")
 				else:
 					for item in value:
 						if not isinstance(item, (int, float)):
-							raise AttributeError(f"'{value}' contains an valid value ('{item}') for UFO attribute '{key}.\n"
+							raise TypeError(f"'{value}' contains an invalid value ('{item}') for UFO attribute '{key}.\n"
 								f"'{key}' items must be integers or floats")
 
-	ascender = instance_attributes.get('ascender')
-	if ascender is not None:
-		font.ascender[0] = int(ascender)
+	int_attributes = [
+		('ascender', font.ascender[0]),
+		('capHeight', font.cap_height[0]),
+		('descender', font.descender[0]),
+		('xHeight', font.x_height[0]),
+		('versionMajor', font.version_major),
+		('versionMinor', font.version_minor),
+		('unitsPerEm', font.upm),
+		('openTypeHeadLowestRecPPEM', font.ttinfo.head_lowest_rec_ppem),
+		('openTypeHheaAscender', font.ttinfo.hhea_ascender),
+		('openTypeHheaDescender', font.ttinfo.hhea_descender),
+		('openTypeHheaLineGap', font.ttinfo.hhea_line_gap),
+		('openTypeOS2Selection', font.ttinfo.os2_fs_selection),
+		('openTypeOS2SubscriptXOffset', font.ttinfo.os2_y_subscript_x_offset),
+		('openTypeOS2SubscriptXSize', font.ttinfo.os2_y_subscript_x_size),
+		('openTypeOS2SubscriptYOffset', font.ttinfo.os2_y_subscript_y_offset),
+		('openTypeOS2SubscriptYSize', font.ttinfo.os2_y_subscript_y_size),
+		('openTypeOS2SuperscriptXOffset', font.ttinfo.os2_y_superscript_x_offset),
+		('openTypeOS2SuperscriptXSize', font.ttinfo.os2_y_superscript_x_size),
+		('openTypeOS2SuperscriptYOffset', font.ttinfo.os2_y_superscript_y_offset),
+		('openTypeOS2SuperscriptYSize', font.ttinfo.os2_y_superscript_y_size),
+		('openTypeOS2StrikeoutSize', font.ttinfo.os2_y_strikeout_size),
+		('openTypeOS2StrikeoutPosition', font.ttinfo.os2_y_strikeout_position),
+		('openTypeOS2Type', font.ttinfo.os2_fs_type),
+		('openTypeOS2TypoAscender', font.ttinfo.os2_s_typo_ascender),
+		('openTypeOS2TypoDescender', font.ttinfo.os2_s_typo_descender),
+		('openTypeOS2TypoLineGap', font.ttinfo.os2_s_typo_line_gap),
+		('openTypeOS2WinAscent', font.ttinfo.os2_us_win_ascent),
+		('openTypeOS2WinDescent', font.ttinfo.os2_us_win_descent),
+		('postscriptDefaultWidthX', font.default_width[0]),
+		('postscriptForceBold', font.force_bold[0]),
+		('postscriptIsFixedPitch', font.is_fixed_pitch),
+		('postscriptBlueFuzz', font.blue_fuzz[0]),
+		('postscriptBlueShift', font.blue_shift[0]),
+		('postscriptUnderlinePosition', font.underline_position),
+		('postscriptUnderlineThickness', font.underline_thickness),
+		('postscriptUniqueID', font.unique_id),
+		]
 
-	cap_height = instance_attributes.get('capHeight')
-	if cap_height is not None:
-		font.cap_height[0] = int(cap_height)
+	float_attributes = [
+		('italicAngle', font.italic_angle),
+		('postscriptSlantAngle', font.slant_angle),
+		]
 
-	font_copyright = instance_attributes.get('copyright')
-	if font_copyright is not None:
-		font.copyright = str(font_copyright).encode('cp1252')
+	bytes_attributes = [
+		('familyName', font.family_name),
+		('styleMapFamilyName', font.menu_name),
+		('styleName', font.style_name),
+		('openTypeNameCompatibleFullName', font.mac_compatible),
+		('openTypeNameDesignerURL', font.designer_url),
+		('openTypeNameManufacturerURL', font.vendor_url),
+		('openTypeNameLicenseURL', font.license_url),
+		('openTypeNamePreferredFamilyName', font.pref_family_name),
+		('openTypeNamePreferredSubfamilyName', font.pref_style_name),
+		('openTypeNameUniqueID', font.tt_u_id),
+		('openTypeNameVersion', font.version),
+		('postscriptFontName', font.font_name),
+		('postscriptFullName', font.full_name),
+		('postscriptBlueScale', font.blue_scale[0]),
+		('postscriptDefaultCharacter', font.default_character),
+		('postscriptWeightName', font.weight),
+		]
 
-	descender = instance_attributes.get('descender')
-	if descender is not None:
-		font.descender[0] = int(descender)
+	cp1252_attributes = [
+		('copyright', font.copyright),
+		('trademark', font.trademark),
+		('note', font.note),
+		('openTypeNameDescription', font.notice),
+		('openTypeNameDesigner', font.designer),
+		('openTypeNameManufacturer', font.source),
+		('openTypeNameLicense', font.license),
+		]
 
-	family_name = instance_attributes.get('familyName')
-	if family_name is not None:
-		font.family_name = bytes(str(family_name))
+	int_list_attributes = [
+		('openTypeOS2CodePageRanges', font.codepages),
+		('openTypeOS2UnicodeRanges', font.unicoderanges),
+		]
 
-	menu_name = instance_attributes.get('styleMapFamilyName')
-	if menu_name is not None:
-		font.menu_name = bytes(str(menu_name))
+	list_attributes = [
+		('postscriptBlueValues', font.blue_values[0]),
+		('postscriptFamilyBlues', font.blue_shift[0]),
+		('postscriptFamilyOtherBlues', font.family_other_blues[0]),
+		('postscriptOtherBlues', font.other_blues[0]),
+		('postscriptStemSnapH', font.stem_snap_h[0]),
+		('postscriptStemSnapV', font.stem_snap_v[0]),
+		]
+
+	# typical-case attribute assignments
+
+	for ufo_attribute, fl_attribute in int_attributes:
+		attr = instance_attributes.get(ufo_attribute)
+		if attr is not None:
+			fl_attribute = int(attr)
+
+	for ufo_attribute, fl_attribute in float_attributes:
+		attr = instance_attributes.get(ufo_attribute)
+		if attr is not None:
+			fl_attribute = float(attr)
+
+	for ufo_attribute, fl_attribute in bytes_attributes:
+		attr = instance_attributes.get(ufo_attribute)
+		if attr is not None:
+			fl_attribute = bytes(str(attr))
+
+	for ufo_attribute, fl_attribute in cp1252_attributes:
+		attr = instance_attributes.get(ufo_attribute)
+		if attr is not None:
+			fl_attribute = str(attr).encode('cp1252')
+
+	for ufo_attribute, fl_attribute in int_list_attributes:
+		attr = instance_attributes.get(ufo_attribute)
+		if attr is not None:
+			fl_attribute = [int(i) for i in ufo_attribute]
+
+	# special-case attribute assignments
 
 	ufo.fontinfo.font_style = instance_attributes.get('styleMapStyleName')
 	if ufo.fontinfo.font_style not in ('regular', 'italic', 'bold', 'bold italic'):
 		ufo.fontinfo.font_style = str(FL_STYLES[font.font_style].lower())
 
-	style_name = instance_attributes.get('styleName')
-	if style_name is not None:
-		font.style_name = bytes(str(style_name))
-
-	trademark = instance_attributes.get('trademark')
-	if trademark is not None:
-		font.trademark = str(trademark).encode('cp1252')
-
-	x_height = instance_attributes.get('xHeight')
-	if x_height is not None:
-		font.x_height[0] = int(x_height)
-
-	italic_angle = instance_attributes.get('italicAngle')
-	if italic_angle is not None:
-		font.italic_angle = float(italic_angle)
-
-	note = instance_attributes.get('note')
-	if note is not None:
-		font.note = str(note).encode('cp1252')
-
-	upm = instance_attributes.get('unitsPerEm')
-	if upm is not None:
-		font.upm = int(upm)
-
-	version_major = instance_attributes.get('versionMajor')
-	if version_major is not None:
-		font.version_major = int(version_major)
-
-	version_minor = instance_attributes.get('versionMinor')
-	if version_minor is not None:
-		font.version_minor = int(version_minor)
-
 	font_style = instance_attributes.get('openTypeHeadFlags')
 	if font_style is not None:
 		font.font_style = int(_font_style(font_style))
-
-	mac_compatible = instance_attributes.get('openTypeNameCompatibleFullName')
-	if mac_compatible is not None:
-		font.mac_compatible = bytes(str(mac_compatible))
-
-	notice = instance_attributes.get('openTypeNameDescription')
-	if notice is not None:
-		font.notice = str(notice).encode('cp1252')
-
-	designer = instance_attributes.get('openTypeNameDesigner')
-	if designer is not None:
-		font.designer = str(designer).encode('cp1252')
-
-	designer_url = instance_attributes.get('openTypeNameDesignerURL')
-	if designer_url is not None:
-		font.designer_url = bytes(str(designer_url))
-
-	source = instance_attributes.get('openTypeNameManufacturer')
-	if source is not None:
-		font.source = str(source).encode('cp1252')
-
-	vendor_url = instance_attributes.get('openTypeNameManufacturerURL')
-	if vendor_url is not None:
-		font.vendor_url = bytes(str(vendor_url))
-
-	ot_license = instance_attributes.get('openTypeNameLicense')
-	if ot_license is not None:
-		font.license = str(ot_license).encode('cp1252')
-
-	license_url = instance_attributes.get('openTypeNameLicenseURL')
-	if license_url is not None:
-		font.license_url = bytes(str(license_url))
-
-	pref_family_name = instance_attributes.get('openTypeNamePreferredFamilyName')
-	if pref_family_name is not None:
-		font.pref_family_name = bytes(str(pref_family_name))
-
-	pref_style_name = instance_attributes.get('openTypeNamePreferredSubfamilyName')
-	if pref_style_name is not None:
-		font.pref_style_name = bytes(str(pref_style_name))
 
 	sample_font_text = instance_attributes.get('openTypeNameSampleText')
 	if sample_font_text is not None:
 		ufo.fontinfo.sample_font_text = sample_font_text
 
-	tt_u_id = instance_attributes.get('openTypeNameUniqueID')
-	if tt_u_id is not None:
-		font.tt_u_id = bytes(str(tt_u_id))
-
-	version = instance_attributes.get('openTypeNameVersion')
-	if version is not None:
-		font.version = bytes(str(version))
-
 	ufo.fontinfo.wws_family_name = instance_attributes.get('openTypeNameWWSFamilyName')
 	ufo.fontinfo.wws_sub_family_name = instance_attributes.get('openTypeNameWWSSubfamilyName')
-
-	codepages = instance_attributes.get('openTypeOS2CodePageRanges')
-	if codepages is not None:
-		font.codepages = [int(i) for i in codepages if i in CODEPAGES]
-
-	head_lowest_rec_ppem = instance_attributes.get('openTypeHeadLowestRecPPEM')
-	if head_lowest_rec_ppem is not None:
-		font.ttinfo.head_lowest_rec_ppem = int(head_lowest_rec_ppem)
-
-	hhea_ascender = instance_attributes.get('openTypeHheaAscender')
-	if hhea_ascender is not None:
-		font.ttinfo.hhea_ascender = int(hhea_ascender)
-
 	ufo.ttinfo.hhea_caret_slope_rise = instance_attributes.get('openTypeHheaCaretSlopeRise')
 	ufo.ttinfo.hhea_caret_slope_run = instance_attributes.get('openTypeHheaCaretSlopeRun')
-	ufo.ttinfo.hhea_caret_offset = instance_attributes.get('openTypeHheaCaretOffset')
-	if ufo.ttinfo.hhea_caret_offset is None:
-		ufo.ttinfo.hhea_caret_offset = 0
-
-	hhea_descender = instance_attributes.get('openTypeHheaDescender')
-	if hhea_descender is not None:
-		font.ttinfo.hhea_descender = int(hhea_descender)
-
-	hhea_line_gap = instance_attributes.get('openTypeHheaLineGap')
-	if hhea_line_gap is not None:
-		font.ttinfo.hhea_line_gap = int(hhea_line_gap)
+	ufo.ttinfo.hhea_caret_offset = instance_attributes.get('openTypeHheaCaretOffset', 0)
 
 	os2_s_family_class = instance_attributes.get('openTypeOS2FamilyClass')
 	if os2_s_family_class is not None:
@@ -422,70 +398,6 @@ def set_attributes(ufo, font, instance_attributes):
 	if panose is not None:
 		for i, j in enumerate(panose):
 			font.panose[i] = int(j)
-
-	os2_fs_selection = instance_attributes.get('openTypeOS2Selection')
-	if os2_fs_selection is not None:
-		font.ttinfo.os2_fs_selection = int(os2_fs_selection)
-
-	os2_y_subscript_x_offset = instance_attributes.get('openTypeOS2SubscriptXOffset')
-	if os2_y_subscript_x_offset is not None:
-		font.ttinfo.os2_y_subscript_x_offset = int(os2_y_subscript_x_offset)
-
-	os2_y_subscript_x_size = instance_attributes.get('openTypeOS2SubscriptXSize')
-	if os2_y_subscript_x_size is not None:
-		font.ttinfo.os2_y_subscript_x_size = int(os2_y_subscript_x_size)
-
-	os2_y_subscript_y_offset = instance_attributes.get('openTypeOS2SubscriptYOffset')
-	if os2_y_subscript_y_offset is not None:
-		font.ttinfo.os2_y_subscript_y_offset = int(os2_y_subscript_y_offset)
-
-	os2_y_subscript_y_size = instance_attributes.get('openTypeOS2SubscriptYSize')
-	if os2_y_subscript_y_size is not None:
-		font.ttinfo.os2_y_subscript_y_size = int(os2_y_subscript_y_size)
-
-	os2_y_superscript_x_offset = instance_attributes.get('openTypeOS2SuperscriptXOffset')
-	if os2_y_superscript_x_offset is not None:
-		font.ttinfo.os2_y_superscript_x_offset = int(os2_y_superscript_x_offset)
-
-	os2_y_superscript_x_size = instance_attributes.get('openTypeOS2SuperscriptXSize')
-	if os2_y_superscript_x_size is not None:
-		font.ttinfo.os2_y_superscript_x_size = int(os2_y_superscript_x_size)
-
-	os2_y_superscript_y_offset = instance_attributes.get('openTypeOS2SuperscriptYOffset')
-	if os2_y_superscript_y_offset is not None:
-		font.ttinfo.os2_y_superscript_y_offset = int(os2_y_superscript_y_offset)
-
-	os2_y_superscript_y_size = instance_attributes.get('openTypeOS2SuperscriptYSize')
-	if os2_y_superscript_y_size is not None:
-		font.ttinfo.os2_y_superscript_y_size = int(os2_y_superscript_y_size)
-
-	os2_y_strikeout_size = instance_attributes.get('openTypeOS2StrikeoutSize')
-	if os2_y_strikeout_size is not None:
-		font.ttinfo.os2_y_strikeout_size = int(os2_y_strikeout_size)
-
-	os2_y_strikeout_position = instance_attributes.get('openTypeOS2StrikeoutPosition')
-	if os2_y_strikeout_position is not None:
-		font.ttinfo.os2_y_strikeout_position = int(os2_y_strikeout_position)
-
-	unicoderanges = instance_attributes.get('openTypeOS2UnicodeRanges')
-	if unicoderanges is not None:
-		font.unicoderanges = [int(i) for i in unicoderanges if i in UNICODE_RANGES]
-
-	os2_fs_type = instance_attributes.get('openTypeOS2Type')
-	if os2_fs_type is not None:
-		font.ttinfo.os2_fs_type = int(os2_fs_type)
-
-	os2_s_typo_ascender = instance_attributes.get('openTypeOS2TypoAscender')
-	if os2_s_typo_ascender is not None:
-		font.ttinfo.os2_s_typo_ascender = int(os2_s_typo_ascender)
-
-	os2_s_typo_descender = instance_attributes.get('openTypeOS2TypoDescender')
-	if os2_s_typo_descender is not None:
-		font.ttinfo.os2_s_typo_descender = int(os2_s_typo_descender)
-
-	os2_s_typo_line_gap = instance_attributes.get('openTypeOS2TypoLineGap')
-	if os2_s_typo_line_gap is not None:
-		font.ttinfo.os2_s_typo_line_gap = int(os2_s_typo_line_gap)
 
 	vendor = instance_attributes.get('openTypeOS2VendorID')
 	if vendor is not None:
@@ -510,104 +422,14 @@ def set_attributes(ufo, font, instance_attributes):
 		font.width = bytes(str(REVERSED_WIDTHS[width]))
 		font.ttinfo.os2_us_width_class = int(width)
 
-	os2_us_win_ascent = instance_attributes.get('openTypeOS2WinAscent')
-	if os2_us_win_ascent is not None:
-		font.ttinfo.os2_us_win_ascent = int(os2_us_win_ascent)
-
-	os2_us_win_descent = instance_attributes.get('openTypeOS2WinDescent')
-	if os2_us_win_descent is not None:
-		font.ttinfo.os2_us_win_descent = int(os2_us_win_descent)
-
-	font_name = instance_attributes.get('postscriptFontName')
-	if font_name is not None:
-		font.font_name = bytes(str(font_name))
-
-	full_name = instance_attributes.get('postscriptFullName')
-	if full_name is not None:
-		font.full_name = bytes(str(full_name))
-
-	slant_angle = instance_attributes.get('postscriptSlantAngle')
-	if slant_angle is not None:
-		try:
-			font.slant_angle = float(slant_angle)
-		except:
-			pass
-
-	blue_values = instance_attributes.get('postscriptBlueValues')
-	if blue_values is not None:
-		font.blue_values[0] = list(blue_values)
-
-	family_blues = instance_attributes.get('postscriptFamilyBlues')
-	if family_blues is not None:
-		font.blue_shift[0] = list(family_blues)
-
-	family_other_blues = instance_attributes.get('postscriptFamilyOtherBlues')
-	if family_other_blues is not None:
-		font.family_other_blues[0] = list(family_other_blues)
-
-	other_blues = instance_attributes.get('postscriptOtherBlues')
-	if other_blues is not None:
-		font.other_blues[0] = list(other_blues)
-
-	blue_fuzz = instance_attributes.get('postscriptBlueFuzz')
-	if blue_fuzz is not None:
-		font.blue_fuzz[0] = int(blue_fuzz)
-
-	blue_scale = instance_attributes.get('postscriptBlueScale')
-	if blue_scale is not None:
-		font.blue_scale[0] = float(blue_scale)
-
-	blue_shift = instance_attributes.get('postscriptBlueShift')
-	if blue_shift is not None:
-		font.blue_shift[0] = int(blue_shift)
-
-	default_character = instance_attributes.get('postscriptDefaultCharacter')
-	if default_character is not None:
-		font.default_character = bytes(str(default_character))
-
-	default_width = instance_attributes.get('postscriptDefaultWidthX')
-	if default_width is not None:
-		font.default_width[0] = int(default_width)
-
-	force_bold = instance_attributes.get('postscriptForceBold')
-	if force_bold is not None:
-		font.force_bold[0] = int(force_bold)
-
-	is_fixed_pitch = instance_attributes.get('postscriptIsFixedPitch')
-	if is_fixed_pitch is not None:
-		font.is_fixed_pitch = int(is_fixed_pitch)
-
 	ufo.fontinfo.nominal_width = instance_attributes.get('postscriptNominalWidthX')
 	if ufo.fontinfo.nominal_width is None:
 		ufo.fontinfo.nominal_width = _nominal_width(font)
 
-	stem_snap_h = instance_attributes.get('postscriptStemSnapH')
-	if stem_snap_h is not None:
-		font.stem_snap_h[0] = list(stem_snap_h)
-
-	stem_snap_v = instance_attributes.get('postscriptStemSnapV')
-	if stem_snap_v is not None:
-		font.stem_snap_v[0] = list(stem_snap_v)
-
-	underline_position = instance_attributes.get('postscriptUnderlinePosition')
-	if underline_position is not None:
-		font.underline_position = int(underline_position)
-
-	underline_thickness = instance_attributes.get('postscriptUnderlineThickness')
-	if underline_thickness is not None:
-		font.underline_thickness = int(underline_thickness)
-
-	postscript_id = instance_attributes.get('postscriptUniqueID')
-	if postscript_id is not None:
-		font.unique_id = int(postscript_id)
-
-	weight = instance_attributes.get('postscriptWeightName')
-	if weight is not None:
-		font.weight = bytes(str(weight))
-
 	ms_charset = instance_attributes.get('postscriptWindowsCharacterSet')
 	if ms_charset and ms_charset in range(1, 20):
 		font.ms_charset = REVERSED_FL_WIN_CHARSET[ms_charset]
+
 
 def _nominal_width(font):
 
@@ -627,6 +449,7 @@ def _nominal_width(font):
 
 	return int(round(widths / glyphs))
 
+
 def _postscript_unique_id(font):
 
 	'''
@@ -636,6 +459,7 @@ def _postscript_unique_id(font):
 	if font.unique_id > -1:
 		return font.unique_id
 	return
+
 
 def _font_style(font_style):
 
@@ -662,13 +486,15 @@ def _font_style(font_style):
 		return [j]
 	return [0]
 
+
 cdef list _os2_family_class(int os2_family_class):
 
 	'''
 	convert FontLab family class attribute to UFO integer pair
 	'''
 
-	return [int(os2_family_class / 256), os2_family_class % 256]
+	return [os2_family_class // 256, os2_family_class % 256]
+
 
 cdef unicode _date():
 
@@ -681,10 +507,11 @@ cdef unicode _date():
 
 	return str(datetime.datetime.now()).replace('-', '/')[:19]
 
+
 cdef dict _guideline(x, y, double angle=0.0, double scale=0.0):
 
 	'''
-	build guide dictionary
+	build guideline as a dictionary
 	'''
 
 	cdef:
@@ -706,6 +533,7 @@ cdef dict _guideline(x, y, double angle=0.0, double scale=0.0):
 
 	return guide
 
+
 cdef list _guidelines(object font, object ufo):
 
 	'''
@@ -722,6 +550,7 @@ cdef list _guidelines(object font, object ufo):
 		for guide in font.vguides])
 
 	return guides
+
 
 cdef list _name_records(object font):
 
@@ -740,6 +569,7 @@ cdef list _name_records(object font):
 
 	return records
 
+
 cdef list _gasp_records(object font):
 
 	'''
@@ -753,6 +583,7 @@ cdef list _gasp_records(object font):
 			for gasp in font.ttinfo.gasp]
 
 	return records
+
 
 def fontinfo(ufo):
 

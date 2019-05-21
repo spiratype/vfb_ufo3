@@ -2,8 +2,7 @@
 # cython: wraparound=False, boundscheck=False
 # cython: infer_types=True, cdivision=True
 # cython: optimize.use_switch=True, optimize.unpack_method_calls=True
-from __future__ import (absolute_import, division, print_function,
-	unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from tools cimport hsv_srgb, int_float, uni_transform, element
 
@@ -11,11 +10,11 @@ import concurrent.futures
 import hashlib
 import time
 
-from vfb_ufo3 import tools
-from vfb_ufo3.constants import XML_DECLARATION
-from vfb_ufo3.future import items, open, range, str, zip
-
 from FL import fl
+
+from vfb2ufo import tools
+from vfb2ufo.constants import *
+from vfb2ufo.future import *
 
 '''
 benchmarks
@@ -37,6 +36,7 @@ cdef unicode glif_advance(width):
 
 	return element('advance', attrs=f'width="{width}"', text=None, elems=None)
 
+
 cdef unicode glif_unicode(unicode _unicode):
 
 	'''
@@ -44,6 +44,7 @@ cdef unicode glif_unicode(unicode _unicode):
 	'''
 
 	return element('unicode', attrs=f'hex="{_unicode}"', text=None, elems=None)
+
 
 cdef glif_anchor(object anchor, double scale, int glif_version):
 
@@ -66,6 +67,7 @@ cdef glif_anchor(object anchor, double scale, int glif_version):
 		sub_elements = [element('point', attrs=attributes, text=None, elems=None)]
 		return glif_contour(sub_elements)
 
+
 cdef unicode glif_component(object component, double scale, object font):
 
 	'''
@@ -83,6 +85,7 @@ cdef unicode glif_component(object component, double scale, object font):
 		f'xScale="{component.scale.x}" yScale="{component.scale.y}"')
 
 	return element('component', attrs=attributes, text=None, elems=None)
+
 
 cdef unicode glif_point(object point, bint off=0, unicode node_type='', bint smooth=0, unicode name=''):
 
@@ -112,6 +115,7 @@ cdef unicode glif_point(object point, bint off=0, unicode node_type='', bint smo
 
 	return element('point', attrs=attributes, text=None, elems=None)
 
+
 cdef list glif_contour(list points):
 
 	'''
@@ -120,6 +124,7 @@ cdef list glif_contour(list points):
 
 	return element('contour', attrs=None, text=None, elems=points)
 
+
 cdef list glif_outline(list outline):
 
 	'''
@@ -127,6 +132,7 @@ cdef list glif_outline(list outline):
 	'''
 
 	return element('outline', attrs=None, text=None, elems=outline)
+
 
 cdef list glif_mark(int fl_color, int glif_version):
 
@@ -153,6 +159,7 @@ cdef list glif_mark(int fl_color, int glif_version):
 
 		return [mark_element] + element('array', attrs=None, text=None, elems=sub_elements)
 
+
 cdef unicode glif_hint_stem(pos, width, double scale, bint vertical, bint horizontal):
 
 	'''
@@ -173,6 +180,7 @@ cdef unicode glif_hint_stem(pos, width, double scale, bint vertical, bint horizo
 	if horizontal:
 		return element('string', attrs=None, text=f'hstem {pos} {width}', elems=None)
 
+
 cdef list glif_hintset(int tag, list stems):
 
 	'''
@@ -189,6 +197,7 @@ cdef list glif_hintset(int tag, list stems):
 		] + element('array', attrs=None, text=None, elems=stems)
 
 	return element('dict', attrs=None, text=None, elems=hintset)
+
 
 cdef list glif_hints(list hints, list hintset_hash, bint afdko):
 
@@ -233,6 +242,7 @@ cdef list glif_hints(list hints, list hintset_hash, bint afdko):
 
 	return hints
 
+
 cdef list glif_lib(list lib_objects):
 
 	'''
@@ -246,6 +256,7 @@ cdef list glif_lib(list lib_objects):
 
 	return element('lib', attrs=None, text=None, elems=sub_elements)
 
+
 cdef unicode glif_glyph(list glif, unicode name, int glif_version):
 
 	'''
@@ -256,6 +267,7 @@ cdef unicode glif_glyph(list glif, unicode name, int glif_version):
 		unicode attributes = f'name="{name}" format="{glif_version}"'
 
 	return '\n'.join(element('glyph', attrs=attributes, text=None, elems=glif))
+
 
 cdef list _starts(object glyph):
 
@@ -274,6 +286,7 @@ cdef list _starts(object glyph):
 		starts[i] = 1
 
 	return starts
+
 
 cdef tuple glif_contours(
 	object glyph,
@@ -375,6 +388,7 @@ cdef tuple glif_contours(
 			hintset_hash = [f'w{glyph.width}'] + hintset_hashes + hintset_hash
 
 	return contours + glif_contour(contour), hintset_hash, hintsets
+
 
 cdef build_glif(object glyph, object ufo, object font):
 
@@ -501,6 +515,7 @@ cdef build_glif(object glyph, object ufo, object font):
 		glif_path = f'{ufo.instance_paths.glyphs}\\{ufo.glifs[glyph_name]}'
 		with open(glif_path, 'wb') as f:
 			f.write(XML_DECLARATION + glif + '\n')
+
 
 def glifs(ufo):
 

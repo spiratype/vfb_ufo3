@@ -2,8 +2,7 @@
 # cython: wraparound=False, boundscheck=False
 # cython: infer_types=True, cdivision=True
 # cython: optimize.use_switch=True, optimize.unpack_method_calls=True
-from __future__ import (absolute_import, division, print_function,
-	unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from tools cimport element
 
@@ -15,11 +14,9 @@ import time
 
 from FL import fl
 
-from vfb_ufo3 import fontinfo
-from vfb_ufo3 import tools
-from vfb_ufo3 import vfb
-from vfb_ufo3.constants import XML_DECLARATION, PLIST_DOCTYPE
-from vfb_ufo3.future import items, open, range, str, zip
+from vfb2ufo import fontinfo, tools, vfb
+from vfb2ufo.constants import *
+from vfb2ufo.future import *
 
 def plists(ufo):
 
@@ -40,6 +37,7 @@ def plists(ufo):
 
 	ufo.instance_times.plist = time.clock() - start
 
+
 def write_plist(ufo, plist, plist_path):
 
 	plist = f'<plist version="1.0">\n{chr(10).join(plist)}\n</plist>'
@@ -48,6 +46,7 @@ def write_plist(ufo, plist, plist_path):
 		ufo.archive.update({plist_path: XML_DECLARATION + PLIST_DOCTYPE + plist})
 	else:
 		tools.write_file(plist_path, XML_DECLARATION + PLIST_DOCTYPE + plist)
+
 
 cdef glyphs_contents_plist(object ufo):
 
@@ -78,6 +77,7 @@ cdef glyphs_contents_plist(object ufo):
 		glyphs_contents_dict = element('dict', attrs=None, text=None, elems=glyphs_contents_dict)
 		write_plist(ufo, glyphs_contents_dict, plist_path)
 
+
 cdef layercontents_plist(object ufo):
 
 	'''
@@ -103,6 +103,7 @@ cdef layercontents_plist(object ufo):
 		layercontents_array = element('array', attrs=None, text=None, elems=layercontents_array)
 		write_plist(ufo, layercontents_array, plist_path)
 
+
 cdef fontinfo_plist(object ufo):
 
 	'''
@@ -123,6 +124,7 @@ cdef fontinfo_plist(object ufo):
 
 	fontinfo_dict = element('dict', attrs=None, text=None, elems=fontinfo_dict)
 	write_plist(ufo, fontinfo_dict, plist_path)
+
 
 cdef groups_plist(object ufo):
 
@@ -158,6 +160,7 @@ cdef groups_plist(object ufo):
 
 		groups_dict = element('dict', attrs=None, text=None, elems=groups_dict)
 		write_plist(ufo, groups_dict, plist_path)
+
 
 cdef kerning_plist(object ufo):
 
@@ -210,6 +213,7 @@ cdef kerning_plist(object ufo):
 	kerning_dict = element('dict', attrs=None, text=None, elems=kerning_dict)
 	write_plist(ufo, kerning_dict, plist_path)
 
+
 cdef lib_plist(object ufo):
 
 	'''
@@ -245,6 +249,7 @@ cdef lib_plist(object ufo):
 
 		lib_dict = element('dict', attrs=None, text=None, elems=lib_dict)
 		write_plist(ufo, lib_dict, plist_path)
+
 
 cdef metainfo_plist(object ufo):
 

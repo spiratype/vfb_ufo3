@@ -2,8 +2,7 @@
 # cython: wraparound=False, boundscheck=False
 # cython: infer_types=True, cdivision=True
 # cython: optimize.use_switch=True, optimize.unpack_method_calls=True
-from __future__ import (absolute_import, division, print_function,
-	unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from tools cimport fea_feature, fea_lookup, fea_table
 
@@ -11,11 +10,9 @@ import time
 
 from FL import fl
 
-from vfb_ufo3 import fdk
-from vfb_ufo3 import tools
-from vfb_ufo3 import vfb
-from vfb_ufo3.constants import OT_FEATURES
-from vfb_ufo3.future import items, open, range, str, zip
+from vfb2ufo import fdk, tools, vfb
+from vfb2ufo.constants import *
+from vfb2ufo.future import *
 
 def features(ufo):
 
@@ -96,6 +93,7 @@ def features(ufo):
 
 	ufo.instance_times.fea = time.clock() - start
 
+
 cdef list _fea_tables(object font):
 
 	'''
@@ -110,6 +108,7 @@ cdef list _fea_tables(object font):
 		tables.append(table)
 
 	return tables
+
 
 cdef tuple _font_classes(object ufo, object font):
 
@@ -131,6 +130,7 @@ cdef tuple _font_classes(object ufo, object font):
 	kern_groups = [line for line in sorted(kern_groups)]
 
 	return list(sorted(font_groups[:split_index])), kern_groups
+
 
 cdef list _process_kern_feature(list kern_feature, object ufo):
 
@@ -184,6 +184,7 @@ cdef list _process_kern_feature(list kern_feature, object ufo):
 
 	return '\n'.join(kern_feature).replace(_enum, enum).replace(_pos, pos).replace('@_', '@').splitlines()
 
+
 cdef list _add_subtables(list kerning_set):
 
 	'''
@@ -206,6 +207,7 @@ cdef list _add_subtables(list kerning_set):
 				kerning_set.insert(j, 'subtable')
 
 	return kerning_set
+
 
 cdef Py_ssize_t _subtable_index(list kerning_subset, Py_ssize_t index):
 

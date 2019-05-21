@@ -2,16 +2,15 @@
 # cython: wraparound=False, boundscheck=False
 # cython: infer_types=True, cdivision=True
 # cython: optimize.use_switch=True, optimize.unpack_method_calls=True
-from __future__ import (absolute_import, division, print_function,
-	unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
 import shutil
 
-from vfb_ufo3 import tools
-from vfb_ufo3.future import items, open, range, str, zip
-
 from FL import fl
+
+from vfb2ufo import tools
+from vfb2ufo.future import *
 
 cdef glyph_order_db(object ufo, object font):
 
@@ -41,7 +40,8 @@ cdef glyph_order_db(object ufo, object font):
 		tools.write_file(ufo.instance_paths.afdko.goadb, '\n'.join(goadb))
 
 	else:
-		shutil.copy(ufo.afdko.GOADB_path, ufo.instance_paths.afdko.goadb)
+		shutil.copy2(ufo.afdko.GOADB_path, ufo.instance_paths.afdko.goadb)
+
 
 cdef font_name_db(object ufo, object font):
 
@@ -58,6 +58,7 @@ cdef font_name_db(object ufo, object font):
 			])
 
 	tools.write_file(ufo.instance_paths.afdko.fontnamedb, fontnamedb)
+
 
 cdef makeotf_command(object ufo, bint batch):
 
@@ -169,6 +170,7 @@ cdef makeotf_command(object ufo, bint batch):
 		command_path = ufo.instance_paths.afdko.cmd
 		write_makeotf_cmd(command, command_path, batch)
 
+
 cdef write_makeotf_cmd(list command, unicode command_path, bint batch):
 
 	'''
@@ -184,6 +186,7 @@ cdef write_makeotf_cmd(list command, unicode command_path, bint batch):
 		command_str = f'echo on\n{chr(32).join(command)}\npause'
 
 	tools.write_file(command_path, command_str)
+
 
 def parts(ufo):
 

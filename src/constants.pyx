@@ -1,19 +1,18 @@
 # coding: future_fstrings
-from __future__ import (absolute_import, division, print_function,
-	unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-from vfb_ufo3.future import items, open, range, str, zip
+from vfb2ufo.future import *
 
 # XML
 
 XML_DECLARATION = '<?xml version="1.0" encoding="UTF-8"?>\n'
 PLIST_DOCTYPE = ('<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN"'
-	'\n  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n')
+	' "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n')
 
 # FL FILE
 
-FL_ENC_HEADER = ('%%FONTLAB ENCODING: 1252; MS Windows 1252 Western (ANSI)'
-	'\n%%GROUP:Type 1 World Microsoft\n')
+FL_ENC_HEADER = ('%%FONTLAB ENCODING: 1252; MS Windows 1252 Western (ANSI)\n'
+	'%%GROUP:Type 1 World Microsoft\n')
 FLC_HEADER = '%%FONTLAB CLASSES\n'
 FLC_GROUP_MARKER = '%%CLASS'
 FLC_GLYPHS_MARKER = '%%GLYPHS '
@@ -30,6 +29,18 @@ AXIS_TAGS = {
 	'Width': 'wdth',
 	'Weight': 'wght',
 	}
+
+# GLYPH SETS
+
+NOMINAL_WIDTH_GLYPH_SET = (
+	'period', 'comma', 'exclam', 'question', 'colon',
+	'semicolon', 'space', 'zero', 'one', 'two', 'three',
+	'four', 'five', 'six', 'seven', 'eight', 'nine',
+	'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+	'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+	'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+	'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+	)
 
 # CODEPAGES
 
@@ -101,15 +112,7 @@ MACOS_ROMAN = (
 	0xaf, 0x02d8, 0x02d9, 0x02da, 0xb8, 0x02dd, 0x02db, 0x02c7,
 	)
 
-UNICODE_RANGES = {
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-	21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
-	40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58,
-	59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77,
-	78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96,
-	97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112,
-	113, 114, 115, 116, 117, 118, 119, 120, 121, 122,
-	}
+UNICODE_RANGES = set(range(123))
 
 CODEPAGES = {
 	0: 1252,
@@ -172,8 +175,7 @@ FL_WIN_CHARSET = {
 	255: 20,
 	}
 
-REVERSED_FL_WIN_CHARSET = {value: key
-	for key, value in items(FL_WIN_CHARSET)}
+REVERSED_FL_WIN_CHARSET = {value: key for key, value in items(FL_WIN_CHARSET)}
 
 WIDTHS = {
 	'Ultra-condensed': 1,
@@ -207,89 +209,186 @@ REVERSED_WEIGHTS = {value: key for key, value in items(WEIGHTS)}
 # UFO CONFIGURABLE ATTRIBUTE SETS
 
 CONFIGURABLE_ATTRIBUTES = {
-	'ascender', 'capHeight', 'copyright', 'descender', 'familyName',
-	'italicAngle', 'note', 'openTypeHeadFlags', 'openTypeHheaAscender',
-	'openTypeHheaCaretOffset', 'openTypeHheaCaretSlopeRise',
-	'openTypeHheaCaretSlopeRun', 'openTypeHheaDescender', 'openTypeHheaLineGap',
-	'openTypeNameCompatibleFullName', 'openTypeNameDescription',
-	'openTypeNameDesigner', 'openTypeNameDesignerURL', 'openTypeNameLicense',
-	'openTypeNameLicenseURL', 'openTypeNameManufacturer',
-	'openTypeNameManufacturerURL', 'openTypeNamePreferredFamilyName',
-	'openTypeNamePreferredSubfamilyName', 'openTypeNameSampleText',
-	'openTypeNameUniqueID', 'openTypeNameVersion', 'openTypeNameWWSFamilyName',
-	'openTypeNameWWSSubfamilyName', 'openTypeOS2CodePageRanges',
-	'openTypeOS2FamilyClass', 'openTypeOS2Panose', 'openTypeOS2Selection',
-	'openTypeOS2StrikeoutPosition', 'openTypeOS2StrikeoutSize',
-	'openTypeOS2SubscriptXOffset', 'openTypeOS2SubscriptXSize',
-	'openTypeOS2SubscriptYOffset', 'openTypeOS2SubscriptYSize',
-	'openTypeOS2SuperscriptXOffset', 'openTypeOS2SuperscriptXSize',
-	'openTypeOS2SuperscriptYOffset', 'openTypeOS2SuperscriptYSize',
-	'openTypeOS2Type', 'openTypeOS2TypoAscender', 'openTypeOS2TypoDescender',
-	'openTypeOS2TypoLineGap', 'openTypeOS2UnicodeRanges', 'openTypeOS2VendorID',
-	'openTypeOS2WeightClass', 'openTypeOS2WidthClass', 'openTypeOS2WinAscent',
-	'openTypeOS2WinDescent', 'postscriptBlueFuzz', 'postscriptBlueScale',
-	'postscriptBlueShift', 'postscriptBlueValues', 'postscriptDefaultCharacter',
-	'postscriptFamilyBlues', 'postscriptFamilyOtherBlues', 'postscriptFontName',
-	'postscriptForceBold', 'postscriptFullName', 'postscriptIsFixedPitch',
-	'postscriptOtherBlues', 'postscriptSlantAngle', 'postscriptStemSnapH',
-	'postscriptStemSnapV', 'postscriptUnderlinePosition',
-	'postscriptUnderlineThickness', 'postscriptUniqueID', 'postscriptWeightName',
-	'postscriptWindowsCharacterSet', 'styleMapFamilyName', 'styleMapStyleName',
-	'styleName', 'trademark', 'unitsPerEm', 'versionMajor', 'versionMinor',
+	'ascender',
+	'capHeight',
+	'copyright',
+	'descender',
+	'familyName',
+	'italicAngle',
+	'note',
+	'openTypeHeadFlags',
+	'openTypeHheaAscender',
+	'openTypeHheaCaretOffset',
+	'openTypeHheaCaretSlopeRise',
+	'openTypeHheaCaretSlopeRun',
+	'openTypeHheaDescender',
+	'openTypeHheaLineGap',
+	'openTypeNameCompatibleFullName',
+	'openTypeNameDescription',
+	'openTypeNameDesigner',
+	'openTypeNameDesignerURL', 'openTypeNameLicense',
+	'openTypeNameLicenseURL',
+	'openTypeNameManufacturer',
+	'openTypeNameManufacturerURL',
+	'openTypeNamePreferredFamilyName',
+	'openTypeNamePreferredSubfamilyName',
+	'openTypeNameSampleText',
+	'openTypeNameUniqueID',
+	'openTypeNameVersion',
+	'openTypeNameWWSFamilyName',
+	'openTypeNameWWSSubfamilyName',
+	'openTypeOS2CodePageRanges',
+	'openTypeOS2FamilyClass',
+	'openTypeOS2Panose', 'openTypeOS2Selection',
+	'openTypeOS2StrikeoutPosition',
+	'openTypeOS2StrikeoutSize',
+	'openTypeOS2SubscriptXOffset',
+	'openTypeOS2SubscriptXSize',
+	'openTypeOS2SubscriptYOffset',
+	'openTypeOS2SubscriptYSize',
+	'openTypeOS2SuperscriptXOffset',
+	'openTypeOS2SuperscriptXSize',
+	'openTypeOS2SuperscriptYOffset',
+	'openTypeOS2SuperscriptYSize',
+	'openTypeOS2Type',
+	'openTypeOS2TypoAscender',
+	'openTypeOS2TypoDescender',
+	'openTypeOS2TypoLineGap',
+	'openTypeOS2UnicodeRanges',
+	'openTypeOS2VendorID',
+	'openTypeOS2WeightClass',
+	'openTypeOS2WidthClass',
+	'openTypeOS2WinAscent',
+	'openTypeOS2WinDescent',
+	'postscriptBlueFuzz',
+	'postscriptBlueScale',
+	'postscriptBlueShift',
+	'postscriptBlueValues',
+	'postscriptDefaultCharacter',
+	'postscriptFamilyBlues',
+	'postscriptFamilyOtherBlues',
+	'postscriptFontName',
+	'postscriptForceBold',
+	'postscriptFullName',
+	'postscriptIsFixedPitch',
+	'postscriptOtherBlues',
+	'postscriptSlantAngle',
+	'postscriptStemSnapH',
+	'postscriptStemSnapV',
+	'postscriptUnderlinePosition',
+	'postscriptUnderlineThickness',
+	'postscriptUniqueID',
+	'postscriptWeightName',
+	'postscriptWindowsCharacterSet',
+	'styleMapFamilyName',
+	'styleMapStyleName',
+	'styleName',
+	'trademark',
+	'unitsPerEm',
+	'versionMajor',
+	'versionMinor',
 	'xHeight',
 	}
 
 STRING_ATTRIBUTES = {
-	'copyright', 'familyName', 'note', 'openTypeNameCompatibleFullName',
-	'openTypeNameDescription', 'openTypeNameDesigner', 'openTypeNameDesignerURL',
-	'openTypeNameLicense', 'openTypeNameLicenseURL', 'openTypeNameManufacturer',
-	'openTypeNameManufacturerURL', 'openTypeNamePreferredFamilyName',
-	'openTypeNamePreferredSubfamilyName', 'openTypeNameSampleText',
-	'openTypeNameUniqueID', 'openTypeOS2VendorID', 'postscriptDefaultCharacter',
-	'postscriptFontName', 'postscriptFullName', 'postscriptWeightName',
-	'styleMapFamilyName', 'styleMapStyleName', 'styleName', 'trademark',
+	'copyright',
+	'familyName',
+	'note',
+	'openTypeNameCompatibleFullName',
+	'openTypeNameDescription',
+	'openTypeNameDesigner',
+	'openTypeNameDesignerURL',
+	'openTypeNameLicense',
+	'openTypeNameLicenseURL',
+	'openTypeNameManufacturer',
+	'openTypeNameManufacturerURL',
+	'openTypeNamePreferredFamilyName',
+	'openTypeNamePreferredSubfamilyName',
+	'openTypeNameSampleText',
+	'openTypeNameUniqueID',
+	'openTypeOS2VendorID',
+	'postscriptDefaultCharacter',
+	'postscriptFontName',
+	'postscriptFullName',
+	'postscriptWeightName',
+	'styleMapFamilyName',
+	'styleMapStyleName',
+	'styleName',
+	'trademark',
 	}
 
 INT_ATTRIBUTES = {
-	'ascender', 'capHeight', 'descender', 'openTypeHeadLowestRecPPEM',
-	'openTypeHheaAscender', 'openTypeHheaCaretOffset',
-	'openTypeHheaCaretSlopeRise', 'openTypeHheaCaretSlopeRun',
-	'openTypeHheaDescender', 'openTypeHheaLineGap',
-	'openTypeOS2StrikeoutPosition', 'openTypeOS2StrikeoutSize',
-	'openTypeOS2SubscriptXOffset', 'openTypeOS2SubscriptXSize',
-	'openTypeOS2SubscriptYOffset', 'openTypeOS2SubscriptYSize',
-	'openTypeOS2SuperscriptXOffset', 'openTypeOS2SuperscriptXSize',
-	'openTypeOS2SuperscriptYOffset', 'openTypeOS2SuperscriptYSize',
-	'openTypeOS2TypoAscender', 'openTypeOS2TypoDescender',
-	'openTypeOS2TypoLineGap', 'openTypeOS2WeightClass', 'openTypeOS2WidthClass',
-	'openTypeOS2WinAscent', 'openTypeOS2WinDescent', 'postscriptUniqueID',
-	'unitsPerEm', 'versionMajor', 'versionMinor', 'xHeight',
+	'ascender',
+	'capHeight',
+	'descender',
+	'openTypeHeadLowestRecPPEM',
+	'openTypeHheaAscender',
+	'openTypeHheaCaretOffset',
+	'openTypeHheaCaretSlopeRise',
+	'openTypeHheaCaretSlopeRun',
+	'openTypeHheaDescender',
+	'openTypeHheaLineGap',
+	'openTypeOS2StrikeoutPosition',
+	'openTypeOS2StrikeoutSize',
+	'openTypeOS2SubscriptXOffset',
+	'openTypeOS2SubscriptXSize',
+	'openTypeOS2SubscriptYOffset',
+	'openTypeOS2SubscriptYSize',
+	'openTypeOS2SuperscriptXOffset',
+	'openTypeOS2SuperscriptXSize',
+	'openTypeOS2SuperscriptYOffset',
+	'openTypeOS2SuperscriptYSize',
+	'openTypeOS2TypoAscender',
+	'openTypeOS2TypoDescender',
+	'openTypeOS2TypoLineGap',
+	'openTypeOS2WeightClass',
+	'openTypeOS2WidthClass',
+	'openTypeOS2WinAscent',
+	'openTypeOS2WinDescent',
+	'postscriptUniqueID',
+	'unitsPerEm',
+	'versionMajor',
+	'versionMinor',
+	'xHeight',
 	}
 
 FLOAT_ATTRIBUTES = {
-	'italicAngle', 'postscriptSlantAngle',
+	'italicAngle',
+	'postscriptSlantAngle',
 	}
 
 INT_FLOAT_ATTRIBUTES = {
-	'postscriptBlueFuzz', 'postscriptBlueShift', 'postscriptDefaultWidthX',
-	'postscriptNominalWidthX', 'postscriptUnderlinePosition',
+	'postscriptBlueFuzz',
+	'postscriptBlueShift',
+	'postscriptDefaultWidthX',
+	'postscriptNominalWidthX',
+	'postscriptUnderlinePosition',
 	'postscriptUnderlineThickness',
 	}
 
 BOOL_ATTRIBUTES = {
-	'postscriptIsFixedPitch', 'postscriptForceBold',
+	'postscriptIsFixedPitch',
+	'postscriptForceBold',
 	}
 
 INT_LIST_ATTRIBUTES = {
-	'openTypeHeadFlags', 'openTypeOS2CodePageRanges', 'openTypeOS2FamilyClass',
-	'openTypeOS2Panose',	'openTypeOS2Selection', 'openTypeOS2Type',
-	'openTypeOS2UnicodeRanges', 'postscriptWindowsCharacterSet',
+	'openTypeHeadFlags',
+	'openTypeOS2CodePageRanges',
+	'openTypeOS2FamilyClass',
+	'openTypeOS2Panose',
+	'openTypeOS2Selection',
+	'openTypeOS2Type',
+	'openTypeOS2UnicodeRanges',
+	'postscriptWindowsCharacterSet',
 	}
 
 INT_FLOAT_LIST_ATTRIBUTES = {
-	'postscriptBlueValues', 'postscriptFamilyBlues',
-	'postscriptFamilyOtherBlues', 'postscriptOtherBlues',
-	'postscriptStemSnapH', 'postscriptStemSnapV',
+	'postscriptBlueValues',
+	'postscriptFamilyBlues',
+	'postscriptFamilyOtherBlues',
+	'postscriptOtherBlues',
+	'postscriptStemSnapH',
+	'postscriptStemSnapV',
 	}
 
 FL_STYLES = {

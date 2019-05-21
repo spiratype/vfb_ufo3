@@ -2,15 +2,14 @@
 # cython: wraparound=False, boundscheck=False
 # cython: infer_types=True, cdivision=True
 # cython: optimize.use_switch=True, optimize.unpack_method_calls=True
-from __future__ import (absolute_import, division, print_function,
-	unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from tools cimport fea_string
 
 import os
 
-from vfb_ufo3.constants import CODEPAGES
-from vfb_ufo3.future import items, open, range, str, zip
+from vfb2ufo.constants import *
+from vfb2ufo.future import *
 
 from FL import fl, NameRecord, TrueTypeTable
 
@@ -29,6 +28,7 @@ def kerning_scale(ufo, font):
 	fl.UpdateFont(ufo.ifont)
 	ufo.kern.kerning_scaled = 1
 
+
 def kerning_unscale(ufo, font):
 
 	'''
@@ -39,10 +39,11 @@ def kerning_unscale(ufo, font):
 		if glyph.kerning:
 			for kern in glyph.kerning:
 				if kern.value:
-					kern.value = int(kern.value / ufo.scale.factor)
+					kern.value = kern.value // ufo.scale.factor
 
 	fl.UpdateFont(ufo.ifont)
 	ufo.kern.kerning_scaled = 0
+
 
 cdef _update_font_names(object font):
 
@@ -52,28 +53,37 @@ cdef _update_font_names(object font):
 
 	# Font full name
 	font.full_name = bytes(f'{font.family_name} {font.style_name}')
+
 	# PS font name
 	font.font_name = bytes(f'{font.family_name}-{font.style_name}'.replace(' ', ''))[:31]
+
 	# Menu
 	font.menu_name = font.family_name
+
 	# FOND name
 	font.apple_name = font.full_name
+
 	# OpenType family name
 	font.pref_family_name = font.family_name
+
 	# OpenType style name
 	font.pref_style_name = font.style_name
+
 	# OpenType Mac name
 	font.mac_compatible = font.apple_name
+
 	# TrueType Unique ID
 	if font.source:
 		font.tt_u_id = bytes(f'{font.source}: {font.full_name}: {font.year}')
 	else:
 		font.tt_u_id = bytes(f'{font.full_name}: {font.year}')
+
 	# Font style name
 	if font.font_style in (1, 33):
 		font.style_name = bytes(f'{font.weight} Italic')
 	else:
 		font.style_name = font.weight
+
 
 cdef list _ms_mac_names(object font, int platform):
 
@@ -128,6 +138,7 @@ cdef list _ms_mac_names(object font, int platform):
 
 	return names
 
+
 cdef _update_font_name_records(object font):
 
 	'''
@@ -143,10 +154,13 @@ cdef _update_font_name_records(object font):
 
 	fontnames = [NameRecord(name_id, 3, 1, 1033, bytes(fea_string(name, 3)))
 		for name_id, name in ms_names if name]
+
 	fontnames.extend([NameRecord(name_id, 1, 1, 0, bytes(fea_string(name, 1)))
 		for name_id, name in mac_names if name])
+
 	for name_record in fontnames:
 		font.fontnames.append(name_record)
+
 
 cdef _update_font_tables(object font, object ufo):
 
@@ -202,9 +216,19 @@ cdef _update_font_tables(object font, object ufo):
 			else:
 				name_table.append(f'nameid {name_record.nid} 1 "{name}";')
 
-	scalable_keys = ('TypoAscender', 'TypoDescender', 'TypoLineGap',
-		'winAscent', 'winDescent', 'XHeight', 'CapHeight', 'CaretOffset',
-		'Ascender', 'Descender', 'LineGap')
+	scalable_keys = (
+		'TypoAscender',
+		'TypoDescender',
+		'TypoLineGap',
+		'winAscent',
+		'winDescent',
+		'XHeight',
+		'CapHeight',
+		'CaretOffset',
+		'Ascender',
+		'Descender',
+		'LineGap',
+		)
 
 	if scale:
 		os2_table = [f'{key} {int(round(value * scale))};'
@@ -219,14 +243,11 @@ cdef _update_font_tables(object font, object ufo):
 		os2_table = [f'{key} {value};' for key, value in os2_table]
 		hhea_table = [f'{key} {value};' for key, value in hhea_table]
 
-	font.truetypetables.append(TrueTypeTable(b'OS/2',
-		bytes('\n'.join(os2_table))))
-	font.truetypetables.append(TrueTypeTable(b'hhea',
-		bytes('\n'.join(hhea_table))))
-	font.truetypetables.append(TrueTypeTable(b'head',
-		bytes('\n'.join(head_table))))
-	font.truetypetables.append(TrueTypeTable(b'name',
-		bytes('\n'.join(name_table))))
+	font.truetypetables.append(TrueTypeTable(b'OS/2', bytes('\n'.join(os2_table))))
+	font.truetypetables.append(TrueTypeTable(b'hhea', bytes('\n'.join(hhea_table))))
+	font.truetypetables.append(TrueTypeTable(b'head', bytes('\n'.join(head_table))))
+	font.truetypetables.append(TrueTypeTable(b'name', bytes('\n'.join(name_table))))
+
 
 def update(ufo, font):
 	_update_font_names(font)
