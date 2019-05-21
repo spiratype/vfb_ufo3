@@ -11,7 +11,7 @@ from vfb2ufo.designspace import designspace
 
 from vfb2ufo.tools import (AttributeDict, add_master_copy, add_instance,
 	master_names_values, report_log, write_ufoz)
-from vfb2ufo.future import items, open, range, str, zip
+from vfb2ufo.future import *
 
 from FL import fl
 
@@ -157,11 +157,11 @@ affect the kerning.
   _A_l: A' Agrave Aacute Acircumflex Atilde Adieresis Aring...
   _A_r: A' AE Agrave Aacute Acircumflex Atilde Adieresis Aring...
 
-  Working output:
+  Working output (FontLab-class definitions):
   _public.kern1.A: A' Agrave Aacute Acircumflex Atilde Adieresis Aring...
   _public.kern2.A: A' AE Agrave Aacute Acircumflex Atilde Adieresis Aring...
 
-  Final output:
+  Final output (UFO group plist):
   <key>public.kern1.A</key>
   array>
     <string>A</string>
@@ -228,8 +228,8 @@ and 'afdko_makeotf_batch_cmd', respectively.
 
 UFOZ OPTIONS
 UFOs can be written as a .ufoz archive. By default, the archive is written in
-compressed mode. Setting 'ufoz_compress' to False will write an uncompressed
-.ufoz.
+compressed mode. Setting 'ufoz_compress' to False will write an archive without
+compression.
 
 DESIGNSPACE FONT OPTIONS
 A .designspace document can be created in lieu of individual instances. A UFO
@@ -590,9 +590,9 @@ def write_ufo(
 	for values, names, attrs in zip(ufo.values, ufo.names, ufo.attrs):
 		add_instance(ufo, masters, values, names, attrs)
 
-		# glifs(ufo)
-		# features(ufo)
-		# plists(ufo)
+		glifs(ufo)
+		features(ufo)
+		plists(ufo)
 
 		if ufo.afdko.parts:
 			fdk.parts(ufo)
@@ -607,7 +607,7 @@ def write_ufo(
 			fl.Close(ufo.ifont)
 
 		report_log(ufo)
-	# 	raise UserWarning
+
 	# --------------------------
 	#  variable font generation
 	# --------------------------
