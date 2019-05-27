@@ -4,8 +4,17 @@ Multiple master-compatible UFO writer API for Windows FontLab 5.2
 vfb_ufo3 is primarily intended to create scaled UFOs from a > 1000 upm multiple master .vfb font. Hinting output is optional; as of psautohint v1.7, psautohint rounds all coordinates to integers, negating the lossless scaling performed during UFO creation. The most significant non-trivial change that will occur in export is the renaming of kerning glyph groups ('classes' in FontLab). See **kerning group options** below.
 
 ## Requirements
-This module is written in Python 3 syntax when possible and Python 2 elsewhere. The submodules are written in Cython and compiled into .pyd extension modules for increased execution speed on par with FontLab's 'vfb2ufo' command line program. To recompile the submodules, PyPi packages 'future_fstrings' and 'cython' will need to be installed, as well as a C compiler compatible with Cython. The TDM build GCC compiler (version 4.3.3) located at the url below was used to compile the submodules and is known to work with Windows FontLab 5.2.
+This module is written in Python 3 syntax where and whenever possible. The submodules are written in Cython and compiled into .pyd extension modules. To recompile the submodules, PyPi packages 'future_fstrings' and 'cython' will need to be installed. Recompilation will also require the installation of a compiler for Cython to utilize during the extension module creation. 'futures' (a Python 2 backport of Python 3's 'concurrent.futures' module) is the only required module not in the standard library.
 
+### Required modules
+futures (pip install futures)
+
+### Optional modules
+future_fstrings (pip install future_fstrings)
+
+cython (pip install cython)
+
+AFDKO (pip install afdko)
 Windows GCC (MinGW) 4.3.3
 
 https://github.com/develersrl/gccwinbinaries
@@ -54,8 +63,8 @@ write_ufo(
 	instance_values=instances,
 	instance_names=names,
 	instance_attributes=attributes,
-	decompose_glyphs=True,
-	remove_glyph_overlaps=True
+	glyphs_decompose=True,
+	glyphs_remove_overlaps=True
 	)
 ```
 
