@@ -3,6 +3,7 @@
 # cython: infer_types=True, cdivision=True
 # cython: optimize.use_switch=True, optimize.unpack_method_calls=True
 from __future__ import absolute_import, division, print_function, unicode_literals
+from vfb2ufo3.future import open, range, str, zip, items
 
 from tools cimport element
 
@@ -14,9 +15,8 @@ import time
 
 from FL import fl
 
-from vfb2ufo import fontinfo, tools, vfb
-from vfb2ufo.constants import *
-from vfb2ufo.future import *
+from vfb2ufo3 import fontinfo, tools, vfb
+from vfb2ufo3.constants import XML_DECLARATION, PLIST_DOCTYPE
 
 def plists(ufo):
 
@@ -42,7 +42,7 @@ def write_plist(ufo, plist, plist_path):
 
 	plist = f'<plist version="1.0">\n{chr(10).join(plist)}\n</plist>'
 
-	if ufo.ufoz.ufoz:
+	if ufo.ufoz.write:
 		ufo.archive.update({plist_path: XML_DECLARATION + PLIST_DOCTYPE + plist})
 	else:
 		tools.write_file(plist_path, XML_DECLARATION + PLIST_DOCTYPE + plist)
@@ -68,7 +68,7 @@ cdef glyphs_contents_plist(object ufo):
 					element('string', attrs=None, text=ufo.glifs[glyph_name], elems=None),
 					])
 
-		if ufo.ufoz.ufoz:
+		if ufo.ufoz.write:
 			plist_path = os.path.join('glyphs', 'contents.plist')
 		else:
 			plist_path = ufo.instance_paths.plists.glyphs_contents
@@ -94,7 +94,7 @@ cdef layercontents_plist(object ufo):
 			]
 		layercontents_array = element('array', attrs=None, text=None, elems=layercontents_array)
 
-		if ufo.ufoz.ufoz:
+		if ufo.ufoz.write:
 			plist_path = 'layercontents.plist'
 		else:
 			plist_path = ufo.instance_paths.plists.layercontents
@@ -116,7 +116,7 @@ cdef fontinfo_plist(object ufo):
 		if lib.element is not None]
 	fontinfo_dict = list(itertools.chain.from_iterable(fontinfo_dict))
 
-	if ufo.ufoz.ufoz:
+	if ufo.ufoz.write:
 		plist_path = 'fontinfo.plist'
 	else:
 		plist_path = ufo.instance_paths.plists.fontinfo
@@ -152,7 +152,7 @@ cdef groups_plist(object ufo):
 			groups_dict.append(element('key', attrs=None, text=group_name, elems=None))
 			groups_dict.extend(element('array', attrs=None, text=None, elems=sub_elements))
 
-		if ufo.ufoz.ufoz:
+		if ufo.ufoz.write:
 			plist_path = 'groups.plist'
 		else:
 			plist_path = ufo.instance_paths.plists.groups
@@ -202,7 +202,7 @@ cdef kerning_plist(object ufo):
 				])
 		kerning_dict.extend(element('dict', attrs=None, text=None, elems=kerns))
 
-	if ufo.ufoz.ufoz:
+	if ufo.ufoz.write:
 		plist_path = 'kerning.plist'
 	else:
 		plist_path = ufo.instance_paths.plists.kerning
@@ -241,7 +241,7 @@ cdef lib_plist(object ufo):
 			element('key', attrs=None, text='com.schriftgestaltung.useNiceNames', elems=None),
 			element('false', attrs=None, text=None, elems=None),
 			])
-		if ufo.ufoz.ufoz:
+		if ufo.ufoz.write:
 			plist_path = 'lib.plist'
 		else:
 			plist_path = ufo.instance_paths.plists.lib
@@ -271,7 +271,7 @@ cdef metainfo_plist(object ufo):
 			element('integer', attrs=None, text=str(ufo.version), elems=None),
 			]
 
-		if ufo.ufoz.ufoz:
+		if ufo.ufoz.write:
 			plist_path = 'metainfo.plist'
 		else:
 			plist_path = ufo.instance_paths.plists.metainfo

@@ -3,15 +3,15 @@
 # cython: infer_types=True, cdivision=True
 # cython: optimize.use_switch=True, optimize.unpack_method_calls=True
 from __future__ import absolute_import, division, print_function, unicode_literals
+from vfb2ufo3.future import open, range, str, zip, items
 
-from tools cimport fea_string
+from tools cimport nameid_string
 
 import os
 
-from vfb2ufo.constants import *
-from vfb2ufo.future import *
-
 from FL import fl, NameRecord, TrueTypeTable
+
+from vfb2ufo3.constants import CODEPAGES
 
 def kerning_scale(ufo, font):
 
@@ -57,7 +57,7 @@ cdef _update_font_names(object font):
 	# PS font name
 	font.font_name = bytes(f'{font.family_name}-{font.style_name}'.replace(' ', ''))[:31]
 
-	# Menu
+	# Menu name
 	font.menu_name = font.family_name
 
 	# FOND name
@@ -92,8 +92,10 @@ cdef list _ms_mac_names(object font, int platform):
 	'''
 
 	cdef:
-		unicode version = f'Version {font.version_major}.{font.version_minor:03}'
 		list names
+		unicode version
+
+	version = f'Version {font.version_major}.{font.version_minor:03}'
 
 	if not font.pref_family_name:
 		font.pref_family_name = font.family_name
@@ -152,10 +154,10 @@ cdef _update_font_name_records(object font):
 	ms_names = _ms_mac_names(font, 3)
 	mac_names = _ms_mac_names(font, 1)
 
-	fontnames = [NameRecord(name_id, 3, 1, 1033, bytes(fea_string(name, 3)))
+	fontnames = [NameRecord(name_id, 3, 1, 1033, bytes(nameid_string(name, 3)))
 		for name_id, name in ms_names if name]
 
-	fontnames.extend([NameRecord(name_id, 1, 1, 0, bytes(fea_string(name, 1)))
+	fontnames.extend([NameRecord(name_id, 1, 1, 0, bytes(nameid_string(name, 1)))
 		for name_id, name in mac_names if name])
 
 	for name_record in fontnames:
@@ -210,7 +212,7 @@ cdef _update_font_tables(object font, object ufo):
 	name_table = []
 	for name_record in font.fontnames:
 		if name_record.nid in range(7, 255) or name_record.nid == 0:
-			name = fea_string(name_record.name.decode('cp1252'), name_record.pid)
+			name = nameid_string(name_record.name.decode('cp1252'), name_record.pid)
 			if name_record.pid == 3:
 				name_table.append(f'nameid {name_record.nid} 3 1 1033 "{name}";')
 			else:

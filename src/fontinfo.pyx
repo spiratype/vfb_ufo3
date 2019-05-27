@@ -3,6 +3,7 @@
 # cython: infer_types=True, cdivision=True
 # cython: optimize.use_switch=True, optimize.unpack_method_calls=True
 from __future__ import absolute_import, division, print_function, unicode_literals
+from vfb2ufo3.future import range, str, items
 
 from tools cimport int_float, element
 
@@ -13,8 +14,12 @@ import os
 
 from FL import fl
 
-from vfb2ufo.constants import *
-from vfb2ufo.future import *
+from vfb2ufo3.constants import (
+	CONFIGURABLE_ATTRIBUTES, STRING_ATTRIBUTES, INT_ATTRIBUTES, FLOAT_ATTRIBUTES,
+	INT_FLOAT_ATTRIBUTES, BOOL_ATTRIBUTES, INT_LIST_ATTRIBUTES,
+	INT_FLOAT_LIST_ATTRIBUTES, FL_WIDTHS, FL_STYLES, REV_WEIGHTS, REV_WIDTHS,
+	REV_FL_WIN_CHARSET, NOMINAL_WIDTH_GLYPH_SET, UNICODE_RANGES, CODEPAGES,
+	)
 
 class info_lib(object):
 
@@ -31,7 +36,7 @@ class info_lib(object):
 		):
 
 		'''
-		convert byte strings to unicode
+		build lib objects for fontinfo
 		'''
 
 		# check for list of empty lists
@@ -185,7 +190,7 @@ def set_attributes(ufo, font, instance_attributes):
 			print(f"'{key}' is not a configurable attribute")
 		else:
 			if key in STRING_ATTRIBUTES:
-				if not isinstance(value, (bytes, unicode)):
+				if not isinstance(value, (bytes, str)):
 					raise TypeError(f"'{value}' is not a valid value for UFO attribute '{key}'\n"
 						f"'{key}' must be a string value")
 
@@ -257,118 +262,118 @@ def set_attributes(ufo, font, instance_attributes):
 								f"'{key}' items must be integers or floats")
 
 	int_attributes = [
-		('ascender', font.ascender[0]),
-		('capHeight', font.cap_height[0]),
-		('descender', font.descender[0]),
-		('xHeight', font.x_height[0]),
-		('versionMajor', font.version_major),
-		('versionMinor', font.version_minor),
-		('unitsPerEm', font.upm),
-		('openTypeHeadLowestRecPPEM', font.ttinfo.head_lowest_rec_ppem),
-		('openTypeHheaAscender', font.ttinfo.hhea_ascender),
-		('openTypeHheaDescender', font.ttinfo.hhea_descender),
-		('openTypeHheaLineGap', font.ttinfo.hhea_line_gap),
-		('openTypeOS2Selection', font.ttinfo.os2_fs_selection),
-		('openTypeOS2SubscriptXOffset', font.ttinfo.os2_y_subscript_x_offset),
-		('openTypeOS2SubscriptXSize', font.ttinfo.os2_y_subscript_x_size),
-		('openTypeOS2SubscriptYOffset', font.ttinfo.os2_y_subscript_y_offset),
-		('openTypeOS2SubscriptYSize', font.ttinfo.os2_y_subscript_y_size),
-		('openTypeOS2SuperscriptXOffset', font.ttinfo.os2_y_superscript_x_offset),
-		('openTypeOS2SuperscriptXSize', font.ttinfo.os2_y_superscript_x_size),
-		('openTypeOS2SuperscriptYOffset', font.ttinfo.os2_y_superscript_y_offset),
-		('openTypeOS2SuperscriptYSize', font.ttinfo.os2_y_superscript_y_size),
-		('openTypeOS2StrikeoutSize', font.ttinfo.os2_y_strikeout_size),
-		('openTypeOS2StrikeoutPosition', font.ttinfo.os2_y_strikeout_position),
-		('openTypeOS2Type', font.ttinfo.os2_fs_type),
-		('openTypeOS2TypoAscender', font.ttinfo.os2_s_typo_ascender),
-		('openTypeOS2TypoDescender', font.ttinfo.os2_s_typo_descender),
-		('openTypeOS2TypoLineGap', font.ttinfo.os2_s_typo_line_gap),
-		('openTypeOS2WinAscent', font.ttinfo.os2_us_win_ascent),
-		('openTypeOS2WinDescent', font.ttinfo.os2_us_win_descent),
-		('postscriptDefaultWidthX', font.default_width[0]),
-		('postscriptForceBold', font.force_bold[0]),
-		('postscriptIsFixedPitch', font.is_fixed_pitch),
-		('postscriptBlueFuzz', font.blue_fuzz[0]),
-		('postscriptBlueShift', font.blue_shift[0]),
-		('postscriptUnderlinePosition', font.underline_position),
-		('postscriptUnderlineThickness', font.underline_thickness),
-		('postscriptUniqueID', font.unique_id),
+		('ascender', 'ascender[0]'),
+		('capHeight', 'cap_height[0]'),
+		('descender', 'descender[0]'),
+		('xHeight', 'x_height[0]'),
+		('versionMajor', 'version_major'),
+		('versionMinor', 'version_minor'),
+		('unitsPerEm', 'upm'),
+		('openTypeHeadLowestRecPPEM', 'ttinfo.head_lowest_rec_ppem'),
+		('openTypeHheaAscender', 'ttinfo.hhea_ascender'),
+		('openTypeHheaDescender', 'ttinfo.hhea_descender'),
+		('openTypeHheaLineGap', 'ttinfo.hhea_line_gap'),
+		('openTypeOS2Selection', 'ttinfo.os2_fs_selection'),
+		('openTypeOS2SubscriptXOffset', 'ttinfo.os2_y_subscript_x_offset'),
+		('openTypeOS2SubscriptXSize', 'ttinfo.os2_y_subscript_x_size'),
+		('openTypeOS2SubscriptYOffset', 'ttinfo.os2_y_subscript_y_offset'),
+		('openTypeOS2SubscriptYSize', 'ttinfo.os2_y_subscript_y_size'),
+		('openTypeOS2SuperscriptXOffset', 'ttinfo.os2_y_superscript_x_offset'),
+		('openTypeOS2SuperscriptXSize', 'ttinfo.os2_y_superscript_x_size'),
+		('openTypeOS2SuperscriptYOffset', 'ttinfo.os2_y_superscript_y_offset'),
+		('openTypeOS2SuperscriptYSize', 'ttinfo.os2_y_superscript_y_size'),
+		('openTypeOS2StrikeoutSize', 'ttinfo.os2_y_strikeout_size'),
+		('openTypeOS2StrikeoutPosition', 'ttinfo.os2_y_strikeout_position'),
+		('openTypeOS2Type', 'ttinfo.os2_fs_type'),
+		('openTypeOS2TypoAscender', 'ttinfo.os2_s_typo_ascender'),
+		('openTypeOS2TypoDescender', 'ttinfo.os2_s_typo_descender'),
+		('openTypeOS2TypoLineGap', 'ttinfo.os2_s_typo_line_gap'),
+		('openTypeOS2WinAscent', 'ttinfo.os2_us_win_ascent'),
+		('openTypeOS2WinDescent', 'ttinfo.os2_us_win_descent'),
+		('postscriptDefaultWidthX', 'default_width[0]'),
+		('postscriptForceBold', 'force_bold[0]'),
+		('postscriptIsFixedPitch', 'is_fixed_pitch'),
+		('postscriptBlueFuzz', 'blue_fuzz[0]'),
+		('postscriptBlueShift', 'blue_shift[0]'),
+		('postscriptUnderlinePosition', 'underline_position'),
+		('postscriptUnderlineThickness', 'underline_thickness'),
+		('postscriptUniqueID', 'unique_id'),
 		]
 
 	float_attributes = [
-		('italicAngle', font.italic_angle),
-		('postscriptSlantAngle', font.slant_angle),
+		('italicAngle', 'italic_angle'),
+		('postscriptSlantAngle', 'slant_angle'),
 		]
 
 	bytes_attributes = [
-		('familyName', font.family_name),
-		('styleMapFamilyName', font.menu_name),
-		('styleName', font.style_name),
-		('openTypeNameCompatibleFullName', font.mac_compatible),
-		('openTypeNameDesignerURL', font.designer_url),
-		('openTypeNameManufacturerURL', font.vendor_url),
-		('openTypeNameLicenseURL', font.license_url),
-		('openTypeNamePreferredFamilyName', font.pref_family_name),
-		('openTypeNamePreferredSubfamilyName', font.pref_style_name),
-		('openTypeNameUniqueID', font.tt_u_id),
-		('openTypeNameVersion', font.version),
-		('postscriptFontName', font.font_name),
-		('postscriptFullName', font.full_name),
-		('postscriptBlueScale', font.blue_scale[0]),
-		('postscriptDefaultCharacter', font.default_character),
-		('postscriptWeightName', font.weight),
+		('familyName', 'family_name'),
+		('styleMapFamilyName', 'menu_name'),
+		('styleName', 'style_name'),
+		('openTypeNameCompatibleFullName', 'mac_compatible'),
+		('openTypeNameDesignerURL', 'designer_url'),
+		('openTypeNameManufacturerURL', 'vendor_url'),
+		('openTypeNameLicenseURL', 'license_url'),
+		('openTypeNamePreferredFamilyName', 'pref_family_name'),
+		('openTypeNamePreferredSubfamilyName', 'pref_style_name'),
+		('openTypeNameUniqueID', 'tt_u_id'),
+		('openTypeNameVersion', 'version'),
+		('postscriptFontName', 'font_name'),
+		('postscriptFullName', 'full_name'),
+		('postscriptBlueScale', 'blue_scale[0]'),
+		('postscriptDefaultCharacter', 'default_character'),
+		('postscriptWeightName', 'weight'),
 		]
 
 	cp1252_attributes = [
-		('copyright', font.copyright),
-		('trademark', font.trademark),
-		('note', font.note),
-		('openTypeNameDescription', font.notice),
-		('openTypeNameDesigner', font.designer),
-		('openTypeNameManufacturer', font.source),
-		('openTypeNameLicense', font.license),
+		('copyright', 'copyright'),
+		('trademark', 'trademark'),
+		('note', 'note'),
+		('openTypeNameDescription', 'notice'),
+		('openTypeNameDesigner', 'designer'),
+		('openTypeNameManufacturer', 'source'),
+		('openTypeNameLicense', 'license'),
 		]
 
 	int_list_attributes = [
-		('openTypeOS2CodePageRanges', font.codepages),
-		('openTypeOS2UnicodeRanges', font.unicoderanges),
+		('openTypeOS2CodePageRanges', 'codepages'),
+		('openTypeOS2UnicodeRanges', 'unicoderanges'),
 		]
 
 	list_attributes = [
-		('postscriptBlueValues', font.blue_values[0]),
-		('postscriptFamilyBlues', font.blue_shift[0]),
-		('postscriptFamilyOtherBlues', font.family_other_blues[0]),
-		('postscriptOtherBlues', font.other_blues[0]),
-		('postscriptStemSnapH', font.stem_snap_h[0]),
-		('postscriptStemSnapV', font.stem_snap_v[0]),
+		('postscriptBlueValues', 'blue_values[0]'),
+		('postscriptFamilyBlues', 'blue_shift[0]'),
+		('postscriptFamilyOtherBlues', 'family_other_blues[0]'),
+		('postscriptOtherBlues', 'other_blues[0]'),
+		('postscriptStemSnapH', 'stem_snap_h[0]'),
+		('postscriptStemSnapV', 'stem_snap_v[0]'),
 		]
 
 	# typical-case attribute assignments
-
+	font = fl[ufo.ifont]
 	for ufo_attribute, fl_attribute in int_attributes:
 		attr = instance_attributes.get(ufo_attribute)
 		if attr is not None:
-			fl_attribute = int(attr)
+			setattr(font, fl_attribute, int(attr))
 
 	for ufo_attribute, fl_attribute in float_attributes:
 		attr = instance_attributes.get(ufo_attribute)
 		if attr is not None:
-			fl_attribute = float(attr)
+			setattr(font, fl_attribute, float(attr))
 
 	for ufo_attribute, fl_attribute in bytes_attributes:
 		attr = instance_attributes.get(ufo_attribute)
 		if attr is not None:
-			fl_attribute = bytes(str(attr))
+			setattr(font, fl_attribute, bytes(str(attr)))
 
 	for ufo_attribute, fl_attribute in cp1252_attributes:
 		attr = instance_attributes.get(ufo_attribute)
 		if attr is not None:
-			fl_attribute = str(attr).encode('cp1252')
+			setattr(font, fl_attribute, str(attr).encode('cp1252'))
 
 	for ufo_attribute, fl_attribute in int_list_attributes:
 		attr = instance_attributes.get(ufo_attribute)
 		if attr is not None:
-			fl_attribute = [int(i) for i in ufo_attribute]
+			setattr(font, fl_attribute, [int(i) for i in ufo_attribute])
 
 	# special-case attribute assignments
 
@@ -414,12 +419,12 @@ def set_attributes(ufo, font, instance_attributes):
 	if weight_code is not None:
 		if weight_code in range(100, 1000, 100):
 			font.weight_code = int(weight_code)
-			font.ttinfo.os2_us_weight_class = font.weight_code
-			font.weight = bytes(str(REVERSED_WEIGHTS[weight_code]))
+			font.ttinfo.os2_us_weight_class = weight_code
+			font.weight = bytes(str(REV_WEIGHTS[weight_code]))
 
 	width = instance_attributes.get('openTypeOS2WidthClass')
-	if width in REVERSED_WIDTHS:
-		font.width = bytes(str(REVERSED_WIDTHS[width]))
+	if width in REV_WIDTHS:
+		font.width = bytes(str(REV_WIDTHS[width]))
 		font.ttinfo.os2_us_width_class = int(width)
 
 	ufo.fontinfo.nominal_width = instance_attributes.get('postscriptNominalWidthX')
@@ -428,7 +433,9 @@ def set_attributes(ufo, font, instance_attributes):
 
 	ms_charset = instance_attributes.get('postscriptWindowsCharacterSet')
 	if ms_charset and ms_charset in range(1, 20):
-		font.ms_charset = REVERSED_FL_WIN_CHARSET[ms_charset]
+		font.ms_charset = REV_FL_WIN_CHARSET[ms_charset]
+
+	fl.UpdateFont(ufo.ifont)
 
 
 def _nominal_width(font):
@@ -447,7 +454,7 @@ def _nominal_width(font):
 		except TypeError:
 			pass
 
-	return int(round(widths / glyphs))
+	return int(round(widths // glyphs))
 
 
 def _postscript_unique_id(font):
@@ -478,7 +485,7 @@ def _font_style(font_style):
 			return 64
 
 	i = font_style % 2
-	j = int(math.log(font_style) / math.log(2))
+	j = math.log(font_style) // math.log(2)
 
 	if i and j:
 		return [0, j]
@@ -579,8 +586,7 @@ cdef list _gasp_records(object font):
 	cdef:
 		list records = [collections.OrderedDict((
 			('rangeMaxPPEM', gasp.ppm), ('rangeGaspBehavior', [gasp.behavior])
-			))
-			for gasp in font.ttinfo.gasp]
+			)) for gasp in font.ttinfo.gasp]
 
 	return records
 
@@ -647,7 +653,7 @@ def fontinfo(ufo):
 		info_lib('openTypeOS2UnicodeRanges', font.unicoderanges, 'int_list'),
 		info_lib('openTypeOS2VendorID', font.vendor),
 		info_lib('openTypeOS2WeightClass', font.weight_code, 'int'),
-		info_lib('openTypeOS2WidthClass', WIDTHS[font.width], 'int'),
+		info_lib('openTypeOS2WidthClass', FL_WIDTHS[font.width], 'int'),
 		info_lib('openTypeOS2WinAscent', font.ttinfo.os2_us_win_ascent, 'int', scalable=1, scale=scale),
 		info_lib('openTypeOS2WinDescent', font.ttinfo.os2_us_win_descent, 'int', scalable=1, scale=scale),
 		info_lib('openTypeVheaCaretOffset', ufo.ttinfo.vhea_caret_offset, 'int'),

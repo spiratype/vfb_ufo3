@@ -3,6 +3,7 @@
 # cython: infer_types=True, cdivision=True
 # cython: optimize.use_switch=True, optimize.unpack_method_calls=True
 from __future__ import absolute_import, division, print_function, unicode_literals
+from vfb2ufo3.future import open, range, str, zip, items
 
 from tools cimport hsv_srgb, int_float, uni_transform, element
 
@@ -12,21 +13,8 @@ import time
 
 from FL import fl
 
-from vfb2ufo import tools
-from vfb2ufo.constants import *
-from vfb2ufo.future import *
-
-'''
-benchmarks
-cython:
-write 3000 text plain text files writing an integer as a string ~.6 sec
-threading:
-	write UFO with 3200 glif files ~3 sec (no glyph operations)
-	write 2900 glif files ~10 sec (glyph decomposition and remove overlaps)
-non-threading:
-	write UFO with 3200 glif files ~13 sec (no glyph operations)
-	write 2900 glif files ~18 sec (glyph decomposition and remove overlaps)
-'''
+from vfb2ufo3 import tools
+from vfb2ufo3.constants import XML_DECLARATION
 
 cdef unicode glif_advance(width):
 
@@ -145,19 +133,19 @@ cdef list glif_mark(int fl_color, int glif_version):
 
 	r, g, b, a = hsv_srgb(fl_color)
 	if glif_version == 2:
-		key = 'public.markColor'
-		mark_element = [element('key', attrs=None, text=key, elems=None),
-			element('string', attrs=None, text=f'{r},{g},{b},{a}', elems=None)]
+		mark_element = [
+			element('key', attrs=None, text='public.markColor', elems=None),
+			element('string', attrs=None, text=f'{r},{g},{b},{a}', elems=None),
+			]
 		return mark_element
 
-	else:
-		key = 'com.typemytype.robofont.mark'
-		sub_elements = [element('integer', attrs=None, text=str(i), elems=None)
-			if isinstance(i, int) else element('real', attrs=None, text=str(i), elems=None)
-			for i in [r, g, b, a]]
-		mark_element = element('key', attrs=None, text=key, elems=None)
-
-		return [mark_element] + element('array', attrs=None, text=None, elems=sub_elements)
+	key = element('key', attrs=None, text='com.typemytype.robofont.mark', elems=None)
+	sub_elements = [
+		element('integer', attrs=None, text=str(i), elems=None)
+		if isinstance(i, int) else element('real', attrs=None, text=str(i), elems=None)
+		for i in [r, g, b, a]
+		]
+	return [key] + element('array', attrs=None, text=None, elems=sub_elements)
 
 
 cdef unicode glif_hint_stem(pos, width, double scale, bint vertical, bint horizontal):
@@ -176,9 +164,11 @@ cdef unicode glif_hint_stem(pos, width, double scale, bint vertical, bint horizo
 			pos, width = int(round(pos * scale)), int(round(width * scale))
 
 	if vertical:
-		return element('string', attrs=None, text=f'vstem {pos} {width}', elems=None)
-	if horizontal:
-		return element('string', attrs=None, text=f'hstem {pos} {width}', elems=None)
+		text = f'vstem {pos} {width}'
+	else:
+		text = f'hstem {pos} {width}'
+
+	return element('string', attrs=None, text=text, elems=None)
 
 
 cdef list glif_hintset(int tag, list stems):
@@ -194,7 +184,8 @@ cdef list glif_hintset(int tag, list stems):
 		element('key', attrs=None, text='pointTag', elems=None),
 		element('string', attrs=None, text=f'hintSet{tag:04}', elems=None),
 		element('key', attrs=None, text='stems', elems=None),
-		] + element('array', attrs=None, text=None, elems=stems)
+		] + \
+		element('array', attrs=None, text=None, elems=stems)
 
 	return element('dict', attrs=None, text=None, elems=hintset)
 
@@ -223,10 +214,12 @@ cdef list glif_hints(list hints, list hintset_hash, bint afdko):
 			element('key', attrs=None, text='id', elems=None),
 			element('string', attrs=None, text=hints_id, elems=None),
 			element('key', attrs=None, text='hintSetList', elems=None)
-			] + hints
+			] + \
+			hints
 		hints = [
 			element('key', attrs=None, text=key, elems=None)
-			] + element('dict', attrs=None, text=None, elems=hints)
+			] + \
+			element('dict', attrs=None, text=None, elems=hints)
 	else:
 		key = 'public.postscript.hints'
 		hints = [
@@ -235,10 +228,12 @@ cdef list glif_hints(list hints, list hintset_hash, bint afdko):
 			element('key', attrs=None, text='id', elems=None),
 			element('string', attrs=None, text=hints_id, elems=None),
 			element('key', attrs=None, text='hintSetList', elems=None)
-			] + hints
+			] + \
+			hints
 		hints = [
 			element('key', attrs=None, text=key, elems=None),
-			] + element('dict', attrs=None, text=None, elems=hints)
+			] + \
+			element('dict', attrs=None, text=None, elems=hints)
 
 	return hints
 
@@ -266,7 +261,9 @@ cdef unicode glif_glyph(list glif, unicode name, int glif_version):
 	cdef:
 		unicode attributes = f'name="{name}" format="{glif_version}"'
 
-	return '\n'.join(element('glyph', attrs=attributes, text=None, elems=glif))
+	glif_str = '\n'.join(element('glyph', attrs=attributes, text=None, elems=glif))
+
+	return f'{XML_DECLARATION}{glif_str}\n'
 
 
 cdef list _starts(object glyph):
@@ -279,8 +276,9 @@ cdef list _starts(object glyph):
 		Py_ssize_t i
 		list starts = [0] * glyph.nodes_number
 
-	start_indices = [glyph.GetContourBegin(i)
-		for i in range(glyph.GetContoursNumber())]
+	start_indices = [
+		glyph.GetContourBegin(i) for i in range(glyph.GetContoursNumber())
+		]
 
 	for i in start_indices:
 		starts[i] = 1
@@ -293,7 +291,8 @@ cdef tuple glif_contours(
 	object ufo,
 	double scale,
 	bint build_hints,
-	dict hintsets,):
+	dict hintsets,
+	):
 
 	'''
 	build glif contours
@@ -383,7 +382,8 @@ cdef tuple glif_contours(
 	if build_hints:
 		if scale:
 			# UFO spec is int/float, psautohint v1.7.0 requires int
-			hintset_hash = [f'w{int(round(glyph.width * scale))}'] + hintset_hashes + hintset_hash
+			hintset_hash = [f'w{int(round(glyph.width * scale))}'] + \
+				hintset_hashes + hintset_hash
 		else:
 			hintset_hash = [f'w{glyph.width}'] + hintset_hashes + hintset_hash
 
@@ -428,18 +428,24 @@ cdef build_glif(object glyph, object ufo, object font):
 
 	# unicodes
 	if glyph.unicodes:
-		unicodes = [glif_unicode(uni_transform(glyph_unicode))
-			for glyph_unicode in glyph.unicodes if glyph_unicode]
+		unicodes = [
+			glif_unicode(uni_transform(glyph_unicode))
+			for glyph_unicode in glyph.unicodes if glyph_unicode
+			]
 
 	# anchors
 	if glyph.anchors:
-		anchors = [glif_anchor(glyph_anchor, scale, glif_version)
-			for glyph_anchor in glyph.anchors]
+		anchors = [
+			glif_anchor(glyph_anchor, scale, glif_version)
+			for glyph_anchor in glyph.anchors
+			]
 
 	# components
 	if glyph.components:
-		components = [glif_component(glyph_component, scale, font)
-			for glyph_component in glyph.components]
+		components = [
+			glif_component(glyph_component, scale, font)
+			for glyph_component in glyph.components
+			]
 
 	# hints
 	if glyph.hhints or glyph.vhints:
@@ -507,14 +513,22 @@ cdef build_glif(object glyph, object ufo, object font):
 
 	# build glif string
 	glif = glif_glyph(glif, glyph_name, glif_version)
+	glif_path = f'{ufo.instance_paths.glyphs}\\{ufo.glifs[glyph_name]}'
 
-	if ufo.ufoz.ufoz:
+	if ufo.ufoz.write:
 		glif_path = f'glyphs\\{ufo.glifs[glyph_name]}'
-		ufo.archive.update({glif_path: XML_DECLARATION + glif + '\n'})
+		ufo.archive.update({glif_path: glif})
+
 	else:
 		glif_path = f'{ufo.instance_paths.glyphs}\\{ufo.glifs[glyph_name]}'
-		with open(glif_path, 'wb') as f:
-			f.write(XML_DECLARATION + glif + '\n')
+
+		return (glif_path, glif)
+
+
+cdef write_glif(unicode glif_path, unicode glif):
+
+	with open(glif_path, 'wb') as f:
+		f.write(glif)
 
 
 def glifs(ufo):
@@ -525,11 +539,16 @@ def glifs(ufo):
 
 	font = fl[ufo.ifont]
 
-	# convert links/remove vertical hints/autoreplace
+	start = time.clock()
+
+	# remove all hints
 	if ufo.hints.ignore:
 		for glyph in font.glyphs:
 			glyph.RemoveHints(3)
+
 	else:
+
+		# remove vertical hints
 		if ufo.hints.ignore_vertical:
 			for glyph in font.glyphs:
 				glyph.RemoveHints(2)
@@ -540,7 +559,10 @@ def glifs(ufo):
 				if glyph.replace_table:
 					if ufo.hints.ignore_replacements:
 						glyph.replace_table.clean()
+
 		else:
+
+			# convert FontLab links to hints
 			for glyph in font.glyphs:
 				if glyph.vlinks or glyph.hlinks:
 					fl.TransformGlyph(glyph, 10, b'')
@@ -556,22 +578,32 @@ def glifs(ufo):
 			if glyph.components:
 				glyph.Decompose()
 			glyph.RemoveOverlap()
+
 	elif ufo.glyph.decompose:
 		for glyph in font.glyphs:
 			if glyph.components:
 				glyph.Decompose()
+
 	elif ufo.glyph.remove_overlaps:
 		for glyph in font.glyphs:
 			glyph.RemoveOverlap()
 
-	# prepare glyph generator
+	# create glyph generator
 	glyphs = (glyph for glyph in font.glyphs
 		if str(glyph.name) in ufo.glyphs)
 
 	# build and write glif files
-	with concurrent.futures.ThreadPoolExecutor() as executor:
-		for glyph in glyphs:
-			executor.submit(build_glif, glyph, ufo, font)
+	if ufo.ufoz.write:
 
-	# for glyph in glyphs:
-	# 	build_glif(glyph, ufo)
+		for glyph in glyphs:
+			build_glif(glyph, ufo, font)
+
+	else:
+
+		built_glifs = [build_glif(glyph, ufo, font) for glyph in glyphs]
+
+		with concurrent.futures.ThreadPoolExecutor() as executor:
+			for glif_path, glif in built_glifs:
+				executor.submit(write_glif, glif_path, glif)
+
+	ufo.instance_times.glifs = time.clock() - start

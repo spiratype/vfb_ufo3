@@ -3,6 +3,7 @@
 # cython: infer_types=True, cdivision=True
 # cython: optimize.use_switch=True, optimize.unpack_method_calls=True
 from __future__ import absolute_import, division, print_function, unicode_literals
+from vfb2ufo3.future import open, range, str, zip, items
 
 from tools cimport fea_feature, fea_lookup, fea_table
 
@@ -10,9 +11,8 @@ import time
 
 from FL import fl
 
-from vfb2ufo import fdk, tools, vfb
-from vfb2ufo.constants import *
-from vfb2ufo.future import *
+from vfb2ufo3 import fdk, tools, vfb
+from vfb2ufo3.constants import OT_FEATURES
 
 def features(ufo):
 
@@ -24,7 +24,7 @@ def features(ufo):
 	start = time.clock()
 
 	if ufo.features.import_groups:
-		ot_groups, kern_groups = _font_classes(ufo, font)
+		ot_groups, kern_groups = _font_classes(ufo)
 	else:
 		ot_groups = []
 
@@ -86,7 +86,7 @@ def features(ufo):
 			'\n'.join(features).replace('\nfeature', '\n\nfeature'),
 			])
 
-	if ufo.ufoz.ufoz:
+	if ufo.ufoz.write:
 		ufo.archive.update({'features.fea': features})
 	else:
 		tools.write_file(ufo.instance_paths.features, features.strip())
@@ -110,7 +110,7 @@ cdef list _fea_tables(object font):
 	return tables
 
 
-cdef tuple _font_classes(object ufo, object font):
+cdef tuple _font_classes(object ufo):
 
 	'''
 	build OpenType and kern groups from FontLab classes
@@ -118,9 +118,16 @@ cdef tuple _font_classes(object ufo, object font):
 
 	cdef:
 		list font_groups, kern_groups
+		object font = fl[fl.ifont]
 
-	font_groups = str(font.classes_text).replace('@_', '@').splitlines()
-	font_groups = [' '.join(line.split()).replace(' ]', ']') for line in font_groups]
+	font_groups = []
+	for group in font.classes:
+		if group:
+			name, glyphs = group.replace("'", '').split(':')
+			if name.startswith('_'):
+				name = name[1:]
+			font_groups.append(f'@{name}=[{" ".join(glyphs.split())}];')
+
 	for i, line in enumerate(font_groups):
 		if line.count(ufo.kern.first_prefix) or line.count(ufo.kern.second_prefix):
 			split_index = i

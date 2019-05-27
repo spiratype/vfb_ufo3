@@ -3,6 +3,9 @@
 # cython: infer_types=True, cdivision=True
 # cython: optimize.use_switch=True, optimize.unpack_method_calls=True
 from __future__ import absolute_import, division, print_function, unicode_literals
+from vfb2ufo3.future import open, range, str, zip, items
+
+from tools cimport uni_transform
 
 import collections
 import contextlib
@@ -15,9 +18,14 @@ import zipfile
 
 from FL import fl, Feature, Font
 
-from vfb2ufo import fontinfo, groups, vfb
-from vfb2ufo.constants import *
-from vfb2ufo.future import *
+from vfb2ufo3 import fontinfo, groups, vfb
+from vfb2ufo3.constants import (
+	WIN_1252, MACOS_ROMAN, FL_ENC_HEADER, FLC_HEADER, FLC_GROUP_MARKER,
+	FLC_GLYPHS_MARKER, FLC_KERNING_MARKER, FLC_END_MARKER, OT_SCRIPTS,
+	OT_LANGUAGES,
+	)
+
+ENVIRON = os.path.expanduser('~')
 
 # --------
 #  errors
@@ -35,11 +43,23 @@ class GlyphNameError(Exception):
 	def __init__(self, message):
 		super(GlyphNameError, self).__init__(message)
 
-# --------------------------
-#  arguments wrapping class
-# --------------------------
+class GlyphUnicodeError(Exception):
+
+	'''
+	Error class for glyph unicode errors
+
+	Error raised when Unicode value has been mapped to more than one glyph
+	'''
+
+	def __init__(self, message):
+		super(GlyphUnicodeError, self).__init__(message)
+
+# -------------------------
+#  argument wrapping class
+# -------------------------
 
 class AttributeDict(object):
+
 	def __init__(self, **kwargs):
 		self.__dict__.update(kwargs)
 
@@ -70,7 +90,7 @@ def report_log(ufo):
 	output window reporter
 	'''
 
-	if ufo.ufoz.ufoz:
+	if ufo.ufoz.write:
 		filename = os.path.basename(ufo.instance_paths.ufoz)
 	else:
 		filename = os.path.basename(ufo.instance_paths.ufo)
@@ -91,16 +111,17 @@ def report_log(ufo):
 				glyph_options.append('decomposition')
 			if ufo.glyph.remove_overlaps:
 				glyph_options.append('overlaps removed')
-			glyph_options = '  glyph options: ' + ', '.join(glyph_options)
+			glyph_options = '\n    '.join(glyph_options)
+			glyph_options = f'  glyph options:\n    {glyph_options}'
 
-		font_options = []
+		font_options = ''
 		if ufo.afdko.parts:
-			font_options = '  font options: AFDKO'
+			font_options = '  font options:\n    AFDKO'
 
 		completion = f'\n  {filename} completed'
 		upm_version = f'  {upm} UFO{ufo.version}'
-		time_total = (f'  {time_string(time.clock() - ufo.instance_start)} '
-			f'({len(ufo.glyphs)} glyphs)')
+		ufo_time = time.clock() - ufo.instance_start
+		time_total = f'  {time_string(ufo_time)} ({len(ufo.glyphs)} glyphs)'
 
 		# final report
 		font_report = [completion, upm_version, time_total]
@@ -108,6 +129,19 @@ def report_log(ufo):
 			font_report.append(font_options)
 		if glyph_options:
 			font_report.append(glyph_options)
+
+		if ufo.report_detailed:
+			times = ufo.instance_times
+			other_time = ufo_time - times.glifs - times.fea - times.plist - times.afdko
+			font_report.extend([
+				'  times:',
+				f'    {time_string(times.glifs)} (glyphs)',
+				f'    {time_string(times.fea)} (features)',
+				f'    {time_string(times.plist)} (plists)',
+				f'    {time_string(times.afdko)} (afdko)',
+				f'    {time_string(other_time)} (other)',
+				])
+
 		print('\n'.join(font_report))
 
 	else:
@@ -174,7 +208,6 @@ cdef font_encoding(object font, object ufo):
 
 	'''
 	build FontLab encoding file from the master font's encoding attribute
-	(calls to font.encoding attributes will crash FontLab)
 	'''
 
 	cdef:
@@ -183,6 +216,7 @@ cdef font_encoding(object font, object ufo):
 		list encoding_file = [FL_ENC_HEADER]
 
 	for record in font.encoding:
+		# calls to font.encoding attributes will crash FontLab
 		record = repr(record)[1:-1].replace('"', '').replace(',', '').split()
 		glyph_name, glyph_unicode = record[1], record[3]
 		if glyph_name == '(null)':
@@ -311,7 +345,7 @@ def check_paths(ufo):
 				os.path.dirname(instance_ufo_path), 'masters', os.path.basename(instance_ufo_path)
 				)
 
-		if ufo.ufoz.ufoz:
+		if ufo.ufoz.write:
 			instance_ufoz_path = f'{instance_ufo_path}z'
 			if ufo.force_overwrite:
 				with ignored(OSError):
@@ -327,32 +361,39 @@ def check_paths(ufo):
 							shutil.move(instance_ufo_path, temp_path)
 							shutil.rmtree(temp_path)
 					else:
-						raise UserWarning(f"{instance_ufo_path} already exists.\n"
+						raise OSError(f"{instance_ufo_path} already exists.\n"
 							"Please remove directory or set 'force_overwrite' to True")
 
 
 def add_master_copy(master, ufo):
-	# add master copy of source font
+
+	'''
+	add master copy of source font
+
+	this involves copying information from master font to copy that is
+	not copied during the normal FontLab copy operation
+	'''
+
 	fl.output = b''
 	ufo.total_start = time.clock()
 	ufo.last, ufo.completed = 0, 0
 	ufo.master = fl.ifont
+	master_filename = os.path.basename(master.file_name)
 
 	if ufo.report:
 		if master.axis:
 			print(f"Processing <Font: '{master.full_name}' "
-				f"filename='{os.path.basename(master.file_name)}' "
+				f"filename='{master_filename}' "
 				f"axes={len(master.axis)}>\n")
 		else:
 			print(f"Processing <Font: '{master.full_name}' "
-				f"filename='{os.path.basename(master.file_name)}'>\n")
+				f"filename='{master_filename}'>\n")
 
 	print('Pre-processing (building master copy)..')
 
 	# copy glyph groups and font features
 	ot_classes = master.ot_classes.strip()
-	ot_features = [(feature.tag, feature.value.strip())
-		for feature in master.features]
+	ot_features = [(fea.tag, fea.value.strip()) for fea in master.features]
 
 	# build language blocks for lookups
 	scripts = collections.OrderedDict()
@@ -367,10 +408,10 @@ def add_master_copy(master, ufo):
 
 	lookup_block = []
 	if scripts:
-		for script, languages in scripts.items():
+		for script, languages in items(scripts):
 			lookup_block.append(f'script {script}; # {OT_SCRIPTS[script]}')
-			for lang in languages:
-				lookup_block.append(f'  language {lang}; # {OT_LANGUAGES[lang]}')
+			for language in languages:
+				lookup_block.append(f'  language {language}; # {OT_LANGUAGES[language]}')
 
 	ufo.default_lookup_block = lookup_block
 
@@ -411,6 +452,9 @@ def add_master_copy(master, ufo):
 		if glyph_name in ufo.glyphs:
 			glyph_name, glif_glyph_name = glif_name(glyph_name, ufo.afdko.makeotf_release)
 			ufo.glifs[glyph_name] = glif_glyph_name
+
+	if ufo.afdko.makeotf_release:
+		check_glyph_unicodes(master_copy)
 
 	# load master encoding
 	master_copy.encoding.Load(ufo.encoding)
@@ -480,6 +524,7 @@ def add_instance(ufo, masters, instance_value, instance_name, instance_attrs):
 	instance = fl[fl.ifont]
 	ufo.ifont = fl.ifont
 	ufo.completed += 1
+	ufo.italic = instance.font_style in (1, 33)
 
 	# load master encoding
 	instance.encoding.Load(ufo.encoding)
@@ -601,21 +646,22 @@ def add_instance(ufo, masters, instance_value, instance_name, instance_attrs):
 
 	if ufo.path:
 		instance_ufo_path = user_path(instance_ufo_filename, path=ufo.path)
-		ufo.path = os.path.dirname(instance_ufo_path)
 	else:
 		instance_ufo_path = user_path(instance_ufo_filename)
-		ufo.path = os.path.dirname(instance_ufo_path)
+
+	instance_dir = os.path.dirname(instance_ufo_path)
+	ufo.path = instance_dir
 
 	if ufo.designspace.designspace:
-		instance_ufo_path = os.path.join(os.path.dirname(instance_ufo_path), 'masters', instance_ufo_filename)
-		ufo.designspace.sources.append(os.path.basename(instance_ufo_path))
+		instance_ufo_path = os.path.join(instance_dir, 'masters', instance_ufo_filename)
+		ufo.designspace.sources.append(instance_ufo_filename)
 
 	instance_otf_path = instance_ufo_path.replace('.ufo', '.otf')
 	instance_ufo_glyphs_path = user_path('glyphs', path=instance_ufo_path)
 	instance_ufoz_path = instance_ufo_path.replace('.ufo', '.ufoz')
 	instance_vfb_path = instance_ufo_path.replace('.ufo', '.vfb')
 
-	if not ufo.ufoz.ufoz:
+	if not ufo.ufoz.write:
 		make_dir(instance_ufo_glyphs_path)
 
 	plist_paths = AttributeDict(
@@ -694,9 +740,12 @@ def write_ufoz(ufo):
 	'''
 
 	if ufo.ufoz.compress:
-		mode = 8
+		MODE = 8
 	else:
-		mode = 0
+		MODE = 0
+
+	file_open_error = (f'{os.path.basename(ufo.instance_paths.ufoz)} is open.'
+		'\nPlease close the file.')
 
 	if ufo.force_overwrite:
 		if os.path.exists(ufo.instance_paths.ufoz):
@@ -704,20 +753,22 @@ def write_ufoz(ufo):
 				os.rename(ufo.instance_paths.ufoz, ufo.instance_paths.ufoz + '__')
 				os.remove(ufo.instance_paths.ufoz + '__')
 			except OSError:
-				raise OSError(f'{os.path.basename(ufo.instance_paths.ufoz)} is open.'
-					'\nPlease close the file.')
+				raise OSError(file_open_error)
 
 	try:
-		with zipfile.ZipFile(ufo.instance_paths.ufoz, 'w', compression=mode) as z:
-			for file_path, file_contents in items(ufo.archive):
-				z.writestr(file_path, (file_contents + '\n').encode('utf_8'))
+		with zipfile.ZipFile(ufo.instance_paths.ufoz, 'w', compression=MODE) as z:
+			for path, contents in items(ufo.archive):
+				try:
+					z.writestr(path, contents)
+				except UnicodeError:
+					z.writestr(path, contents.encode('utf_8'))
 
 	except IOError:
 		raise IOError(f'{os.path.basename(ufo.instance_paths.ufoz)} already exists.'
 			"\nPlease rename or delete the existing file, or set 'force_overwrite' to True")
+
 	except OSError:
-		raise OSError(f'{os.path.basename(ufo.instance_paths.ufoz)} is open.'
-			'\nPlease close the file.')
+		raise OSError(file_open_error)
 
 	ufo.archive = {}
 
@@ -736,9 +787,9 @@ def user_path(filename_path=None, path=None, temp=False):
 		path = tempfile.gettempdir()
 
 	if not path and not filename_path:
-		return os.path.join(os.path.expanduser('~'), 'Desktop')
+		return os.path.join(ENVIRON, 'Desktop')
 	elif not path:
-		return os.path.join(os.path.expanduser('~'), 'Desktop', filename_path)
+		return os.path.join(ENVIRON, 'Desktop', filename_path)
 	else:
 		return os.path.join(path, filename_path)
 
@@ -751,7 +802,7 @@ def make_dir(path):
 	'''
 
 	if not os.path.isabs(path):
-		path = os.path.join(os.path.expanduser('~'), 'Desktop', path)
+		path = os.path.join(ENVIRON, 'Desktop', path)
 
 	with ignored(OSError):
 		os.makedirs(path)
@@ -966,3 +1017,28 @@ cdef tuple glif_name(unicode glyph_name, bint release_mode):
 		glif_filename = '.'.join(glif_filename_list)
 
 	return glyph_name, f'{glif_filename[:250]}.glif'
+
+cdef check_glyph_unicodes(object font):
+
+	cdef:
+		list unicodes = []
+		dict unicode_errors = {}
+
+	for glyph in font.glyphs:
+		for unicode in glyph.unicodes:
+			if unicode not in unicodes:
+				unicodes.append(glyph.unicode)
+			else:
+				if unicode in unicode_errors:
+					unicode_errors[unicode].append(str(glyph.name))
+				else:
+					unicode_errors[unicode] = [str(glyph.name)]
+
+	if unicode_errors:
+		message = []
+		for unicode, glyphs in items(unicode_errors):
+			message.append(f"'{uni_transform(unicode)}' is mapped to more than one glyph:")
+			for glyph in glyphs:
+				message.append(f'  {glyph}')
+
+		raise GlyphUnicodeError('\n'.join(message))

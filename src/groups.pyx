@@ -3,13 +3,12 @@
 # cython: infer_types=True, cdivision=True
 # cython: optimize.use_switch=True, optimize.unpack_method_calls=True
 from __future__ import absolute_import, division, print_function, unicode_literals
+from vfb2ufo3.future import open, range, str, zip, items
 
 import os
-import xml.etree.cElementTree as etree
+import plistlib
 
 from FL import fl
-
-from vfb2ufo.future import *
 
 def rename_groups(ufo, font):
 
@@ -84,9 +83,13 @@ cdef rename_font_groups(object ufo, object font):
 			if font_class.startswith('_')]
 		kern_groups_no_kerning = []
 	else:
-		kern_classes, kern_groups_no_kerning = _kern_groups_with_no_kerning(ufo, font, firsts, seconds, first_seconds)
+		kern_classes, kern_groups_no_kerning = _kern_groups_with_no_kerning(
+			ufo, font, firsts, seconds, first_seconds,
+			)
 
-	firsts, seconds, first_seconds = _final_kern_groups(ufo, font, kern_classes, kern_groups_no_kerning, firsts, seconds, first_seconds)
+	firsts, seconds, first_seconds = _final_kern_groups(
+		ufo, font, kern_classes, kern_groups_no_kerning, firsts, seconds, first_seconds,
+		)
 	_build_font_groups(ufo, font, firsts, seconds, first_seconds)
 
 	_master_groups(ufo, font)
@@ -158,7 +161,8 @@ cdef tuple _kern_groups_with_no_kerning(
 	object font,
 	list firsts,
 	list seconds,
-	list first_seconds,):
+	list first_seconds,
+	):
 
 	'''
 	kern groups in FL-classes without kerning
@@ -184,7 +188,8 @@ cdef tuple _final_kern_groups(
 	list kern_groups_no_kerning,
 	list firsts,
 	list seconds,
-	list first_seconds,):
+	list first_seconds,
+	):
 
 	'''
 	finalize kern groups
@@ -216,7 +221,8 @@ cdef _build_font_groups(
 	object font,
 	list firsts,
 	list seconds,
-	list first_seconds,):
+	list first_seconds,
+	):
 
 	'''
 	rename FL-classes for UFO-version specific generation
@@ -266,14 +272,14 @@ cdef import_flc(object ufo, object font):
 		unicode prefix_2 = '_public.kern2.'
 		unicode _prefix_1 = '_MMK_L_'
 		unicode _prefix_2 = '_MMK_R_'
-		Py_ssize_t i, j, k
 		unicode flc_filename = os.path.basename(ufo.groups.import_flc_path)
 		unicode flc_file
 		unicode group_name
 		list flc_list
-		list group_names = []
-		list font_groups = []
-		list group_flags = []
+		Py_ssize_t i, j, k
+		list names = []
+		list glyph_groups = []
+		list flags = []
 
 	with open(ufo.groups.import_flc_path, 'r') as f:
 		flc_file = f.read()
@@ -285,32 +291,32 @@ cdef import_flc(object ufo, object font):
 
 	for i, line in enumerate(flc_list):
 		if line.startswith('%%C'):
-			group_names.append(line.split()[1])
-			font_groups.append(flc_list[i+1].split()[1:])
-			group_flag = flc_list[i+2]
-			if group_flag.startswith('%%K'):
-				group_flags.append(group_flag.split()[1])
+			names.append(line.split()[1])
+			glyph_groups.append(flc_list[i+1].split()[1:])
+			flag = flc_list[i+2]
+			if flag.startswith('%%K'):
+				flags.append(flag.split()[1])
 			else:
-				group_flags.append('')
+				flags.append('')
 
 	ufo.kern_firsts_by_key_glyph, ufo.kern_seconds_by_key_glyph = {}, {}
 	ufo.kern_groups, ufo.ot_groups = {}, {}
-	for group_name, group_glyphs, group_flag in zip(group_names, font_groups, group_flags):
-		if group_flag:
-			key_glyph, group_glyphs_str, no_key_glyph = _group_key_glyph(group_glyphs)
+	for name, glyphs, flag in zip(names, glyph_groups, flags):
+		if flag:
+			key_glyph, glyphs, no_key_glyph = _group_key_glyph(glyphs)
 			if no_key_glyph:
-				print(f"  A key glyph was not found in {group_name} from {flc_filename}\n"
+				print(f"  A key glyph was not found in {name} from {flc_filename}\n"
 					f"  Glyph '{key_glyph}' was marked as the key glyph")
-			if group_flag.count('L'):
-				group_name = ufo.kern.first_prefix + key_glyph
-				ufo.kern_firsts_by_key_glyph[key_glyph] = group_name
-				ufo.kern_groups[group_name] = group_glyphs_str
-			if group_flag.count('R'):
-				group_name = ufo.kern.second_prefix + key_glyph
-				ufo.kern_seconds_by_key_glyph[key_glyph] = group_name
-				ufo.kern_groups[group_name] = group_glyphs_str
+			if flag.count('L'):
+				name = ufo.kern.first_prefix + key_glyph
+				ufo.kern_firsts_by_key_glyph[key_glyph] = name
+				ufo.kern_groups[name] = glyphs
+			if flag.count('R'):
+				name = ufo.kern.second_prefix + key_glyph
+				ufo.kern_seconds_by_key_glyph[key_glyph] = name
+				ufo.kern_groups[name] = glyphs
 		else:
-			ufo.ot_groups[group_name] = ' '.join(group_glyphs)
+			ufo.ot_groups[name] = ' '.join(glyphs)
 
 	_master_groups(ufo, font)
 	_update_font_groups(ufo, font)
@@ -327,48 +333,34 @@ cdef import_groups_plist(object ufo, object font):
 		unicode prefix_2 = 'public.kern2.'
 		unicode _prefix_1 = '@MMK_L_'
 		unicode _prefix_2 = '@MMK_R_'
-		unicode groups_plist
-		unicode group_name
-		unicode group_glyphs
+		unicode name
 		dict groups = {}
-		list glyphs = []
 
-	with open(ufo.groups.import_groups_plist_path, 'r') as f:
-		groups_plist = f.read().strip()
+	groups_plist = plistlib.readPlist(ufo.groups.import_groups_plist_path)
 
 	# normalize group names
-	groups_plist = groups_plist.replace(_prefix_1, prefix_1).replace(_prefix_2, prefix_2)
-	plist = etree.fromstring(groups_plist)
+	groups = {group.replace(_prefix_1, prefix_1).replace(_prefix_2, prefix_2): glyphs
+		for group, glyphs in items(groups_plist)}
 
 	ufo.kern_firsts_by_key_glyph, ufo.kern_seconds_by_key_glyph = {}, {}
 	ufo.kern_groups, ufo.ot_groups = {}, {}
-	group_name = ''
-	for plist_dict in plist:
-		for key in plist_dict:
-			if group_name and glyphs:
-				groups[group_name] = f" {' '.join(glyphs)} "
-			if key.tag == 'key':
-				group_name = str(key.text)
-			if key.tag == 'array':
-				glyphs = [str(glyph.text) for glyph in key]
-
-	for group_name, group_glyphs in items(groups):
-		if group_name.startswith('public.kern'):
-			key_glyph = group_name.replace(prefix_1, '').replace(prefix_2, '')
-			group_glyphs = group_glyphs.replace(f' {key_glyph} ', f" {key_glyph}' ")
-			ufo.kern_groups[group_name] = ' '.join(group_glyphs.split())
-			if group_name.count(prefix_1):
-				ufo.kern_firsts_by_key_glyph[key_glyph] = group_name
-			elif group_name.count(prefix_2):
-				ufo.kern_seconds_by_key_glyph[key_glyph] = group_name
+	for name, glyphs in items(groups):
+		if name.startswith('public.kern'):
+			key_glyph = name.replace(prefix_1, '').replace(prefix_2, '')
+			glyphs = ' '.join(glyphs).replace(f' {key_glyph} ', f" {key_glyph}' ")
+			ufo.kern_groups[name] = ' '.join(glyphs.split())
+			if name.count(prefix_1):
+				ufo.kern_firsts_by_key_glyph[key_glyph] = name
+			elif name.count(prefix_2):
+				ufo.kern_seconds_by_key_glyph[key_glyph] = name
 		else:
-			ufo.ot_groups[group_name] = group_glyphs
+			ufo.ot_groups[name] = ' '.join(glyphs)
 
 	_master_groups(ufo, font)
 	_update_font_groups(ufo, font)
 
 
-cdef tuple _group_key_glyph(list group_glyphs):
+cdef tuple _group_key_glyph(list glyphs):
 
 	'''
 	key glyph from .flc or current fl.font.classes
@@ -382,21 +374,22 @@ cdef tuple _group_key_glyph(list group_glyphs):
 	'''
 
 	cdef:
-			bint no_key_glyph = 0
+		bint no_key_glyph = 0
 
-	key_glyph = None
-	for glyph in group_glyphs:
+	key_glyph = ''
+	for glyph in glyphs:
 		if glyph.count("'"):
 			key_glyph = glyph.replace("'", '').strip()
 			break
-	if not key_glyph:
-		key_glyph, no_key_glyph = group_glyphs[0], 1
-		if len(group_glyphs) > 1:
-			group_glyphs = [key_glyph + "'"] + group_glyphs[1:]
-		else:
-			group_glyphs = [key_glyph + "'"]
 
-	return key_glyph, ' '.join(group_glyphs), no_key_glyph
+	if not key_glyph:
+		key_glyph, no_key_glyph = glyphs[0], 1
+		if len(glyphs) > 1:
+			glyphs = [key_glyph + "'"] + glyphs[1:]
+		else:
+			glyphs = [key_glyph + "'"]
+
+	return key_glyph, ' '.join(glyphs), no_key_glyph
 
 
 cdef _update_font_groups(object ufo, object font):

@@ -3,6 +3,7 @@
 # cython: infer_types=True, cdivision=True
 # cython: optimize.use_switch=True, optimize.unpack_method_calls=True
 from __future__ import absolute_import, division, print_function, unicode_literals
+from vfb2ufo3.future import open, range, str, zip, items
 
 from tools cimport element, int_float
 
@@ -10,26 +11,25 @@ import os
 
 from FL import fl
 
-from vfb2ufo import tools
-from vfb2ufo.constants import *
-from vfb2ufo.future import *
+from vfb2ufo3 import tools
+from vfb2ufo3.constants import XML_DECLARATION, AXIS_TAGS
 
-cdef list designspace_axis(unicode tag, default_value):
+cdef list ds_axis(unicode tag, default):
 
 	'''
 	designspace axis
 	'''
 
 	cdef:
-		unicode attrs = (f'default="{default_value}" minimum="0" maximum="1000"'
+		unicode attrs = (f'default="{default}" minimum="0" maximum="1000"'
 			f' name="{tag.lower()}" tag="{AXIS_TAGS[tag]}"')
 
-	elems = element('labelname', attrs='xml:lang="en"', text=tag, elems=None)
+	elems = [element('labelname', attrs='xml:lang="en"', text=tag, elems=None)]
 
-	return element('axis', attrs=attrs, text=None, elems=[elems])
+	return element('axis', attrs=attrs, text=None, elems=elems)
 
 
-cdef list designspace_location(list dimensions):
+cdef list ds_location(list dimensions):
 
 	'''
 	designspace location
@@ -38,7 +38,7 @@ cdef list designspace_location(list dimensions):
 	return element('location', attrs=None, text=None, elems=dimensions)
 
 
-cdef unicode designspace_dimension(unicode name, value):
+cdef unicode ds_dimension(unicode name, value):
 
 	'''
 	designspace dimension
@@ -50,7 +50,7 @@ cdef unicode designspace_dimension(unicode name, value):
 	return element('dimension', attrs=attrs, text=None, elems=None)
 
 
-cdef list designspace_source(
+cdef list ds_source(
 	unicode filename,
 	unicode familyname,
 	unicode stylename,
@@ -69,8 +69,8 @@ cdef list designspace_source(
 	cdef:
 		list copies = []
 		list elems = []
-		unicode	attrs = (f'filename="{filename}" familyname="{familyname}"'
-			f' stylename="{stylename}" name="{name}"')
+		unicode	attrs = f'filename="{filename}" familyname="{familyname}"' + \
+			f' stylename="{stylename}" name="{name}"'
 
 	if features:
 		copies.append(element('features', attrs='copy="1"', text=None, elems=None))
@@ -86,10 +86,10 @@ cdef list designspace_source(
 	return element('source', attrs=attrs, text=None, elems=elems)
 
 
-cdef list designspace_instance(
+cdef list ds_instance(
 	unicode familyname,
 	unicode filename,
-	unicode stylename,
+	unicode name,
 	unicode ps_name,
 	list location,
 	):
@@ -99,8 +99,9 @@ cdef list designspace_instance(
 	'''
 
 	cdef:
-		unicode	attrs = (f'filename="{filename}" familyname="{familyname}"'
-			f' name="{name}"')
+		unicode	attrs
+
+	attrs = f'filename="{filename}" familyname="{familyname}" name="{name}"'
 
 	if ps_name:
 		attrs += f' postscriptfontname="{ps_name}"'
@@ -108,7 +109,7 @@ cdef list designspace_instance(
 	return element('instance', attrs=attrs, text=None, elems=location)
 
 
-cdef list designspace_axes(list axes):
+cdef list ds_axes(list axes):
 
 	'''
 	designspace axes
@@ -117,7 +118,7 @@ cdef list designspace_axes(list axes):
 	return element('axes', attrs=None, text=None, elems=axes)
 
 
-cdef list designspace_instances(list instances):
+cdef list ds_instances(list instances):
 
 	'''
 	designspace instances
@@ -126,7 +127,7 @@ cdef list designspace_instances(list instances):
 	return element('instances', attrs=None, text=None, elems=instances)
 
 
-cdef list designspace_sources(list sources):
+cdef list ds_sources(list sources):
 
 	'''
 	designspace sources
@@ -141,51 +142,48 @@ def designspace(ufo):
 	designspace document
 	'''
 
+	dspace = ufo.designspace
 	master_copy = fl[ufo.master_copy]
 	family_name = str(master_copy.family_name)
 	version = str(master_copy.version)
 	axes_names = [str(axis[0]) for axis in master_copy.axis]
 	master_values, master_names = tools.master_names_values(master_copy)
-	master_filenames = ufo.designspace.sources
+	master_filenames = dspace.sources
 	axes, sources, instances = [], [], []
 
-	for axis_name, default in zip(axes_names, ufo.designspace.default):
-		axes.extend(designspace_axis(axis_name, default))
+	for axis_name, default in zip(axes_names, dspace.default):
+		axes.extend(ds_axis(axis_name, default))
 
-	i = 1
 	for filename, values, names in zip(master_filenames, master_values, master_names):
-		location = [designspace_dimension(name, value)
-			for name, value in zip(axes_names, values)]
-		location = designspace_location(location)
+		location = ds_location([
+			ds_dimension(name, value) for name, value in zip(axes_names, values)
+			])
 		style_name = ' '.join(names)
 		name = f'{family_name} {style_name}'
-		if i:
-			sources.extend(designspace_source(
+		if not sources:
+			sources.extend(ds_source(
 				f'masters\\{filename}', family_name, style_name, name, location, 1, 1, 1, 1,
 				))
-			i = 0
 		else:
-			sources.extend(designspace_source(
+			sources.extend(ds_source(
 				f'masters\\{filename}', family_name, style_name, name, location,
 				))
 
-	doc = designspace_axes(axes) + designspace_sources(sources)
+	doc = ds_axes(axes) + ds_sources(sources)
 
-	if ufo.designspace.values:
-		for values, names, attrs in zip(ufo.designspace.values, ufo.designspace.names, ufo.designspace.attrs):
-			location = [designspace_dimension(name, value)
-				for name, value in zip(axes_names, values)]
-			location = designspace_location(location)
+	if dspace.values:
+		for values, names, attrs in zip(dspace.values, dspace.names, dspace.attrs):
+			location = ds_location([
+				ds_dimension(name, value) for name, value in zip(axes_names, values)
+				])
 			if not isinstance(names, str):
 				style_name = ' '.join(names)
 			family_name = attrs.get('familyName', family_name)
 			name = attrs.get('styleName', style_name)
 			ps_name = attrs.get('postscriptFontName', '')
 			filename = os.path.join('instances', f'{family_name}-{style_name}').replace(' ', '')
-			instances.extend(designspace_instance(
-				family_name, filename, name, ps_name, location,
-				))
-		doc += designspace_instances(instances)
+			instances.extend(ds_instance(family_name, filename, name, ps_name, location))
+		doc += ds_instances(instances)
 
 	doc = '\n'.join(element('designspace', attrs='format="3"', text=None, elems=doc))
-	tools.write_file(ufo.designspace.path, XML_DECLARATION + doc)
+	tools.write_file(dspace.path, XML_DECLARATION + doc)

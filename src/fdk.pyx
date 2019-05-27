@@ -3,14 +3,15 @@
 # cython: infer_types=True, cdivision=True
 # cython: optimize.use_switch=True, optimize.unpack_method_calls=True
 from __future__ import absolute_import, division, print_function, unicode_literals
+from vfb2ufo3.future import str
 
 import os
 import shutil
+import time
 
 from FL import fl
 
-from vfb2ufo import tools
-from vfb2ufo.future import *
+from vfb2ufo3 import tools
 
 cdef glyph_order_db(object ufo, object font):
 
@@ -26,6 +27,7 @@ cdef glyph_order_db(object ufo, object font):
 	dollar	dollar	uni0024
 	percent	percent	uni0025
 	ampersand	ampersand	uni0026
+	...
 	'''
 
 	if not ufo.afdko.GOADB_path:
@@ -50,12 +52,14 @@ cdef font_name_db(object ufo, object font):
 	'''
 
 	cdef:
-		unicode fontnamedb = '\n'.join([
-			f'[{font.font_name}]',
-			f'f={font.family_name}',
-			f's={font.pref_style_name}',
-			f'l={font.pref_family_name}',
-			])
+		unicode fontnamedb
+
+	fontnamedb = '\n'.join([
+		f'[{font.font_name}]',
+		f'f={font.family_name}',
+		f's={font.pref_style_name}',
+		f'l={font.family_name} {font.pref_style_name}',
+		])
 
 	tools.write_file(ufo.instance_paths.afdko.fontnamedb, fontnamedb)
 
@@ -66,15 +70,15 @@ cdef makeotf_command(object ufo, bint batch):
 	generate MakeOTF command
 
 	* -f  input path
-	* -o  output path                     >> default (<ufoname>.otf)
+	* -o  output path                                        >> default (<ufoname>.otf)
 	-b/nb  bold on/off
 	-i/ni  italic on/off
 	-ff  features
 	-fs  create stub GSUB table if no features file
 	-gs  omit glyphs not in goadb
-	-mf  fontmenuname                     >> default (FontMenuNameDB)
-	-gf/nga  goadb on/off                 >> default (GlyphOrderAndAliasDB)
-	-r  release mode                      >> default
+	-mf  fontmenuname                                        >> default (FontMenuNameDB)
+	-gf/nga  goadb on/off                                    >> default (GlyphOrderAndAliasDB)
+	-r  release mode                                         >> default
 	-S/nS  subroutinization on/off
 	-ga  if not -r (release mode)
 	-osbOn/osbOff turn on/off os2 bits
@@ -84,10 +88,11 @@ cdef makeotf_command(object ufo, bint batch):
 		4 strikeout
 		5 bold
 		6 regular
-		7 USE_TYPO_METRICS                  >> default -osbOn 7
-		8 WWS (weight width slope only)     >> default -osbOn 8
+		7 USE_TYPO_METRICS                                     >> default -osbOn 7
+		8 WWS (weight width slope only)                        >> default -osbOn 8
 		9 (oblique)
 	-osv  os/2 version
+	-shw/-nshw  show/hide warnings about unhinted glyphs     >> default -nshw
 	-addn/naddn  replace notdef with makeotf notdef on/off
 	-adds/nadds  add mac symbol glyphs on/off
 	-serif (serifed generated glyphs)
@@ -142,9 +147,7 @@ cdef makeotf_command(object ufo, bint batch):
 	if ufo.afdko.makeotf_replace_notdef:
 		args.append('-addn')
 	if ufo.afdko.makeotf_suppress_unhinted_glyph_warnings:
-		args.append('-shw')
-	if ufo.afdko.makeotf_suppress_width_optimization:
-		args.append('-swo')
+		args.append('-nshw')
 
 	for arg in ufo.afdko.makeotf_args:
 		if arg not in args:
@@ -194,6 +197,8 @@ def parts(ufo):
 	build FontMenuNameDB, GlyphOrderAndAliasDB, and batch MakeOTF command
 	'''
 
+	start = time.clock()
+
 	font = fl[ufo.ifont]
 	font_name_db(ufo, font)
 	glyph_order_db(ufo, font)
@@ -202,3 +207,5 @@ def parts(ufo):
 		makeotf_command(ufo, 1)
 	elif ufo.afdko.makeotf_cmd:
 		makeotf_command(ufo, 0)
+
+	ufo.instance_times.afdko = time.clock() - start

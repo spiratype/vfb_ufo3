@@ -1,23 +1,28 @@
 # coding: future_fstrings
 from __future__ import absolute_import, division, print_function, unicode_literals
+from vfb2ufo3.future import range, items
 
-from vfb2ufo.future import *
+def reversed_dictionary(dictionary):
+	return {value: key for key, value in items(dictionary)}
 
 # XML
 
-XML_DECLARATION = '<?xml version="1.0" encoding="UTF-8"?>\n'
-PLIST_DOCTYPE = ('<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN"'
-	' "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n')
+XML_DECLARATION =    '<?xml version="1.0" encoding="UTF-8"?>\n'
 
-# FL FILE
+# PLIST
 
-FL_ENC_HEADER = ('%%FONTLAB ENCODING: 1252; MS Windows 1252 Western (ANSI)\n'
-	'%%GROUP:Type 1 World Microsoft\n')
-FLC_HEADER = '%%FONTLAB CLASSES\n'
-FLC_GROUP_MARKER = '%%CLASS'
-FLC_GLYPHS_MARKER = '%%GLYPHS '
+PLIST_DOCTYPE =      '<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" ' + \
+                     '"http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
+
+# FLC FILE
+
+FL_ENC_HEADER =      '%%FONTLAB ENCODING: 1252; MS Windows 1252 Western (ANSI)\n' + \
+                     '%%GROUP:Type 1 World Microsoft\n'
+FLC_HEADER =         '%%FONTLAB CLASSES\n'
+FLC_GROUP_MARKER =   '%%CLASS'
+FLC_GLYPHS_MARKER =  '%%GLYPHS '
 FLC_KERNING_MARKER = '%%KERNING'
-FLC_END_MARKER = '%%END\n'
+FLC_END_MARKER =     '%%END\n'
 
 # DESIGNSPACE
 
@@ -175,8 +180,6 @@ FL_WIN_CHARSET = {
 	255: 20,
 	}
 
-REVERSED_FL_WIN_CHARSET = {value: key for key, value in items(FL_WIN_CHARSET)}
-
 WIDTHS = {
 	'Ultra-condensed': 1,
 	'Extra-condensed': 2,
@@ -188,8 +191,6 @@ WIDTHS = {
 	'Extra-expanded': 8,
 	'Ultra-expanded': 9,
 	}
-
-REVERSED_WIDTHS = {value: key for key, value in items(WIDTHS)}
 
 WEIGHTS = {
 	'UltraLight': 100,
@@ -204,7 +205,9 @@ WEIGHTS = {
 	'ExtraBlack': 1000,
 	}
 
-REVERSED_WEIGHTS = {value: key for key, value in items(WEIGHTS)}
+REV_FL_WIN_CHARSET = reversed_dictionary(FL_WIN_CHARSET)
+REV_WIDTHS = reversed_dictionary(WIDTHS)
+REV_WEIGHTS = reversed_dictionary(WEIGHTS)
 
 # UFO CONFIGURABLE ATTRIBUTE SETS
 
@@ -239,7 +242,8 @@ CONFIGURABLE_ATTRIBUTES = {
 	'openTypeNameWWSSubfamilyName',
 	'openTypeOS2CodePageRanges',
 	'openTypeOS2FamilyClass',
-	'openTypeOS2Panose', 'openTypeOS2Selection',
+	'openTypeOS2Panose',
+	'openTypeOS2Selection',
 	'openTypeOS2StrikeoutPosition',
 	'openTypeOS2StrikeoutSize',
 	'openTypeOS2SubscriptXOffset',
@@ -298,7 +302,6 @@ STRING_ATTRIBUTES = {
 	'openTypeNameDescription',
 	'openTypeNameDesigner',
 	'openTypeNameDesignerURL',
-	'openTypeNameLicense',
 	'openTypeNameLicenseURL',
 	'openTypeNameManufacturer',
 	'openTypeNameManufacturerURL',
@@ -398,9 +401,7 @@ FL_STYLES = {
 	64: 'Regular',
 	}
 
-REVERSED_FL_STYLES = {value: key for key, value in items(FL_STYLES)}
-
-WIDTHS = {
+FL_WIDTHS = {
 	'Ultra-condensed': 1,
 	'Extra-condensed': 2,
 	'Condensed': 3,
