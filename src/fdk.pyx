@@ -1,24 +1,52 @@
-# coding: future_fstrings
-# cython: wraparound=False, boundscheck=False
-# cython: infer_types=True, cdivision=True
-# cython: optimize.use_switch=True, optimize.unpack_method_calls=True
-from __future__ import absolute_import, division, print_function, unicode_literals
-from vfb2ufo3.future import str
+# coding: utf-8
+# cython: wraparound=False
+# cython: boundscheck=False
+# cython: infer_types=True
+# cython: cdivision=True
+# cython: auto_pickle=False
+from __future__ import absolute_import, division, unicode_literals
+include 'includes/future.pxi'
+include 'includes/cp1252.pxi'
 
 import os
-import shutil
 import time
 
 from FL import fl
 
-from vfb2ufo3 import tools
+include 'includes/ignored.pxi'
+include 'includes/string.pxi'
+include 'includes/thread.pxi'
+include 'includes/io.pxi'
+include 'includes/path.pxi'
 
-cdef glyph_order_db(object ufo, object font):
+def fdk(ufo):
+	start = time.clock()
+	if ufo.opts.afdko_parts:
+		_parts(ufo)
+	if ufo.opts.psautohint_cmd or ufo.opts.psautohint_cmd:
+		psautohint_command(ufo, batch=ufo.opts.psautohint_batch_cmd)
+	ufo.instance_times.afdko = time.clock() - start
+
+def _parts(ufo):
+
+	'''
+	build FontMenuNameDB, GlyphOrderAndAliasDB, and batch MakeOTF command
+	'''
+
+	instance = fl[ufo.instance.ifont]
+	font_menu_name_db(ufo, instance)
+	glyph_order_db(ufo, instance)
+
+	if ufo.opts.afdko_makeotf_batch_cmd or ufo.opts.afdko_makeotf_cmd:
+		makeotf_command(ufo, batch=ufo.opts.afdko_makeotf_batch_cmd)
+
+
+def glyph_order_db(ufo, font):
 
 	'''
 	GlyphOrderAndAliasDB file
 
-	final/output_name working/source_name uni_name
+	final (working source name) uni_name
 	.notdef	.notdef	uniFFFD
 	space	space	uni0020
 	exclam	exclam	uni0021
@@ -30,41 +58,34 @@ cdef glyph_order_db(object ufo, object font):
 	...
 	'''
 
-	if not ufo.afdko.GOADB_path:
-		goadb = []
+	if not ufo.paths.afdko.goadb:
+		text = []
 		for glyph_name, glyph_uni_name in ufo.afdko.GOADB:
-			if glyph_name in ufo.glyphs:
-				if glyph_uni_name:
-					goadb.append(f'{glyph_name} {glyph_name} {glyph_uni_name}')
+			if font.FindGlyph(py_bytes(glyph_name)) not in ufo.glyph_sets.omit:
+				if glyph_uni_name is None:
+					text.append(f'{glyph_name} {glyph_name}')
 				else:
-					goadb.append(f'{glyph_name} {glyph_name}')
+					text.append(f'{glyph_name} {glyph_name} {glyph_uni_name}')
 
-		tools.write_file(ufo.instance_paths.afdko.goadb, '\n'.join(goadb))
+		write_file(ufo.paths.instance.goadb, file_str('\n'.join(text)))
 
 	else:
-		shutil.copy2(ufo.afdko.GOADB_path, ufo.instance_paths.afdko.goadb)
+		copy_file(ufo.paths.afdko.goadb, ufo.instance_paths.afdko.goadb)
 
 
-cdef font_name_db(object ufo, object font):
+def font_menu_name_db(ufo, font):
 
-	'''
-	FontMenuNameDB file
-	'''
+	text = file_str(
+		f'[{font.font_name.replace(" ", "")}]\n'
+		f'f={font.family_name}\n'
+		f's={font.pref_style_name}\n'
+		f'l={font.family_name} {font.pref_style_name}\n'
+		)
 
-	cdef:
-		unicode fontnamedb
-
-	fontnamedb = '\n'.join([
-		f'[{font.font_name}]',
-		f'f={font.family_name}',
-		f's={font.pref_style_name}',
-		f'l={font.family_name} {font.pref_style_name}',
-		])
-
-	tools.write_file(ufo.instance_paths.afdko.fontnamedb, fontnamedb)
+	write_file(ufo.paths.instance.fontnamedb, text)
 
 
-cdef makeotf_command(object ufo, bint batch):
+def makeotf_command(ufo, batch=0):
 
 	'''
 	generate MakeOTF command
@@ -110,102 +131,128 @@ cdef makeotf_command(object ufo, bint batch):
 	-sp # save options to file
 	'''
 
-	cdef:
-		object font = fl[ufo.ifont]
-		list args = []
-		list bits = []
-		list command
-		unicode makeotf_input = f'..\\{os.path.basename(ufo.instance_paths.ufo)}'
-		unicode makeotf_output = f'..\\{os.path.basename(ufo.instance_paths.otf)}'
-		unicode makeotf_goadb = os.path.basename(ufo.instance_paths.afdko.goadb)
-		unicode makeotf_fontmenudb = os.path.basename(ufo.instance_paths.afdko.fontnamedb)
+	instance = fl[ufo.instance.ifont]
+	args = []
 
-	if font.font_style in (1, 33):
+	if instance.font_style in (1, 33):
 		args.append('-osbOn 0')
-
-	if font.font_style in (32, 33):
+	elif instance.font_style in (32, 33):
 		args.append('-osbOn 5')
-
-	if font.font_style == 64:
+	elif instance.font_style == 64:
 		args.append('-osbOn 6')
 
-	args.extend(['-osbOn 7', '-osbOn 8', '-osbOff 9'])
+	args += ['-osbOn 7', '-osbOn 8', '-osbOff 9']
 
-	if ufo.afdko.makeotf_addDSIG:
+	if ufo.opts.afdko_makeotf_addDSIG:
 		args.append('-addDSIG')
-	if ufo.afdko.makeotf_release:
+	if ufo.opts.afdko_makeotf_release:
 		args.append('-r')
-	if ufo.afdko.makeotf_subroutinization:
+	if ufo.opts.afdko_makeotf_subroutinization:
 		args.append('-S')
-	if ufo.afdko.makeotf_verbose:
+	if ufo.opts.afdko_makeotf_verbose:
 		args.append('-V')
-	if ufo.afdko.makeotf_sans:
+	if ufo.opts.afdko_makeotf_sans:
 		args.append('-sans')
-		ufo.afdko.makeotf_serif = 0
-	if ufo.afdko.makeotf_serif:
+		ufo.opts.afdko_makeotf_serif = 0
+	if ufo.opts.afdko_makeotf_serif:
 		args.append('-serif')
-	if ufo.afdko.makeotf_replace_notdef:
+	if ufo.opts.afdko_makeotf_replace_notdef:
 		args.append('-addn')
-	if ufo.afdko.makeotf_suppress_unhinted_glyph_warnings:
+	if ufo.opts.afdko_makeotf_suppress_unhinted_glyph_warnings:
 		args.append('-nshw')
 
-	for arg in ufo.afdko.makeotf_args:
-		if arg not in args:
-			args.append(arg)
+	if ufo.opts.afdko_makeotf_args:
+		for arg in ufo.opts.afdko_makeotf_args:
+			if arg not in args:
+				args.append(arg)
 
-	command = [
-		'makeotf',
-		f'-f {makeotf_input}',
-		f'-gf {makeotf_goadb}',
-		f'-mf {makeotf_fontmenudb}',
-		' '.join(sorted(list(set(args)))),
-		'-skco',
-		'-osv 4',
-		f'-o {makeotf_output}',
-		]
-
-	if ufo.afdko.makeotf_batch_cmd:
-		ufo.afdko.cmd.append(chr(32).join(command))
-		if ufo.last:
-			command_path = ufo.afdko.cmd_path
-			write_makeotf_cmd(ufo.afdko.cmd, command_path, batch)
-	else:
-		command_path = ufo.instance_paths.afdko.cmd
-		write_makeotf_cmd(command, command_path, batch)
-
-
-cdef write_makeotf_cmd(list command, unicode command_path, bint batch):
-
-	'''
-	write batch MakeOTF command
-	'''
-
-	cdef:
-		unicode command_str
+	command = ' '.join((
+		f'makeotf -f "{os.path.basename(ufo.paths.instance.ufo)}"',
+		f'-gf "{os.path.basename(ufo.paths.instance.goadb)}"',
+		f'-mf "{os.path.basename(ufo.paths.instance.fontnamedb)}"',
+		*args,
+		f'-skco -osv 4 -o "{os.path.basename(ufo.paths.instance.otf)}"',
+		))
 
 	if batch:
-		command_str = f'echo on\n{chr(10).join(command)}\npause'
+		ufo.afdko.makeotf.cmd.append(command)
+		if ufo.last:
+			write_bat(ufo.afdko.makeotf.cmd, ufo.paths.afdko.makeotf_cmd, batch=1)
 	else:
-		command_str = f'echo on\n{chr(32).join(command)}\npause'
-
-	tools.write_file(command_path, command_str)
+		write_bat(command, ufo.paths.instance.makeotf_cmd)
 
 
-def parts(ufo):
+def write_bat(command, command_path, batch=0):
+
+	if batch:
+		command = '\n'.join(command)
+	command = f'echo on\n{command}\npause'
+
+	write_file(command_path, file_str(command))
+
+
+def psautohint_command(ufo, batch=0):
 
 	'''
-	build FontMenuNameDB, GlyphOrderAndAliasDB, and batch MakeOTF command
+	-v, verbose mode
+	-vv, extra-verbose mode.
+	-a, hint all glyphs
+	-w, write hints to default layer. This is a UFO-only
+	-d, use decimal coordinates
+	-g, comma-separated sequence of glyphs to hint
+		The glyph identifiers may be glyph indexes, glyph
+		names, or glyph CIDs. CID values must be prefixed with
+		a forward slash.
+		Examples:
+			psautohint -g A,B,C,69 MyFont.ufo
+			psautohint -g /103,/434,68 MyCIDFont
+	-x, comma-separated sequence of glyphs to NOT hint
+	-c, allow changes to the glyph outlines
+	--report-only, process the font without modifying it
+	--log, write output messages to a file
+	--no-flex, suppress generation of flex commands
+	--no-hint-sub, suppress hint substitution
+	--no-zones-stems, allow the font to have no alignment zones nor stem widths
 	'''
 
-	start = time.clock()
+	args = []
+	if ufo.opts.psautohint_write_to_default_layer:
+		args.append('-w')
+	if ufo.opts.psautohint_decimal:
+		args.append('-d')
+	if ufo.opts.psautohint_allow_outline_changes:
+		args.append('-c')
+	if ufo.opts.psautohint_no_flex:
+		args.append('--no-flex')
+	if ufo.opts.psautohint_no_hint_substitution:
+		args.append('--no-hint-sub')
+	if ufo.opts.psautohint_no_zones_stems:
+		args.append('--no-zones-stems')
+	if ufo.opts.psautohint_verbose:
+		args.append('-v')
+	if ufo.opts.psautohint_extra_verbose:
+		args.append('-vv')
+	if ufo.opts.psautohint_glyphs_list:
+		args.append(f'-g {",".join(ufo.opts.psautohint_glyphs_list)}')
+	if ufo.opts.psautohint_glyphs_omit_list:
+		args.append(f'-x {",".join(ufo.opts.psautohint_glyphs_omit_list)}')
+	if ufo.opts.psautohint_log:
+		log_path = ufo.paths.instance.psautohint_cmd.replace('.bat', '.log')
+		args.append(f'--log {log_path}')
+	if ufo.opts.psautohint_report_only:
+		args.append('--report-only')
 
-	font = fl[ufo.ifont]
-	font_name_db(ufo, font)
-	glyph_order_db(ufo, font)
+	command = ' '.join((
+		'psautohint',
+		*args,
+		f'"{os.path.basename(ufo.paths.instance.ufo)}"',
+		))
 
-	if ufo.afdko.makeotf_batch_cmd:
-		makeotf_command(ufo, 1)
-	elif ufo.afdko.makeotf_cmd:
-		makeotf_command(ufo, 0)
-
-	ufo.instance_times.afdko = time.clock() - start
+	if batch:
+		if ufo.psautohint.cmd is None:
+			ufo.psautohint.cmd = []
+		ufo.psautohint.cmd.append(command)
+		if ufo.last:
+			write_bat(ufo.psautohint.cmd, ufo.paths.psautohint_cmd, batch=1)
+	else:
+		write_bat(command, ufo.paths.instance.psautohint_cmd)
