@@ -4,6 +4,8 @@
 # cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
+# distutils: extra_compile_args=[-fconcepts, -O2, -fno-strict-aliasing, -Wno-register]
+# distutils: extra_link_args=[-fconcepts, -O2, -fno-strict-aliasing, -Wno-register]
 from __future__ import absolute_import, division, unicode_literals
 include 'includes/future.pxi'
 include 'includes/cp1252.pxi'
@@ -80,7 +82,7 @@ def _copy_opentype(ufo, master):
 	# copy opentype features
 	if master.features:
 		ufo.master.ot_features = features = ordered_dict()
-		if ufo.opts.kern_passthrough_kern_feature:
+		if ufo.opts.kern_feature_passthrough:
 			for feature in master.features:
 				features[py_unicode(feature.tag)] = py_unicode(feature.value).strip()
 		else:

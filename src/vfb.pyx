@@ -4,6 +4,8 @@
 # cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
+# distutils: extra_compile_args=[-fconcepts, -O2, -fno-strict-aliasing, -Wno-register]
+# distutils: extra_link_args=[-fconcepts, -O2, -fno-strict-aliasing, -Wno-register]
 from __future__ import absolute_import, division, unicode_literals, print_function
 include 'includes/future.pxi'
 include 'includes/cp1252.pxi'
@@ -24,7 +26,6 @@ include 'includes/io.pxi'
 include 'includes/path.pxi'
 include 'includes/string.pxi'
 include 'includes/defaults.pxi'
-include 'includes/conversions.pxi'
 include 'includes/nameid.pxi'
 include 'includes/flc.pxi'
 include 'includes/glifname.pxi'
@@ -103,7 +104,7 @@ def master_instance(ufo, name, attributes, path):
 	instance = fl[ufo.master_copy.ifont]
 	ufo.instance.ifont = ufo.master_copy.ifont
 
-	if ufo.master.ot_classes or ufo.master.ot_features:
+	if ufo.master.ot_prefix or ufo.master.ot_features:
 		fea.load_opentype(ufo, instance)
 
 	user.load_encoding(ufo, instance)
@@ -153,7 +154,7 @@ def _add_instance(ufo, index, value, name, attributes, path):
 	ufo.instance.index = index
 
 	if ufo.opts.vfb_save:
-		if ufo.master.ot_classes or ufo.master.ot_features:
+		if ufo.master.ot_prefix or ufo.master.ot_features:
 			fea.load_opentype(ufo, instance)
 
 	user.load_encoding(ufo, instance)
@@ -208,6 +209,8 @@ def build_instance_paths(ufo, attributes, path):
 		for file, _ in UFO_PATHS_INSTANCE_AFDKO:
 			path = os.path.join(ufo.paths.out, f'{bare_filename}{exts[file]}')
 			ufo.paths.instance[file] = file_str(path)
+		if os.path.isfile(ufo.paths.GOADB):
+			ufo.paths.afdko.goadb = ufo.paths.GOADB
 
 	if ufo.opts.psautohint_cmd:
 		path = os.path.join(ufo.paths.out, f'{bare_filename}_psautohint.bat')
@@ -221,7 +224,7 @@ def build_instance_paths(ufo, attributes, path):
 def _build_goadb(ufo, font):
 
 	if os.path.isfile(ufo.paths.GOADB):
-		ufo.afdko.GOADB = user.read_file(ufo.paths.GOADB).splitlines()
+		ufo.afdko.GOADB = [line.split() for line in user.read_file(ufo.paths.GOADB).splitlines()]
 	else:
 		goadb_from_encoding(ufo, font)
 
@@ -419,12 +422,7 @@ def component_lib(ufo, font):
 
 	# check for small cap variants of glyphs found in codepoint glyph set
 	for name in names:
-		smcp = (
-			name.endswith('.sc') or
-			name.endswith('.smcp') or
-			name.endswith('.c2sc')
-			)
-		if not smcp:
+		if not name.endswith(('.sc', '.smcp', '.c2sc')):
 			for sc_name in [f'{name}.sc', f'{name}.smcp', f'{name}.c2sc']:
 				glyph_index = font.FindGlyph(py_bytes(sc_name))
 				if glyph_index > -1:
@@ -434,14 +432,9 @@ def component_lib(ufo, font):
 
 
 def Glif(glyph, release, omit):
-	glyph_name = py_unicode(glyph.name)
+	glyph_name = glyph.name
 	glif_name = GLIFNAMES.get(glyph_name, glifname(glyph.name, release, omit))
-	return glyph_name, glif_name, mark(glyph), unicodes(glyph)
-
-def mark(glyph):
-	if glyph.mark:
-		return fl_mark_srgb(glyph.mark)
-	return ()
+	return cp1252_utf8_bytes(glyph_name), glif_name, glyph.mark, unicodes(glyph), omit
 
 def unicodes(glyph):
 	if glyph.unicodes:

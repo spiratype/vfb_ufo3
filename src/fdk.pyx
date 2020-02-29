@@ -1,9 +1,7 @@
 # coding: utf-8
-# cython: wraparound=False
-# cython: boundscheck=False
-# cython: infer_types=True
-# cython: cdivision=True
 # cython: auto_pickle=False
+# distutils: extra_compile_args=[-fconcepts, -O2, -fno-strict-aliasing, -Wno-register]
+# distutils: extra_link_args=[-fconcepts, -O2, -fno-strict-aliasing, -Wno-register]
 from __future__ import absolute_import, division, unicode_literals
 include 'includes/future.pxi'
 include 'includes/cp1252.pxi'
@@ -24,7 +22,8 @@ def fdk(ufo):
 	if ufo.opts.afdko_parts:
 		_parts(ufo)
 	if ufo.opts.psautohint_cmd or ufo.opts.psautohint_cmd:
-		psautohint_command(ufo, batch=ufo.opts.psautohint_batch_cmd)
+		batch = bool(ufo.opts.psautohint_batch_cmd and len(ufo.instance_values) > 1)
+		psautohint_command(ufo, batch=batch)
 	ufo.instance_times.afdko = time.clock() - start
 
 def _parts(ufo):
@@ -38,7 +37,8 @@ def _parts(ufo):
 	glyph_order_db(ufo, instance)
 
 	if ufo.opts.afdko_makeotf_batch_cmd or ufo.opts.afdko_makeotf_cmd:
-		makeotf_command(ufo, batch=ufo.opts.afdko_makeotf_batch_cmd)
+		batch = bool(ufo.opts.afdko_makeotf_batch_cmd and len(ufo.instance_values) > 1)
+		makeotf_command(ufo, batch=batch)
 
 
 def glyph_order_db(ufo, font):
@@ -66,9 +66,7 @@ def glyph_order_db(ufo, font):
 					text.append(f'{glyph_name} {glyph_name}')
 				else:
 					text.append(f'{glyph_name} {glyph_name} {glyph_uni_name}')
-
 		write_file(ufo.paths.instance.goadb, file_str('\n'.join(text)))
-
 	else:
 		copy_file(ufo.paths.afdko.goadb, ufo.instance_paths.afdko.goadb)
 
@@ -182,15 +180,6 @@ def makeotf_command(ufo, batch=0):
 		write_bat(command, ufo.paths.instance.makeotf_cmd)
 
 
-def write_bat(command, command_path, batch=0):
-
-	if batch:
-		command = '\n'.join(command)
-	command = f'echo on\n{command}\npause'
-
-	write_file(command_path, file_str(command))
-
-
 def psautohint_command(ufo, batch=0):
 
 	'''
@@ -256,3 +245,11 @@ def psautohint_command(ufo, batch=0):
 			write_bat(ufo.psautohint.cmd, ufo.paths.psautohint_cmd, batch=1)
 	else:
 		write_bat(command, ufo.paths.instance.psautohint_cmd)
+
+def write_bat(command, command_path, batch=0):
+
+	if batch:
+		command = '\n'.join(command)
+	command = file_str(f'echo on\n{command}\npause')
+
+	write_file(command_path, command)

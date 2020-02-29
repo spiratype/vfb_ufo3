@@ -4,6 +4,9 @@
 # cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
+# distutils: language=c++
+# distutils: extra_compile_args=[-fopenmp, -fconcepts, -O3, -Wno-register, -fno-strict-aliasing, -std=c++17]
+# distutils: extra_link_args=[-fopenmp, -fconcepts, -O3, -Wno-register, -fno-strict-aliasing, -std=c++17]
 from __future__ import absolute_import, division, unicode_literals
 include 'includes/future.pxi'
 include 'includes/cp1252.pxi'
@@ -14,11 +17,8 @@ import FL
 from FL import fl
 
 include 'includes/ignored.pxi'
-include 'includes/thread.pxi'
-include 'includes/io.pxi'
 include 'includes/string.pxi'
 include 'includes/glif.pxi'
-include 'includes/xml.pxi'
 
 def glifs(ufo):
 	start = time.clock()
@@ -48,8 +48,8 @@ def _glifs(ufo):
 	'''
 
 	if ufo.scale is not None:
-		global UFO_SCALE
-		UFO_SCALE = <double>ufo.scale
+		global SCALE
+		SCALE = <double>ufo.scale
 
 	font = fl[ufo.instance.ifont]
 	optimize = ufo.opts.glyphs_optimize
@@ -60,28 +60,41 @@ def _glifs(ufo):
 	optimized_glyphs = ufo.glyph_sets.optimized
 	omit_glyphs = ufo.glyph_sets.omit
 
-	base_contours = {}
+	cdef:
+		cpp_glif glif
+		cpp_glifs glifs
+		cpp_anchors anchors
+		cpp_components components
+		cpp_contour contour
+		cpp_contours contours
+		cpp_anchor_lib anchor_lib
+		cpp_component_lib component_lib
+		cpp_contour_lib contour_lib
+		vector[string] unicodes
+		string path
+		string text
+		bytes name
+		bytes code_point
+		int mark
+		bint omit
+		size_t base
+		size_t n = len(font.glyphs)
 
-	glifs = {i: Glif(*glif, i, ufo) for i, glif in items(ufo.glifs)}
+	anchor_lib.reserve(n)
+	component_lib.reserve(n)
+	contour_lib.reserve(n)
+	glifs.reserve(n)
 
-	# build library of contours mapped to a base glyph
-	if optimize:
-		for base in bases:
-			glyph = font[base]
-			if remove_overlaps:
+	if optimize and remove_overlaps:
+		for i, glyph in enumerate(font.glyphs):
+			if i in bases:
 				glyph.RemoveOverlap()
-			base_contours[base] = glif_base_contours(glyph.nodes)
+			if glyph.unicode not in code_points and i not in optimized_glyphs:
+				if glyph.components:
+					glyph.Decompose()
+				if i not in bases:
+					glyph.RemoveOverlap()
 
-		# decompose only glyphs which do not have contours built
-		if remove_overlaps:
-			for i, glyph in enumerate(font.glyphs):
-				if glyph.unicode not in code_points and i not in optimized_glyphs:
-					if glyph.components:
-						glyph.Decompose()
-					if i not in bases:
-						glyph.RemoveOverlap()
-
-	# decompose/remove glyph overlaps
 	elif decompose and remove_overlaps:
 		for i, glyph in enumerate(font.glyphs):
 			if glyph.components:
@@ -99,132 +112,110 @@ def _glifs(ufo):
 			if i not in bases:
 				glyph.RemoveOverlap()
 
-	# fully build base glifs
-	for base in bases:
-		glyph = font[base]
-		glif_glif(glifs, glyph, base, font, base_contours)
 
-	# build non-base glyphs
-	for i, glyph in enumerate(font.glyphs):
-		if i not in bases:
-			glif_glif(glifs, glyph, i, font, base_contours)
+	for i, (name, glif_name, mark, code_points, omit) in sorted(items(ufo.glifs)):
+		path.clear()
+		unicodes.clear()
+		unicodes.reserve(len(code_points))
+		for code_point in code_points:
+			unicodes.push_back(code_point)
+		path = os.path.join(ufo.paths.instance.glyphs, glif_name).encode('utf_8')
+		glyph = font[i]
+		glif = cpp_glif(
+			name,
+			path,
+			unicodes,
+			mark,
+			glyph.width * SCALE,
+			i,
+			omit,
+			i in bases,
+			bool(glyph.anchors),
+			bool(glyph.components),
+			bool(glyph.nodes),
+			bool(glyph.components and optimize),
+			)
+		glifs.push_back(glif)
 
-	for glif in values(glifs):
-		if not glif.base and not glif.omit:
-			glif_build(glif)
+	for glif in glifs:
+		glyph = font[glif.index]
+		if glyph.anchors:
+			anchor_lib[glif.index] = glif_anchors(glyph.anchors)
+		if glyph.components:
+			component_lib[glif.index] = glif_components(glyph.components, font)
+		if glyph.nodes:
+			contour_lib[glif.index] = glif_contours(glyph.nodes)
 
-	while threading.active_count() != 1:
-		time.sleep(.02)
-	del glifs
-
-def glif_glif(glifs, glyph, glyph_index, font, base_contours):
-
-	glif = glifs[glyph_index]
-	glif.width = glyph.width
-
-	if glyph.anchors:
-		glif.anchors = [Anchor(anchor.x, anchor.y, anchor.name)
-			for anchor in glyph.anchors]
-
-	if glyph.components:
-		for component in glyph.components:
-			offset, scale, index = component.delta, component.scale, component.index
-			if index in base_contours:
-				if offset == NO_OFFSET and scale == NO_SCALE:
-					glif.component_contours += glifs[index].contours
-					continue
-				base_contour = base_contours[index]
-				glif.contours += glif_component_contours(base_contour, offset, scale)
-			else:
-				glif.components.append(Component(offset, scale, font[index].name))
-
-	if glyph.nodes:
-		if glyph_index in base_contours:
-			glif.contours = [[Point(*point) for point in contour]
-				for contour in base_contours[glyph_index]]
-		else:
-			glif.contours = glif_contours(glyph.nodes)
-
-	if glif.base:
-		glif_build(glif)
-
-def glif_build(glif):
-
-	unicodes = []
-	anchors = []
-	components = []
-	contours = []
-	component_contours = []
-	lib = []
-
-	if glif.unicodes:
-		unicodes = [glif_unicode(code_point) for code_point in glif.unicodes]
-
-	if glif.anchors:
-		anchors = [glif_anchor(anchor) for anchor in glif.anchors]
-
-	if glif.components:
-		components = [glif_component(component) for component in glif.components]
-
-	if glif.component_contours:
-		contours = glif.component_contours
-
-	if glif.contours:
-		if glif.base:
-			for contour in glif.contours:
-				contours += glif_contour(contour)
-			glif.contours = contours[:]
-		else:
-			for contour in glif.contours:
-				contours += glif_contour(contour)
-
-	if glif.mark_color:
-		lib = glif.lib
-
-	outline = glif_outline(components + contours)
-
-	elems = unicodes + anchors + outline + lib
-
-	text = '\n'.join((
-		f'{XML_PROLOG}\n<glyph name="{glif.name}" format="2">\n'
-		f'\t<advance width="{glif.advance}"/>',
-		*elems,
-		'</glyph>\n'
-		))
-
-	glif.text = file_str(text)
-
-	if glif.ufoz:
-		glif.archive()
+	if ufo.opts.ufoz:
+		for glif in glifs:
+			text = build_glif(glif, anchor_lib, component_lib, contour_lib, True)
+			ufo.archive[glif.path] = text
 	else:
-		glif.write()
+		write_glif_files(glifs, anchor_lib, component_lib, contour_lib, False)
 
-def glif_contours(nodes):
 
-	off, cubic = 0, 1
-	contours, contour = [], []
-	for i, node in enumerate(nodes):
+cdef cpp_anchors glif_anchors(object glyph_anchors):
+
+	cdef:
+		cpp_anchors anchors
+		cpp_anchor anchor
+		bytes name
+
+	anchors.reserve(len(glyph_anchors))
+	for glyph_anchor in glyph_anchors:
+		name = cp1252_utf8_bytes(glyph_anchor.name)
+		anchors.push_back(cpp_anchor(name, glyph_anchor.x * SCALE, glyph_anchor.y * SCALE))
+
+	return anchors
+
+cdef cpp_components glif_components(object glyph_components, object font):
+
+	cdef:
+		cpp_components components
+		cpp_component component
+		bytes name
+		object offset, scale
+		size_t i
+
+	components.reserve(len(glyph_components))
+	for glyph_component in glyph_components:
+		offset, scale, i = glyph_component.delta, glyph_component.scale, glyph_component.index
+		name = cp1252_utf8_bytes(font[i].name)
+		components.push_back(cpp_component(name, i, offset.x * SCALE, offset.y * SCALE, scale.x, scale.y))
+
+	return components
+
+cdef cpp_contours glif_contours(object glyph_nodes):
+
+	cdef:
+		cpp_contours contours
+		cpp_contour contour
+		bint off = 0
+		bint cubic = 1
+		int point_type = 0
+		size_t n = len(glyph_nodes)
+
+	contour.reserve(n / 2)
+	for i, node in enumerate(glyph_nodes):
 
 		if node.type == 17:
 			start_node = node[0]
-			if contour:
-				contours.append(contour)
-				contour = []
+			if not contour.empty():
+				contour.shrink_to_fit()
+				contours.push_back(contour)
+				contour.clear()
+				contour.reserve(n - i + 1)
 
 		if node.count > 1:
 			cubic = 1
 			if start_node == node[0]:
-				contour[0] = Point(node.x, node.y, 1, node.alignment)
-				contour += [
-					Point(node.points[1].x, node.points[1].y, 4, 0),
-					Point(node.points[2].x, node.points[2].y, 4, 0),
-					]
+				contour.push_back(cpp_contour_point(node.points[1].x * SCALE, node.points[1].y * SCALE, 4, 0))
+				contour.push_back(cpp_contour_point(node.points[2].x * SCALE, node.points[2].y * SCALE, 4, 0))
+				contour[0] = cpp_contour_point(node.x * SCALE, node.y * SCALE, 1, node.alignment)
 			else:
-				contour += [
-					Point(node.points[1].x, node.points[1].y, 4, 0),
-					Point(node.points[2].x, node.points[2].y, 4, 0),
-					Point(node.x, node.y, 1, node.alignment),
-					]
+				contour.push_back(cpp_contour_point(node.points[1].x * SCALE, node.points[1].y * SCALE, 4, 0))
+				contour.push_back(cpp_contour_point(node.points[2].x * SCALE, node.points[2].y * SCALE, 4, 0))
+				contour.push_back(cpp_contour_point(node.x * SCALE, node.y * SCALE, 1, node.alignment))
 		else:
 			if cubic:
 				point_type = 3
@@ -240,76 +231,8 @@ def glif_contours(nodes):
 					else:
 						point_type = 3
 
-			contour.append(Point(node.x, node.y, point_type, 0))
+			contour.push_back(cpp_contour_point(node.x * SCALE, node.y * SCALE, point_type, 0))
 
-	contours.append(contour)
+	contour.shrink_to_fit()
+	contours.push_back(contour)
 	return contours
-
-def glif_base_contours(nodes):
-
-	off, cubic = 0, 1
-	contours, contour = [], []
-	for i, node in enumerate(nodes):
-
-		if node.type == 17:
-			start_node = node[0]
-			if contour:
-				contours.append(contour)
-				contour = []
-
-		if node.count > 1:
-			cubic = 1
-			if start_node == node[0]:
-				contour[0] = (node.x, node.y, 1, node.alignment)
-				contour += [
-					(node.points[1].x, node.points[1].y, 4, 0),
-					(node.points[2].x, node.points[2].y, 4, 0),
-					]
-			else:
-				contour += [
-					(node.points[1].x, node.points[1].y, 4, 0),
-					(node.points[2].x, node.points[2].y, 4, 0),
-					(node.x, node.y, 1, node.alignment),
-					]
-		else:
-			if cubic:
-				point_type = 3
-			else:
-				if node.type == 65:
-					point_type = 4
-					off = 1
-					cubic = 0
-				else:
-					if off:
-						point_type = 2
-						off = 0
-					else:
-						point_type = 3
-
-			contour.append((node.x, node.y, point_type, 0))
-
-	contours.append(contour)
-	return contours
-
-def glif_component_contours(contours, offset, scale):
-
-	if offset == NO_OFFSET:
-		return [[scaled_point(*point, scale) for point in contour]
-			for contour in contours]
-
-	if scale == NO_SCALE:
-		return [[offset_point(*point, offset) for point in contour]
-			for contour in contours]
-
-	return [[offset_scaled_point(*point, offset, scale)
-		for point in contour] for contour in contours]
-
-def scaled_point(x, y, point_type, smooth, scale):
-	return Point(x * scale.x, y * scale.y, point_type, smooth)
-
-def offset_point(x, y, point_type, smooth, offset):
-	return Point(x + offset.x, y + offset.y, point_type, smooth)
-
-def offset_scaled_point(x, y, point_type, smooth, offset, scale):
-	return Point((x + offset.x) * scale.x, (y + offset.y) * scale.y,
-		point_type, smooth)

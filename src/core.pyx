@@ -4,6 +4,8 @@
 # cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
+# distutils: extra_compile_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
+# distutils: extra_link_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
 from __future__ import absolute_import, division, unicode_literals, print_function
 include 'includes/future.pxi'
 include 'includes/cp1252.pxi'
@@ -76,7 +78,8 @@ def parse_options(options):
 	ufo.total_times.start = start
 	ufo.paths.encoding = unique_path('__temp__.enc')
 
-	fl.output = b'Processing user options..\n\n'
+	fl.output = b''
+	print(b'Processing user options..\n')
 	ufo.master.ifont = fl.ifont
 	master = fl[fl.ifont]
 
@@ -313,7 +316,8 @@ def build_paths(ufo, master=0):
 		base_filename = ufo.master.family_name
 
 	for name in ufo.instance_names:
-		filename = f'{base_filename}-{name}'.replace(' ', '')
+		filename = f'{base_filename}-{name}' if name else f'{base_filename}'
+		filename = filename.replace(' ', '')
 		ufo_filename = f'{filename}.ufo'
 		ufoz_filename = f'{filename}.ufoz'
 		vfb_filename = f'{filename}.vfb'
@@ -369,11 +373,10 @@ def master_instances(font, layer=None):
 
 	values = [[i * 1000 for i in axis][:j] for axis in axes]
 
-	names = [''.join([f'{short[i]}{axis[i]}' for i in range(j)])
-		for short, axis in zip(shorts, axes)]
+	names = [''.join(f'{short_name[i]}{axis[i]}' for i in range(j))
+		for short_name, axis in zip(shorts, axes)]
 
-	attributes = [{'styleName': name}
-		for name in names]
+	attributes = [{'styleName': name} for name in names]
 
 	if layer is not None:
 		return [values[layer]], [names[layer]], [attributes[layer]]
@@ -490,9 +493,9 @@ def show_default_optimize_code_points():
 	code_points = [[f'0x{code_points[i+j]:04x},'
 		for j in range(8) if i + j < len(code_points)]
 		for i in range(0, len(code_points), 8)]
-	code_points = '\n'.join(['\t' + ' '.join(line) for line in code_points])
+	code_points = '\n'.join('\t' + ' '.join(line) for line in code_points)
 
-	print(b'OPTIMIZE_CODE_POINTS = {{\n%s\n\t}}' % py_bytes(code_points))
+	print(b'OPTIMIZE_CODE_POINTS = {\n%s\n\t}' % py_bytes(code_points))
 
 
 def check_instance_lists(options, master):

@@ -4,6 +4,8 @@
 # cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
+# distutils: extra_compile_args=[-fconcepts, -O2, -Wno-register]
+# distutils: extra_link_args=[-fconcepts, -O2, -Wno-register]
 from __future__ import absolute_import, division, unicode_literals
 include 'includes/future.pxi'
 include 'includes/cp1252.pxi'
