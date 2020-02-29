@@ -4,26 +4,58 @@ Multiple master-compatible **Unified Font Object** (UFO) version 3 font writer A
 
 **VFB2UFO3** is primarily intended to create scaled UFO instances from a > 1000 UPM multiple master FontLab `.vfb` font with PostScript outlines for use with the AFDKO tools for creating binary fonts while still working with Windows FontLab 5.2. The most significant non-trivial change that will occur in export is the renaming of kerning glyph groups (FontLab *classes*). Providing a `.flc` (FontLab-class) file can speed up conversion significantly when font groups are not identifiable as first/second from their name. All glyph hints/links are ignored. A batch command can be created for use with `psautohint`, which supports hinting outlines with decimal coordinates.
 
+## Installation
+This package may be installed via PyPi:
+
+`pip install vfb2ufo3`
+
+Alternatively, the latest release `.zip` may be downloaded, unzipped, and added to your FontLab Macros folder as shown:
+
+```
+[user folder]
+`-- Documents
+    `-- Fontlab
+        `-- Studio 5
+            `-- Macros
+                `-- System
+                    `-- Modules
+                        `-- vfb2ufo3
+                            `-- __init__.py
+                            `-- core.pyd
+                            `-- designspace.pyd
+                            `-- fdk.pyd
+                            `-- fea.pyd
+                            `-- fontinfo.pyd
+                            `-- glif.pyd
+                            `-- groups.pyd
+                            `-- kern.pyd
+                            `-- mark.pyd
+                            `-- plist.pyd
+                            `-- tools.pyd
+                            `-- user.py
+                            `-- vfb.pyd
+```
+
 ## Requirements
-This package has no dependencies outside of the standard library. It is written in Cython and in Python 3 syntax where it is natively supported by Cython. The submodules are compiled into .pyd extension modules. To recompile the submodules, the PyPi `cython` package and a compiler for Cython to utilize during extension module compilation will be required.
+This package has no dependencies outside of the standard library. It is written in Cython and in Python 3 syntax where it is natively supported by Cython. The submodules are compiled into `.pyd` extension modules. To recompile the submodules, the PyPi `cython` package and a compiler for Cython to utilize during extension module compilation will be required.
 
 ### Optional
 * cython
 **pip install cython**
 <https://github.com/cython/cython>
 
+* Minimalist GNU for Window (MinGW)
+<http://www.mingw.org>
+<http://winlibs.com>
+
 * AFDKO
 **pip install afdko**
 <https://github.com/adobe-type-tools/afdko>
 
-* psautohint
-**pip install psautohint**
-<https://github.com/adobe-type-tools/psautohint>
-
 ### Functionality
 UFO output is produced without changes to the source font. The source font will be copied and UFOs will be created from the copy. If the font is multiple master, instances will be generated from the copy. If a specific `layer` or `instance_values` are not provided for a multiple master source font, a UFO will be generated for each master in the font.
 
-Fonts with a large number of glyphs benefit greatly from supplying additional glyph names to be optimized (`glyphs_optimize_names`) and/or glyph names and suffixes which can be omitted from the final UFO instance (`glyphs_omit_names`, `glyphs_omit_suffixes`). See **GLYPHS OPTIONS** below.
+Fonts with a large number of glyphs benefit greatly from supplying additional glyph names to be optimized when removing overlaps (`glyphs_optimize_names`) and/or glyph names and suffixes which can be omitted from the final UFO instance (`glyphs_omit_names`, `glyphs_omit_suffixes`). See **GLYPHS OPTIONS** below.
 
 Generated instances/layers can be saved and/or left open after generation via the `vfb_save` and `vfb_close` options. If `vfb_save` is set to `True`, the resulting `.vfb` instance will be updated during UFO creation. This includes glyph outline changes (overlap removal and decomposition).
 
@@ -127,7 +159,7 @@ By default, when decomposing and removing overlaps from glyph outlines for expor
 
 When decomposing only, the optimization outlined above will be used for all glyphs containing components.
 
-The generated `.vfb`instance(s) will leave components in component-form.
+The generated `.vfb` instance(s) will leave components in component-form.
 
 To disable the optimizations outlined above, set the `glyphs_optimize` option to `False`.
 
@@ -226,7 +258,7 @@ Greek Mono- and Polytonic
 Font groups can be added to the `features.fea` file on export by setting `features_import_groups` to `True`. The font's features are neither formatted nor checked for correctness. Users are responsible for moving referenced feature files from `include()` statements to the chosen output directory. Also see **KERN FEATURE OPTIONS** and **MARK FEATURE OPTIONS** below for `kern` and `mark` feature options.
 
 #### Kern feature options
-Kern values will be scaled in parity with the output UFO. This scaling is independent from the created `.vfb` instance. A minimum value can be set using `kern_min_value`. This value should be an integer and when set, all kern values (negative and positive) not above the threshold will be omitted from the `kern` feature.
+Kern values will be scaled in parity with the output UFO. This scaling is independent from the created `.vfb` instance. A minimum value can be set using `kern_min_value`. This value should be a positive integer and when set, all kern values (negative and positive) not above the threshold will be omitted from the `kern` feature.
 
 By default, the `kern` feature from the master font is not included in the `features.fea` file. To include the `kern` feature from the master font, `kern_feature_passthrough` should be set to `True`.
 
@@ -240,9 +272,9 @@ A `mark` feature can be generated on export by setting `mark_feature_generate` t
 #### Group options
 Providing a FontLab-class file (`.flc`) or `groups.plist` speeds up UFO creation time significantly when the group names are not named using first and second group identifiers (see `groups_flc_path` and `groups_plist_path` options). Group names in the `.flc` file do not have match any specific formatting (e.g. `MMK_R_<key glyph>`, `public.kern2.<key glyph>`).
 
-When not using either a `.flc` or `groups.plist` file, group names will be checked for UFO3-style group identifiers (`public.kern1.<key glyph>`, `public.kern2.<key glyph>`), MetricsMachine-style identifiers (`MMK_L_<key glyph>`, `MMK_R_<key glyph>`), and the simpler `_L` and `_R` identifier suffixes. Groups which either have no kerning or not identifiable using their name will be identified as first/second using FontLab's built-in `GetClassLeft`/`GetClassRight` methods.
+When not using either a `.flc` or `groups.plist` file, group names will be checked for UFO3-style group identifiers (`public.kern1.<key glyph>`, `public.kern2.<key glyph>`), MetricsMachine-style identifiers (`MMK_L_<key glyph>`, `MMK_R_<key glyph>`), and the simpler `_L` and `_R` identifier suffixes. Groups which either have no kerning or are not identifiable using their name will be identified as first/second using FontLab's built-in `GetClassLeft`/`GetClassRight` methods.
 
-If the `export_flc` option is set to `True`, a FontLab-class file (`.flc`) will be generated with group names matching those of the generated UFOs. This file will be located in the same directory as the generated UFOs.
+If the `export_flc` option is set to `True`, a FontLab-class file (`.flc`) will be generated with group names matching those of the generated UFOs. This file will be located in the same directory as the generated UFO(s).
 
 The `kern_ignore_no_kerning` option can be set to `True` to ignore groups which have no kerning pairs. This may be desirable if making a binary font from the UFO. This option has no effect when using an imported `.flc` or `groups.plist` file.
 
@@ -286,7 +318,7 @@ Final output (UFO group plist):
 ```
 
 #### AFDKO options
-The `OS/2`, `hhea`, `head`, and `name` tables will be added to the features file. The `name` table entry strings will be formatted according to [OpenType Feature File Specification § 9.e](https://adobe-type-tools.github.io/afdko/OpenTypeFeatureFileSpecification.html#9.e). Any strings unable to be formatted fully for each platform's specific encoding restriction (Windows -- [`UTF-8`](https://en.wikipedia.org/wiki/UTF-8)>, Macintosh -- [`Mac OS Roman`](https://en.wikipedia.org/wiki/Mac_OS_Roman)) will be formatted to their nearest ASCII equivalent rather than omitting any un-encodable characters. The standard library [`unicodedata`](https://docs.python.org/2.7/library/unicodedata.html) module is used for entries that meet this need.
+The `OS/2`, `hhea`, `head`, and `name` tables will be added to the features file. The `name` table entry strings will be formatted according to [OpenType Feature File Specification § 9.e](https://adobe-type-tools.github.io/afdko/OpenTypeFeatureFileSpecification.html#9.e). Any strings unable to be formatted fully for each platform's specific encoding restriction (Windows -- [`UTF-8`](https://en.wikipedia.org/wiki/UTF-8), Macintosh -- [`Mac OS Roman`](https://en.wikipedia.org/wiki/Mac_OS_Roman)) will be formatted to their nearest ASCII equivalent rather than omitting any un-encodable characters. The standard library [`unicodedata`](https://docs.python.org/2.7/library/unicodedata.html) module is used for any entries meeting this criteria.
 
 *[GlyphOrderAndAliasDB](https://adobe-type-tools.github.io/afdko/MakeOTFUserGuide.pdf)* (GOADB) and *[FontMenuNameDB](https://adobe-type-tools.github.io/afdko/MakeOTFUserGuide.pdf)* files can be generated for use with MakeOTF. The GOADB can be provided (`afdko_makeotf_GOADB_path`), derived from the `.vfb`'s original encoding, or the order of the source font.
 
@@ -340,7 +372,7 @@ vfb2ufo3.write_ufo(
 	)
 ```
 
-**Test (~2900 glyphs @ 10,000 UPM -> 1,000 UPM), <6.5 sec**
+**Test (~2900 glyphs @ 10,000 UPM -> 1,000 UPM), ≈7 sec**
 ```
 flc_path = <path to .flc file>
 glyphs_optimize_names = [
@@ -372,7 +404,7 @@ vfb2ufo3.write_ufo(
 	)
 ```
 
-**Test (~2900 glyphs @ 10,000 UPM -> 1,000 UPM), <3.5 sec**
+**Test (~2900 glyphs @ 10,000 UPM -> 1,000 UPM), ≈3-4 sec**
 ```
 flc_path = <path to .flc file>
 glyphs_omit_list = [
@@ -390,7 +422,7 @@ vfb2ufo3.write_ufo(
 	)
 ```
 
-**Test (~3200 glyphs @ 10,000 UPM -> 1,000 UPM), ≈3 sec**
+**Test (~3200 glyphs @ 10,000 UPM -> 1,000 UPM), ≈3-4 sec**
 ```
 flc_path = <path to .flc file>
 
@@ -409,6 +441,15 @@ Jameson R Spires
 This package is available under the [MIT License](https://opensource.org/licenses/MIT)
 
 #### Version history
+* version 0.6.0
+small fix for single-master font builds
+small changes to several source files
+`glif.pyx` has been rewritten in C++ as much as possible
+
+* version 0.5.2
+small change to `groups.pyx`
+re-added link to known working GCC compiler
+
 * version 0.5.1
 majority of code base rewritten
 support for UFO3 specification only
