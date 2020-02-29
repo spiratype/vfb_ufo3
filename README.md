@@ -40,17 +40,17 @@ Alternatively, the latest release `.zip` may be downloaded, unzipped, and added 
 This package has no dependencies outside of the standard library. It is written in Cython and in Python 3 syntax where it is natively supported by Cython. The submodules are compiled into `.pyd` extension modules. To recompile the submodules, the PyPi `cython` package and a compiler for Cython to utilize during extension module compilation will be required.
 
 ### Optional
-* cython
-**pip install cython**
-<https://github.com/cython/cython>
+* cython  
+**pip install cython**  
+<https://github.com/cython/cython>  
 
-* Minimalist GNU for Window (MinGW)
-<http://www.mingw.org>
-<http://winlibs.com>
+* Minimalist GNU for Window (MinGW)  
+<http://www.mingw.org>  
+<http://winlibs.com>  
 
-* AFDKO
-**pip install afdko**
-<https://github.com/adobe-type-tools/afdko>
+* AFDKO  
+**pip install afdko**  
+<https://github.com/adobe-type-tools/afdko>  
 
 ### Functionality
 UFO output is produced without changes to the source font. The source font will be copied and UFOs will be created from the copy. If the font is multiple master, instances will be generated from the copy. If a specific `layer` or `instance_values` are not provided for a multiple master source font, a UFO will be generated for each master in the font.
@@ -125,16 +125,16 @@ If the source is a multiple master font and a list of instance values is not pro
 For multiple master fonts, the instance values list should be values in `tuple`- or `list`-form with a value for each axis. For single-axis fonts, if the list values are numerical, the values will be converted to single-element lists:
 
 **2-axis font**
-* `instance_values = [[0, 1000], [200, 1000]]`
+* `instance_values = [[0, 1000], [200, 1000]]`  
 
-* `instance_values = [(0, 1000), (200, 1000)]`
+* `instance_values = [(0, 1000), (200, 1000)]`  
 
 **1-axis font**
-* `instance_values = [[0], [200]]`
+* `instance_values = [[0], [200]]`  
 
-* `instance_values = [(0, ), (200, )]`
+* `instance_values = [(0, ), (200, )]`  
 
-* `instance_values = [0, 200]` becomes `[[0], [200]]`
+* `instance_values = [0, 200]` becomes `[[0], [200]]`  
 
 If the optional lists of names and/or attributes are provided in addition to a list of values, they must be of the same length as the values list. A `ValueError` will be raised if the lengths do not match, since this will likely produce undesirable results:
 
@@ -164,18 +164,18 @@ The generated `.vfb` instance(s) will leave components in component-form.
 To disable the optimizations outlined above, set the `glyphs_optimize` option to `False`.
 
 **Omit glyphs from instance**
-* A list of glyph suffixes and/or glyph names can be supplied that should be omitted from the instance UFO via the `glyphs_omit_suffixes` and `glyphs_omit_names` options, respectively.
+* A list of glyph suffixes and/or glyph names can be supplied that should be omitted from the instance UFO via the `glyphs_omit_suffixes` and `glyphs_omit_names` options, respectively.  
 
 **Optimize glyph name and code point lists**
-* If removing overlaps, the default list of code points for glyphs to be constructed in the above manner is composed of glyphs that normally have no overlapping components. The list is located in the `ufo.pxi` source file with the character representations for these code points shown below.
+* If removing overlaps, the default list of code points for glyphs to be constructed in the above manner is composed of glyphs that normally have no overlapping components. The list is located in the `ufo.pxi` source file with the character representations for these code points shown below.  
 
-* The code points from the default code point list can be shown by running the `vfb2ufo3.show_default_optimize_code_points()` function. The code points will print to the FontLab output window and can then be copied into a text editor and edited as needed.
+* The code points from the default code point list can be shown by running the `vfb2ufo3.show_default_optimize_code_points()` function. The code points will print to the FontLab output window and can then be copied into a text editor and edited as needed.  
 
-* A user-supplied code point list (`glyphs_optimize_code_points`) can be a list of `'0x00ac'`-format strings, integers in hexadecimal-form (`0x00ac`), or numeric integers (`172`); values which cannot be converted to an integer will raise a `ValueError`. Only the first code point in each glyph's list of code points (FontLab *unicodes* attribute) is checked for code point set membership.
+* A user-supplied code point list (`glyphs_optimize_code_points`) can be a list of `'0x00ac'`-format strings, integers in hexadecimal-form (`0x00ac`), or numeric integers (`172`); values which cannot be converted to an integer will raise a `ValueError`. Only the first code point in each glyph's list of code points (FontLab *unicodes* attribute) is checked for code point set membership.  
 
-* A user-supplied glyph name list (`glyphs_optimize_names`) can be supplied to supplement the code point list for glyphs. Any glyphs containing components that do not overlap should be added to this list.
+* A user-supplied glyph name list (`glyphs_optimize_names`) can be supplied to supplement the code point list for glyphs. Any glyphs containing components that do not overlap should be added to this list.  
 
-* Small case variants of the code points in the code point list will be also added to code point list assuming they end with `.sc`, `.smcp`, or `.c2sc` suffixes.
+* Small case variants of the code points in the code point list will be also added to code point list assuming they end with `.sc`, `.smcp`, or `.c2sc` suffixes.  
 
 #### `OPTIMIZE_CODE_POINTS`
 ```
@@ -441,39 +441,39 @@ Jameson R Spires
 This package is available under the [MIT License](https://opensource.org/licenses/MIT)
 
 #### Version history
-* version 0.6.0
-small fix for single-master font builds
-small changes to several source files
-`glif.pyx` has been rewritten in C++ as much as possible
+* version 0.6.0  
+small fix for single-master font builds  
+small changes to several source files  
+`glif.pyx` has been rewritten in C++ as much as possible  
 
-* version 0.5.2
-small change to `groups.pyx`
-re-added link to known working GCC compiler
+* version 0.5.2  
+small change to `groups.pyx`  
+re-added link to known working GCC compiler  
 
-* version 0.5.1
-majority of code base rewritten
-support for UFO3 specification only
-considerable improvement in UFO creation times
-corrected UFOZ build structure
-removed hint operations, added psautohint batch command options
-improved option handling
-improved group conversion
-native `kern` and `mark` feature generation
+* version 0.5.1  
+majority of code base rewritten  
+support for UFO3 specification only  
+considerable improvement in UFO creation times  
+corrected UFOZ build structure  
+removed hint operations, added psautohint batch command options  
+improved option handling  
+improved group conversion  
+native `kern` and `mark` feature generation  
 
-* version 0.3.1
-updated sample script
+* version 0.3.1  
+updated sample script  
 
-* version 0.3.0
-additional documentation
-slight improvement in glif and .glif file creation times
-added sample benchmark times
+* version 0.3.0  
+additional documentation  
+slight improvement in glif and .glif file creation times  
+added sample benchmark times  
 
-* version 0.2.0
-minor formatting
-change to plistlib for groups.plist import
-removed commented lines in `__init__.py`
-added `futures` package as a required package
-added module to PyPi
+* version 0.2.0  
+minor formatting  
+change to plistlib for groups.plist import  
+removed commented lines in `__init__.py`  
+added `futures` package as a required package  
+added module to PyPi  
 
-* version 0.1.0
-initial release
+* version 0.1.0  
+initial release  
