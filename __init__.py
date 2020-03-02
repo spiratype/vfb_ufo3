@@ -7,7 +7,7 @@ from . import core
 
 show_default_optimize_code_points = core.show_default_optimize_code_points
 
-__version__ = '0.6.0'
+__version__ = '0.6.1'
 __doc__ = """
 VFB2UFO3
 DESCRIPTION
@@ -123,35 +123,35 @@ user_profile_folder = os.environ['USERPROFILE']
 output_path = os.path.join(user_profile_folder, 'Documents', 'test_font')
 
 instances = [
-  0,
-  200,
-  400,
-  650,
-  1000,
-  ]
+	0,
+	200,
+	400,
+	650,
+	1000,
+	]
 names = [
-  'Thin',
-  'Light',
-  'Regular',
-  'SemiBold',
-  'Bold',
-  ]
+	'Thin',
+	'Light',
+	'Regular',
+	'SemiBold',
+	'Bold',
+	]
 attributes = [
-  {'openTypeOS2WeightClass': 200},
-  {'openTypeOS2WeightClass': 300},
-  {'openTypeOS2WeightClass': 400},
-  {'openTypeOS2WeightClass': 600},
-  {'openTypeOS2WeightClass': 700},
-  ]
+	{'openTypeOS2WeightClass': 200},
+	{'openTypeOS2WeightClass': 300},
+	{'openTypeOS2WeightClass': 400},
+	{'openTypeOS2WeightClass': 600},
+	{'openTypeOS2WeightClass': 700},
+	]
 
 write_ufo(
-  output_path=output_path,
-  instance_values=instances,
-  instance_names=names,
-  instance_attributes=attributes,
-  glyphs_decompose=True,
-  glyphs_remove_overlaps=True,
-  )
+	output_path=output_path,
+	instance_values=instances,
+	instance_names=names,
+	instance_attributes=attributes,
+	glyphs_decompose=True,
+	glyphs_remove_overlaps=True,
+	)
 
 -------------------------------------------------------------------------------
 ```
@@ -188,7 +188,7 @@ lists:
 1-axis font
   `instance_values = [[0], [200]]`
 
-  `instance_values = [(0, ), (200, )]`
+  `instance_values = [(0,), (200,)]`
 
   `instance_values = [0, 200]` becomes `[[0], [200]]`
 
@@ -422,27 +422,27 @@ _public.kern2.A: A' AE Agrave Aacute Acircumflex Atilde Adieresis Aring...
 Final output (UFO group plist):
 <key>public.kern1.A</key>
 <array>
-  <string>A</string>
-  <string>Agrave</string>
-  <string>Aacute</string>
-  <string>Acircumflex</string>
-  <string>Atilde</string>
-  <string>Adieresis</string>
-  <string>Aring</string>
-  ...
+	<string>A</string>
+	<string>Agrave</string>
+	<string>Aacute</string>
+	<string>Acircumflex</string>
+	<string>Atilde</string>
+	<string>Adieresis</string>
+	<string>Aring</string>
+	...
 </array>
 
 <key>public.kern2.A</key>
 <array>
-  <string>A</string>
-  <string>AE</string>
-  <string>Agrave</string>
-  <string>Aacute</string>
-  <string>Acircumflex</string>
-  <string>Atilde</string>
-  <string>Adieresis</string>
-  <string>Aring</string>
-  ...
+	<string>A</string>
+	<string>AE</string>
+	<string>Agrave</string>
+	<string>Aacute</string>
+	<string>Acircumflex</string>
+	<string>Atilde</string>
+	<string>Adieresis</string>
+	<string>Aring</string>
+	...
 </array>
 ```
 
@@ -481,7 +481,7 @@ lib for each glyph).
 
 UFOZ options
 UFO instances can be written as a `.ufoz` archive. If you are planning on any
-file transfer operations after creation, transferring a single .ufoz file is
+file transfer operations after creation, transferring a single `.ufoz` file is
 much quicker than the large number of small text files in the generated UFO
 instance(s), especially when transferring through USB. By default, archives are
 written in compressed mode. Compression can be turned off by setting
@@ -513,10 +513,10 @@ Test (~3200 glyphs @ 10,000 UPM -> 1,000 UPM), <10 sec
 flc_path = <path to .flc file>
 
 vfb2ufo3.write_ufo(
-  glyphs_decompose=True,
-  glyphs_remove_overlaps=True,
-  groups_flc_path=flc_path,
-  )
+	glyphs_decompose=True,
+	glyphs_remove_overlaps=True,
+	groups_flc_path=flc_path,
+	)
 ```
 
 Test (~2900 glyphs @ 10,000 UPM -> 1,000 UPM), ≈9 sec
@@ -524,19 +524,19 @@ Test (~2900 glyphs @ 10,000 UPM -> 1,000 UPM), ≈9 sec
 ```
 flc_path = <path to .flc file>
 glyphs_omit_list = [
-  <glyph names to be omitted go here>
-  ]
+	<glyph names to be omitted go here>
+	]
 glyphs_omit_suffixes_list = [
-  <glyph name suffixes to be omitted go here>
-  ]
+	<glyph name suffixes to be omitted go here>
+	]
 
 vfb2ufo3.write_ufo(
-  glyphs_decompose=True,
-  glyphs_remove_overlaps=True,
-  glyphs_omit_list=glyphs_omit_list,
-  glyphs_omit_suffixes_list=glyphs_omit_suffixes_list,
-  groups_flc_path=flc_path,
-  )
+	glyphs_decompose=True,
+	glyphs_remove_overlaps=True,
+	glyphs_omit_list=glyphs_omit_list,
+	glyphs_omit_suffixes_list=glyphs_omit_suffixes_list,
+	groups_flc_path=flc_path,
+	)
 ```
 
 Test (~2900 glyphs @ 10,000 UPM -> 1,000 UPM), ≈7 sec
@@ -544,23 +544,23 @@ Test (~2900 glyphs @ 10,000 UPM -> 1,000 UPM), ≈7 sec
 ```
 flc_path = <path to .flc file>
 glyphs_optimize_names = [
-  <glyph names with no overlapping components go here>
-  ]
+	<glyph names with no overlapping components go here>
+	]
 glyphs_omit_list = [
-  <glyph names to be omitted go here>
-  ]
+	<glyph names to be omitted go here>
+	]
 glyphs_omit_suffixes_list = [
-  <glyph name suffixes to be omitted go here>
-  ]
+	<glyph name suffixes to be omitted go here>
+	]
 
 vfb2ufo3.write_ufo(
-  glyphs_decompose=True,
-  glyphs_remove_overlaps=True,
-  glyphs_optimize_names=glyphs_optimize_names,
-  glyphs_omit_list=glyphs_omit_list,
-  glyphs_omit_suffixes_list=glyphs_omit_suffixes_list,
-  groups_flc_path=flc_path,
-  )
+	glyphs_decompose=True,
+	glyphs_remove_overlaps=True,
+	glyphs_optimize_names=glyphs_optimize_names,
+	glyphs_omit_list=glyphs_omit_list,
+	glyphs_omit_suffixes_list=glyphs_omit_suffixes_list,
+	groups_flc_path=flc_path,
+	)
 ```
 
 Test (~2900 glyphs @ 10,000 UPM -> 1,000 UPM), ≈4 sec
@@ -568,9 +568,9 @@ Test (~2900 glyphs @ 10,000 UPM -> 1,000 UPM), ≈4 sec
 ```
 flc_path = <path to .flc file>
 vfb2ufo3.write_ufo(
-  glyphs_decompose=True,
-  groups_flc_path=flc_path,
-  )
+	glyphs_decompose=True,
+	groups_flc_path=flc_path,
+	)
 ```
 
 Test (~2900 glyphs @ 10,000 UPM -> 1,000 UPM), ≈3-4 sec
@@ -578,18 +578,18 @@ Test (~2900 glyphs @ 10,000 UPM -> 1,000 UPM), ≈3-4 sec
 ```
 flc_path = <path to .flc file>
 glyphs_omit_list = [
-  <glyph names to be omitted go here>
-  ]
+	<glyph names to be omitted go here>
+	]
 glyphs_omit_suffixes_list = [
-  <glyph name suffixes to be omitted go here>
-  ]
+	<glyph name suffixes to be omitted go here>
+	]
 
 vfb2ufo3.write_ufo(
-  glyphs_decompose=True,
-  glyphs_omit_list=glyphs_omit_list,
-  glyphs_omit_suffixes_list=glyphs_omit_suffixes_list,
-  groups_flc_path=flc_path,
-  )
+	glyphs_decompose=True,
+	glyphs_omit_list=glyphs_omit_list,
+	glyphs_omit_suffixes_list=glyphs_omit_suffixes_list,
+	groups_flc_path=flc_path,
+	)
 ```
 
 Test (~3200 glyphs @ 10,000 UPM -> 1,000 UPM), ≈3-4 sec
@@ -598,8 +598,8 @@ Test (~3200 glyphs @ 10,000 UPM -> 1,000 UPM), ≈3-4 sec
 flc_path = <path to .flc file>
 
 vfb2ufo3.write_ufo(
-  groups_flc_path=flc_path,
-  )
+	groups_flc_path=flc_path,
+	)
 ```
 
 Notes
@@ -616,6 +616,9 @@ License
 This package is available under the MIT License
 
 Version history
+version 0.6.1
+small corrections
+
 version 0.6.0
 small fix for single-master font builds
 small changes to several source files
@@ -746,3 +749,4 @@ def write_ufo(
 	options = core.decode_dict(locals())
 	core.write_ufo(options)
 	cleanup()
+

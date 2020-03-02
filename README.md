@@ -132,7 +132,7 @@ For multiple master fonts, the instance values list should be values in `tuple`-
 **1-axis font**
 * `instance_values = [[0], [200]]`  
 
-* `instance_values = [(0, ), (200, )]`  
+* `instance_values = [(0,), (200,)]`  
 
 * `instance_values = [0, 200]` becomes `[[0], [200]]`  
 
@@ -330,7 +330,7 @@ There are several explicit keyword options to enable specific MakeOTF switches. 
 [`psautohint`](https://github.com/adobe-type-tools/psautohint) can be utilized for generating glyph hints after UFO generation. Commands to run `psautohint` for each generated instance separately or all instances as a batch using the options `psautohint_cmd` and `psautohint_batch_cmd`, respectively. The default options are `-d` (write decimal (float) hint coordinates) and `-w` (write hints directly to the .glif lib for each glyph).
 
 #### UFOZ options
-UFO instances can be written as a `.ufoz` archive. If you are planning on any file transfer operations after creation, transferring a single .ufoz file is much quicker than the large number of small text files in the generated UFO instance(s), especially when transferring through USB. By default, archives are written in compressed mode. Compression can be turned off by setting `ufoz_compress` to `False`.
+UFO instances can be written as a `.ufoz` archive. If you are planning on any file transfer operations after creation, transferring a single `.ufoz` file is much quicker than the large number of small text files in the generated UFO instance(s), especially when transferring through USB. By default, archives are written in compressed mode. Compression can be turned off by setting `ufoz_compress` to `False`.
 
 #### `.designspace` font options
 A `.designspace` document can be created in place of individual UFO instances. A UFO for each master will be generated and the instances will be described in the `.designspace` document. A default instance can be described with the `designspace_default` option. This value must be a list or tuple with a value for each axis in the font. If `glyphs_omit_list` or `glyphs_omit_suffixes_list` lists are provided, the glyphs will remain in the source UFOs and a glyph mute rule for each glyph to be omitted will be added for each instance.
@@ -441,6 +441,9 @@ Jameson R Spires
 This package is available under the [MIT License](https://opensource.org/licenses/MIT)
 
 #### Version history
+* version 0.6.1  
+small corrections  
+
 * version 0.6.0  
 small fix for single-master font builds  
 small changes to several source files  
