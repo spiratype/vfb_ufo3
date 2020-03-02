@@ -121,7 +121,7 @@ def _glifs(ufo):
 			unicodes.push_back(code_point)
 		path = os.path.join(ufo.paths.instance.glyphs, glif_name).encode('utf_8')
 		glyph = font[i]
-		glif = cpp_glif(
+		glifs.push_back(cpp_glif(
 			name,
 			path,
 			unicodes,
@@ -134,8 +134,7 @@ def _glifs(ufo):
 			bool(glyph.components),
 			bool(glyph.nodes),
 			bool(glyph.components and optimize),
-			)
-		glifs.push_back(glif)
+			))
 
 	for glif in glifs:
 		glyph = font[glif.index]
