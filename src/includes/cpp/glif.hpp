@@ -275,30 +275,26 @@ std::string build_glif(auto &glif, auto &anchor_lib, auto &component_lib, auto &
 		cpp_anchors anchors(anchor_lib[glif.index]);
 		text_stream << items_repr(anchors);
 		}
-	if (glif.has_components or glif.has_contours) {
+	if (glif.has_components or glif.has_contours)
 		text_stream << "\t<outline>\n";
-		}
 	if (glif.has_components and !glif.optimize) {
 		cpp_components components(component_lib[glif.index]);
 		text_stream << items_repr(components);
 		}
 	if (glif.optimize and glif.has_components) {
 		cpp_components components(component_lib[glif.index]);
-		for (auto &component : components) {
+		for (auto &component : components)
 			add_contours(contour_lib, component, text_stream);
-			}
 		}
 	if (glif.has_contours) {
 		cpp_contours contours(contour_lib[glif.index]);
 		text_stream << contours_repr(contours);
 		}
-	if (glif.has_components or glif.has_contours) {
+	if (glif.has_components or glif.has_contours)
 		text_stream << "\t</outline>\n";
-		}
 	if (glif.mark > 0 and glif.mark < 256) {
-		if (glif.mark == 255) {
+		if (glif.mark == 255)
 			glif.mark = 254;
-			}
 		text_stream <<
 			"\t<lib>\n"
 			"\t\t<dict>\n"
@@ -309,9 +305,8 @@ std::string build_glif(auto &glif, auto &anchor_lib, auto &component_lib, auto &
 		}
 	text_stream << "</glyph>\n";
 	const std::string text = text_stream.str();
-	if (!ufoz) {
+	if (!ufoz)
 		write_file(glif.path.c_str(), text.c_str(), text.size());
-		}
 	return text;
 	}
 
