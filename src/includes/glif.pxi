@@ -11,28 +11,28 @@ import os
 
 cdef extern from 'includes/cpp/glif.hpp' nogil:
 	cppclass cpp_point:
-		double x
-		double y
+		float x
+		float y
 		cpp_point()
-		cpp_point(double x, double y)
+		cpp_point(float x, float y)
 
 	cppclass cpp_anchor:
 		string name
-		double x
-		double y
+		float x
+		float y
 		cpp_anchor()
-		cpp_anchor(string name, double x, double y)
+		cpp_anchor(string name, float x, float y)
 
 	cppclass cpp_contour_point:
-		double x
-		double y
+		float x
+		float y
 		int type
 		int alignment
 		cpp_contour_point()
-		cpp_contour_point(double x, double y, int type, int alignment)
+		cpp_contour_point(float x, float y, int type, int alignment)
 		void scale(cpp_point &scale)
 		void offset(cpp_point &offset)
-		void scale_offset(cpp_point &scale, cpp_point &offset)
+		void offset_scale(cpp_point &offset, cpp_point &scale)
 
 	ctypedef vector[cpp_contour_point] cpp_contour
 	ctypedef vector[cpp_contour] cpp_contours
@@ -43,13 +43,13 @@ cdef extern from 'includes/cpp/glif.hpp' nogil:
 		cpp_point offset
 		cpp_point scale
 		cpp_component()
-		cpp_component(string base, size_t index, double offset_x, double offset_y, double scale_x, double scale_y)
+		cpp_component(string base, size_t index, float offset_x, float offset_y, float scale_x, float scale_y)
 
 	cppclass cpp_glif:
 		string name
 		string path
 		string text
-		double width
+		float width
 		size_t index
 		int mark
 		vector[string] unicodes
@@ -65,7 +65,7 @@ cdef extern from 'includes/cpp/glif.hpp' nogil:
 			string &path,
 			vector[string] &unicodes,
 			int mark,
-			double width,
+			float width,
 			size_t index,
 			bint omit,
 			bint base,
@@ -81,12 +81,51 @@ cdef extern from 'includes/cpp/glif.hpp' nogil:
 	ctypedef unordered_map[size_t, cpp_anchors] cpp_anchor_lib
 	ctypedef unordered_map[size_t, cpp_components] cpp_component_lib
 	ctypedef unordered_map[size_t, cpp_contours] cpp_contour_lib
+	ctypedef unordered_map[size_t, string] cpp_completed_contour_lib
 
+	void add_anchor(
+		cpp_anchors &anchors,
+		string name,
+		float x,
+		float y,
+		)
+	void add_component(
+		cpp_components &components,
+		string base,
+		size_t index,
+		float offset_x,
+		float offset_y,
+		float scale_x,
+		float scale_y,
+		)
+	void add_contour_point(
+		cpp_contour &contour,
+		float x,
+		float y,
+		int type,
+		int alignment,
+		)
+	void add_glif(
+		cpp_glifs &glifs,
+		string &name,
+		string &path,
+		vector[string] &unicodes,
+		int mark,
+		float width,
+		size_t index,
+		bint omit,
+		bint base,
+		bint has_anchors,
+		bint has_components,
+		bint has_contours,
+		bint optimize
+		)
 	string build_glif(
 		cpp_glif &glif,
 		cpp_anchor_lib &anchor_lib,
 		cpp_component_lib &component_lib,
 		cpp_contour_lib &contour_lib,
+		cpp_completed_contour_lib &completed_contour_lib,
 		bint ufoz,
 		)
 	void write_glif_files(
@@ -94,17 +133,9 @@ cdef extern from 'includes/cpp/glif.hpp' nogil:
 		cpp_anchor_lib &anchor_lib,
 		cpp_component_lib &component_lib,
 		cpp_contour_lib &contour_lib,
+		cpp_completed_contour_lib &completed_contour_lib,
 		bint ufoz,
 		)
 
 
-cdef double SCALE = 1.0
-
-POINT_TYPES = {
-	0: '',
-	1: 'curve',
-	2: 'qcurve',
-	3: 'line',
-	4: 'off',
-	5: 'move',
-	}
+cdef float SCALE = 1.0

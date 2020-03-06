@@ -10,26 +10,15 @@ cdef extern from '<fenv.h>' nogil:
 
 cdef int FE_MODE = fegetround()
 
-cdef double UFO_SCALE = 1.0
+cdef double SCALE = 1.0
 
-ctypedef struct cPoint:
-	long x, y
-
-cdef inline cPoint int_anchor_coords(double anchor_x, double anchor_y) nogil:
-	cdef:
-		cPoint point
-	fesetround(FE_TONEAREST)
-	point.x = <long>nearbyint(anchor_x * UFO_SCALE)
-	point.y = <long>nearbyint(anchor_y * UFO_SCALE)
-	fesetround(FE_MODE)
-	return point
+cdef inline (long, long) int_anchor_coords(double x, double y) nogil:
+	return <long>nearbyint(x * SCALE), <long>nearbyint(y * SCALE)
 
 def mark_class(parent, anchor):
-	coords = int_anchor_coords(anchor.x, anchor.y)
-	anchor_name = py_unicode(anchor.name[1:])
-	return f'\tmarkClass {parent} <anchor {coords.x} {coords.y}> @{anchor_name};'
+	x, y = int_anchor_coords(anchor.x, anchor.y)
+	return f'\tmarkClass {parent} <anchor {x} {y}> @{py_unicode(anchor.name[1:])};'
 
 def mark_base(base, anchor):
-	coords = int_anchor_coords(anchor.x, anchor.y)
-	anchor_name = py_unicode(anchor.name)
-	return f'\tpos base {base} <anchor {coords.x} {coords.y}> mark @{anchor_name};'
+	x, y = int_anchor_coords(anchor.x, anchor.y)
+	return f'\tpos base {base} <anchor {x} {y}> mark @{py_unicode(anchor.name)};'
