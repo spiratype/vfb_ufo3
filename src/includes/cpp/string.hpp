@@ -24,12 +24,6 @@ std::string number_str(const double &n) {
 	return float_str(n, 1);
 	}
 
-std::string hex_code_point_str(const long &code_point) {
-	std::stringstream stream;
-	stream << std::setfill('0') << std::setw(4) << std::uppercase << std::hex << code_point;
-	return stream.str();
-	}
-
 std::string attr(std::string name, std::string value) {
 	return name + "=\"" + value + '\"';
 	}
