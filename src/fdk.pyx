@@ -1,7 +1,10 @@
 # coding: utf-8
+# cython: wraparound=False
+# cython: boundscheck=False
+# cython: cdivision=True
 # cython: auto_pickle=False
-# distutils: extra_compile_args=[-fconcepts, -O2, -fno-strict-aliasing, -Wno-register]
-# distutils: extra_link_args=[-fconcepts, -O2, -fno-strict-aliasing, -Wno-register]
+# distutils: extra_compile_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
+# distutils: extra_link_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
 from __future__ import absolute_import, division, unicode_literals
 include 'includes/future.pxi'
 include 'includes/cp1252.pxi'

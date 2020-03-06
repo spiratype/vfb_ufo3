@@ -1,7 +1,6 @@
 # coding: utf-8
 # cython: wraparound=False
 # cython: boundscheck=False
-# cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
 # distutils: extra_compile_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]

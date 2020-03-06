@@ -1,11 +1,10 @@
 # coding: utf-8
 # cython: wraparound=False
 # cython: boundscheck=False
-# cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
-# distutils: extra_compile_args=[-fconcepts, -O2, -Wno-register]
-# distutils: extra_link_args=[-fconcepts, -O2, -Wno-register]
+# distutils: extra_compile_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
+# distutils: extra_link_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
 from __future__ import absolute_import, division, unicode_literals
 include 'includes/future.pxi'
 include 'includes/cp1252.pxi'
@@ -27,10 +26,11 @@ def mark_feature(ufo):
 def _mark_feature(ufo):
 
 	if ufo.scale is not None:
-		global UFO_SCALE
-		UFO_SCALE = <double>ufo.scale
+		global SCALE
+		SCALE = <double>ufo.scale
 
 	font = fl[ufo.instance.ifont]
+	fesetround(FE_TONEAREST)
 
 	mark_classes = set()
 	bases = defaultdict(list)
@@ -57,6 +57,8 @@ def _mark_feature(ufo):
 		for i, bases in enumerate(mark_bases)]
 	mark_classes = '\n'.join(sorted(mark_classes))
 
-	lookups = '\n'.join([f'\tlookup mark{i+1};' for i in range(len(mark_bases))])
+	lookups = '\n'.join(f'\tlookup mark{i+1};' for i in range(len(mark_bases)))
+
+	fesetround(FE_MODE)
 
 	return fea_feature('mark', [mark_classes, *mark_lookups, lookups])
