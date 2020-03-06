@@ -7,7 +7,7 @@ from . import core
 
 show_default_optimize_code_points = core.show_default_optimize_code_points
 
-__version__ = '0.6.1'
+__version__ = '0.6.2'
 __doc__ = """
 VFB2UFO3
 DESCRIPTION
@@ -616,6 +616,10 @@ License
 This package is available under the MIT License
 
 Version history
+version 0.6.2
+replaced `push_back` with `emplace_back` where possible
+corrections to shifted and scaled contour-from-component builds
+
 version 0.6.1
 small corrections
 

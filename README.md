@@ -441,6 +441,10 @@ Jameson R Spires
 This package is available under the [MIT License](https://opensource.org/licenses/MIT)
 
 #### Version history
+* version 0.6.2  
+replaced `push_back` with `emplace_back` where possible  
+corrections to shifted and scaled contour-from-component builds  
+
 * version 0.6.1  
 small corrections  
 
