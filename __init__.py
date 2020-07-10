@@ -2,12 +2,17 @@
 from __future__ import absolute_import, unicode_literals
 
 import gc
+import os
+
+dll_path = os.path.join(os.path.dirname(__file__), 'dlls')
+if dll_path not in os.environ['PATH']:
+  os.environ['PATH'] += '%s;' % os.path.join(os.path.dirname(__file__), 'dlls')
 
 from . import core
 
 show_default_optimize_code_points = core.show_default_optimize_code_points
 
-__version__ = '0.6.2'
+__version__ = '0.6.3'
 __doc__ = """
 VFB2UFO3
 DESCRIPTION
@@ -35,44 +40,49 @@ to your FontLab Macros folder as shown:
 
 ```
 [user folder]
-`-- Documents
-    `-- Fontlab
-        `-- Studio 5
-            `-- Macros
-                `-- System
-                    `-- Modules
-                        `-- vfb2ufo3
-                            `-- __init__.py
-                            `-- core.pyd
-                            `-- designspace.pyd
-                            `-- fdk.pyd
-                            `-- fea.pyd
-                            `-- fontinfo.pyd
-                            `-- glif.pyd
-                            `-- groups.pyd
-                            `-- kern.pyd
-                            `-- mark.pyd
-                            `-- plist.pyd
-                            `-- tools.pyd
-                            `-- user.py
-                            `-- vfb.pyd
+  `-- Documents
+      `-- Fontlab
+          `-- Studio 5
+              `-- Macros
+                  `-- System
+                      `-- Modules
+                          `-- vfb2ufo3
+                              `-- __init__.py
+                              `-- core.pyd
+                              `-- designspace.pyd
+                              `-- fdk.pyd
+                              `-- fea.pyd
+                              `-- fontinfo.pyd
+                              `-- glif.pyd
+                              `-- groups.pyd
+                              `-- kern.pyd
+                              `-- mark.pyd
+                              `-- plist.pyd
+                              `-- tools.pyd
+                              `-- user.py
+                              `-- vfb.pyd
+                            `-- dlls
+                                `-- libgcc_s_dw2-1.dll
+                                `-- libgomp-1.dll
+                                `-- libstdc++-6.dll
+                                `-- libwinpthread-1.dll
 ```
 
 REQUIREMENTS
-This package has no dependencies outside of the standard library. It is written
-in Cython and in Python 3 syntax where it is natively supported by Cython. The
-submodules are compiled into `.pyd` extension modules. To recompile the
-submodules, the PyPi `cython` package and a compiler for Cython to utilize
-during extension module compilation will be required.
+This package has no Python dependencies outside of the standard library. It is
+written in C++ and Cython. The submodules are compiled into `.pyd` extension
+modules. To recompile the submodules, the PyPi `cython` package and a compiler
+for Cython to utilize during extension module compilation will be required.
+
+The `glif.pyd` extension module requires DLLs from the MinGW 32-bit GCC:
+`libgcc_s_dw2-1.dll`, `libgomp-1.dll`, `libwinpthread-1.dll`, and
+`libstdc++-6.dll`. These DLLs are included in the release `.zip` archives and
+the PyPi package.
 
 OPTIONAL
   cython
   pip install cython
   https://github.com/cython/cython
-
-  Minimalist GNU for Window (MinGW)
-  http://www.mingw.org
-  http://winlibs.com
 
   AFDKO
   pip install afdko
@@ -109,7 +119,7 @@ creation.
 
 ```
 -------------------------------------------------------------------------------
-EXAMPLE UFO GENERATION SCRIPT
+EXAMPLE UFO GENERATION SCRIPT FOR SINGLE-AXIS MULTIPLE MASTER .VFB FONT
 -------------------------------------------------------------------------------
 #FLM: write ufo
 # coding: utf-8
@@ -498,14 +508,15 @@ rule for each glyph to be omitted will be added for each instance.
 
 Benchmarks
 For reference, testing was performed on a Windows 10 machine with an Intel Xeon
-E5 1650v3 @ 3.5 GHz CPU and a solid-state hard drive.
+E5 1650v3 @ 3.5 GHz CPU and a solid-state hard drive; CPUs with fewer cores
+and/or a hard disk drive increases file write times considerably.
 
 Times are per-instance (±.5 sec) and do not include time to load and parse user
 options, then copy the original font and prepare the copy for conversion to the
-UFO format. This prep time increases when not providing a FontLab-class or
-`groups.plist` file.
+UFO format. This prep time increases when not providing a FontLab-class
+(`.flc`) or `groups.plist` file.
 
-The `ufoz` option will reduce times by 0 - 0.5 sec.
+The `ufoz` option reduces build time considerably.
 
 Test (~3200 glyphs @ 10,000 UPM -> 1,000 UPM), <10 sec
 
@@ -613,11 +624,18 @@ Author
 Jameson R Spires
 
 License
-This package is available under the MIT License
+The GCC DLLs are covered under the GPL License; all other source is covered
+under the MIT License.
 
 Version history
+version 0.6.3
+added 32-bit GCC DLLs
+C++ string formatting improved utilizing {fmt} formatting library
+`mark` feature generation corrections
+small changes and corrections
+
 version 0.6.2
-replaced `push_back` with `emplace_back` where possible
+replaced `push_back` with `emplace_back` where possible in `glif.hpp`
 corrections to shifted and scaled contour-from-component builds
 
 version 0.6.1

@@ -11,8 +11,8 @@ _print = print
 def print(message):
 	if isinstance(message, bytes):
 		message = message.decode('utf_8').encode('cp1252', 'ignore')
-	if isinstance(message, unicode):
-		message.encode('cp1252', 'ignore')
+	elif isinstance(message, unicode):
+		message = message.encode('cp1252', 'ignore')
 	_print(message)
 
 def save_encoding(ufo, font):
