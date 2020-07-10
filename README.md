@@ -55,6 +55,10 @@ The `glif.pyd` extension module requires DLLs from the MinGW 32-bit GCC: `libgcc
 **pip install afdko**  
 <https://github.com/adobe-type-tools/afdko>  
 
+* [MinGW 32-bit/i686 GCC 9.3.0](https://github.com/brechtsanders/winlibs_mingw/releases/download/9.3.0-10.0.0-7.0.0-r4/winlibs-i686-posix-dwarf-gcc-9.3.0-llvm-10.0.0-mingw-w64-7.0.0-r4.7z)  
+<http://winlibs.com>  
+<http://mingw.org>  
+
 ### Functionality
 UFO output is produced without changes to the source font. The source font will be copied and UFOs will be created from the copy. If the font is multiple master, instances will be generated from the copy. If a specific `layer` or `instance_values` are not provided for a multiple master source font, a UFO will be generated for each master in the font.
 
