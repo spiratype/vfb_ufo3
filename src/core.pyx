@@ -1,11 +1,12 @@
 # coding: utf-8
 # cython: wraparound=False
 # cython: boundscheck=False
+# cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
-# distutils: extra_compile_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
-# distutils: extra_link_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
-from __future__ import absolute_import, division, unicode_literals, print_function
+# distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
+# distutils: extra_link_args=[-O3]
+from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 include 'includes/cp1252.pxi'
 
@@ -13,11 +14,12 @@ import linecache
 import os
 import time
 
-from . import fdk, fea, groups, user, vfb
+from . import fea, user, vfb
 from .designspace import designspace
 from .fdk import fdk
 from .fea import features
 from .glif import glifs
+from .groups import groups
 from .plist import plists
 from .tools import finish
 from .user import print
@@ -26,13 +28,13 @@ from .vfb import add_instance
 from FL import fl, Font, Rect
 import FL
 
-include 'includes/ignored.pxi'
+include 'includes/string.pxi'
 include 'includes/thread.pxi'
 include 'includes/path.pxi'
 include 'includes/io.pxi'
-include 'includes/string.pxi'
 include 'includes/dict.pxi'
-include 'includes/objects.pxi'
+include 'includes/attribute_dict.pxi'
+include 'includes/ordered_set.pxi'
 include 'includes/options.pxi'
 include 'includes/defaults.pxi'
 include 'includes/core.pxi'
@@ -78,7 +80,7 @@ def parse_options(options):
 	ufo.paths.encoding = unique_path('__temp__.enc')
 
 	fl.output = b''
-	print(b'Processing user options..\n')
+	print('Processing user options..\n')
 	ufo.master.ifont = fl.ifont
 	master = fl[fl.ifont]
 
@@ -86,7 +88,12 @@ def parse_options(options):
 	ufo.opts = opts = option_dict()
 	opts.update(options)
 
-	dirname, basename = os.path.split(py_unicode(master.file_name))
+	dirname, basename = split_path(py_unicode(master.file_name))
+	if not basename.endswith('.vfb'):
+		filename, ext = os.path.splitext(basename)
+		basename = f'{filename}.vfb'
+		master.Save(py_bytes(unique_path(basename, temp=1)))
+
 	ufo.master.filename = basename
 	ufo.master.dirname = os.path.normpath(dirname)
 	ufo.master.family_name = py_unicode(master.family_name)
@@ -100,10 +107,7 @@ def parse_options(options):
 	fea.copy_opentype(ufo, master)
 	user.save_encoding(ufo, master)
 
-	if opts.output_path:
-		ufo.paths.out = opts.output_path
-	else:
-		ufo.paths.out = user.DESKTOP
+	ufo.paths.out = opts.output_path if opts.output_path else user.DESKTOP
 
 	if opts.scale_to_upm != master.upm or opts.scale_auto:
 		if opts.scale_to_upm >= 1000:
@@ -120,15 +124,12 @@ def parse_options(options):
 	if opts.designspace_export:
 		set_designspace_values(ufo, master)
 
-	if opts.layer:
-		if master.axis:
-			if opts.layer not in range(2 ** len(master.axis) - 1):
-				master = repr(master)
-				layers = 2 ** len(master.axis)
-				raise UserWarning(
-					b"Provided layer index is greater than the number of available layers.\n"
-					b"'%s' has %d layers(s)" % (master, layers)
-					)
+	if opts.layer and master.axis:
+		if opts.layer not in range(2 ** len(master.axis) - 1):
+			raise IndexError(
+				b"Provided layer index is greater than the number of available layers.\n"
+				b"'%s' has %d layers(s)" % (repr(master), 2 ** len(master.axis))
+				)
 
 	if opts.instance_values:
 		set_instance_values(ufo)
@@ -242,8 +243,7 @@ def parse_code_points(code_point_list):
 			elif isinstance(code_point, basestring):
 				code_points.add(int(code_point, 16))
 		except ValueError as e:
-			message = (code_point, e.message)
-			error = b"'%s' could not be converted to an integer.\n%s" % message
+			error = b"'%s' could not be converted to an integer.\n%s" % (code_point, e.message)
 			raise ValueError(error)
 
 	return code_points
@@ -259,13 +259,13 @@ def add_master_copy(ufo):
 		fullname = font.full_name
 		if font.axis:
 			axes = len(font.axis)
-			return f"<Font: '{fullname}' filename='{filename}' axes={axes}>"
-		return f"<Font: '{fullname}' filename='{filename}'>"
+			return f'<Font: {fullname!r} filename={filename!r} axes={axes}>'
+		return f'<Font: {fullname!r} filename={filename!r}>'
 
 	master = fl[fl.ifont]
 
 	if ufo.opts.report:
-		print(f"Processing {font_repr(master)}..\n")
+		print(f'Processing {font_repr(master)}..\n')
 
 	print(' Processing master copy..')
 
@@ -284,11 +284,11 @@ def add_master_copy(ufo):
 	if ufo.opts.afdko_makeotf_release:
 		vfb.check_glyph_unicodes(master_copy)
 
-	master_copy.full_name = py_bytes(f'{ufo.master.family_name} - master')
+	master_copy.full_name = b'%s - master' % ufo.master.family_name
 
 	vfb.process_master_copy(ufo, master_copy)
 
-	groups.groups(ufo)
+	groups(ufo)
 
 	if ufo.opts.afdko_parts:
 		vfb.build_goadb(ufo, master_copy)
@@ -328,10 +328,7 @@ def build_paths(ufo, master=0):
 			ufo_path = os.path.join(ufo.paths.out, ufo_filename)
 			ufoz_path = os.path.join(ufo.paths.out, ufoz_filename)
 
-		if ufo.opts.ufoz:
-			check_paths = [ufoz_path]
-		else:
-			check_paths = [ufo_path]
+		check_paths = [ufoz_path] if ufo.opts.ufoz else [ufo_path]
 
 		if ufo.opts.vfb_save:
 			check_paths.append(os.path.join(ufo.paths.out, vfb_filename))
@@ -344,6 +341,10 @@ def build_paths(ufo, master=0):
 						b"Please remove directory/file or set 'force_overwrite' to True" % path
 						)
 				remove_path(path, 1)
+			if 'masters' in path:
+				dirname = os.path.dirname(path)
+				if not os.path.isdir(dirname):
+					make_dir(dirname)
 
 		paths.append(ufo_path)
 
@@ -367,7 +368,7 @@ def master_instances(font, layer=None):
 
 	j, k = len(font.axis), 2 ** len(font.axis)
 
-	shorts = [[unicode(axis[1]) for axis in font.axis] for i in range(k)]
+	shorts = [[str(axis[1]) for axis in font.axis] for i in range(k)]
 	axes = [axis for axis in zip(*MATRIX)][:k]
 
 	values = [[i * 1000 for i in axis][:j] for axis in axes]
@@ -387,9 +388,7 @@ def check_designspace_default(ufo, master):
 	verify user-supplied designspace default instance
 	'''
 
-	len_error = (
-		b'.designspace default instance length must match the source font axis length.'
-		)
+	len_error = b'.designspace default instance length must match the source font axis length.'
 	val_error = b'.designspace default instance values must be numeric.'
 	if ufo.opts.designspace_default:
 		if len(ufo.opts.designspace_default) != len(master.axis):
@@ -435,10 +434,8 @@ def set_designspace_glyphs_omit(ufo, master):
 	glyphs_omit_suffixes = encode_string_list(ufo.opts.glyphs_omit_suffixes)
 	glyphs_omit = set()
 	for i, glyph in enumerate(master.glyphs):
-
 		if glyph.name in glyphs_omit_names:
 			glyphs_omit.add(py_unicode(glyph.name))
-
 		if b'.' in glyph.name:
 			for suffix in glyphs_omit_suffixes:
 				if glyph.name.endswith(suffix):
@@ -487,12 +484,12 @@ def show_default_optimize_code_points():
 	the FontLab output window
 	'''
 
-	code_points = sorted(OPTIMIZE_CODE_POINTS)
+	code_points = list(sorted(OPTIMIZE_CODE_POINTS))
 
 	code_points = [[f'0x{code_points[i+j]:04x},'
 		for j in range(8) if i + j < len(code_points)]
 		for i in range(0, len(code_points), 8)]
-	code_points = '\n'.join('\t' + ' '.join(line) for line in code_points)
+	code_points = '\n'.join(f'\t{" ".join(line)}' for line in code_points)
 
 	print(b'OPTIMIZE_CODE_POINTS = {\n%s\n\t}' % py_bytes(code_points))
 
@@ -532,9 +529,8 @@ def check_instance_values(options, master):
 		)
 
 	# check instance options
-	user_instance_options = [
-		options[option] for option in INSTANCE_OPTIONS if options[option]
-		]
+	user_instance_options = [options[option]
+		for option in INSTANCE_OPTIONS if options[option]]
 
 	if options['designspace_export'] and options['designspace_default']:
 		if len(options['designspace_default']) != min_len:

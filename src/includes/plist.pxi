@@ -3,7 +3,6 @@
 def parse_plist(plist):
 
 	parsed = {}
-
 	for line in plist.splitlines():
 		if '<string>' in line:
 			string = parse_xml_element(line)

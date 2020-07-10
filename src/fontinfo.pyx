@@ -1,11 +1,12 @@
 # coding: utf-8
 # cython: wraparound=False
 # cython: boundscheck=False
+# cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
-# distutils: extra_compile_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
-# distutils: extra_link_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
-from __future__ import absolute_import, division, unicode_literals, print_function
+# distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
+# distutils: extra_link_args=[-O3]
+from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 include 'includes/cp1252.pxi'
 
@@ -16,11 +17,10 @@ import unicodedata
 
 from .user import print
 
-include 'includes/string.pxi'
-include 'includes/objects.pxi'
-include 'includes/dict.pxi'
 include 'includes/nameid.pxi'
+include 'includes/dict.pxi'
 include 'includes/fontinfo.pxi'
+include 'includes/ordered_dict.pxi'
 
 def fontinfo(ufo, font, user_attributes):
 	start = time.clock()

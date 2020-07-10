@@ -1,13 +1,23 @@
 # coding: utf-8
 # cython: wraparound=False
 # cython: boundscheck=False
+# cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
-# distutils: extra_compile_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
-# distutils: extra_link_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
-from __future__ import absolute_import, division, unicode_literals
+# distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
+# distutils: extra_link_args=[-O3]
+from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 include 'includes/cp1252.pxi'
+
+cdef extern from '<math.h>' nogil:
+	double nearbyint(double x)
+
+cdef extern from '<fenv.h>' nogil:
+	const int FE_TONEAREST
+	int fesetround(int)
+
+cdef double SCALE = 1.0
 
 import time
 
@@ -15,12 +25,12 @@ from FL import fl, Feature, TrueTypeTable
 
 from . import kern, mark, user
 
-include 'includes/string.pxi'
 include 'includes/thread.pxi'
 include 'includes/io.pxi'
-include 'includes/objects.pxi'
 include 'includes/fea.pxi'
 include 'includes/opentype.pxi'
+include 'includes/string.pxi'
+include 'includes/ordered_dict.pxi'
 
 def copy_opentype(ufo, font):
 	_copy_opentype(ufo, font)
@@ -64,7 +74,7 @@ def _features(ufo):
 
 	tables = []
 	if ufo.opts.afdko_parts:
-		tables = ufo.instance.tables.values()
+		tables = list(values(ufo.instance.tables))
 
 	feature_file = features + tables
 
@@ -83,15 +93,15 @@ def _copy_opentype(ufo, master):
 		ufo.master.ot_features = features = ordered_dict()
 		if ufo.opts.kern_feature_passthrough:
 			for feature in master.features:
-				features[py_unicode(feature.tag)] = py_unicode(feature.value).strip()
+				features[py_unicode(feature.tag)] = py_unicode(feature.value.strip())
 		else:
 			for feature in master.features:
 				if feature.tag != b'kern':
-					features[py_unicode(feature.tag)] = py_unicode(feature.value).strip()
+					features[py_unicode(feature.tag)] = py_unicode(feature.value.strip())
 
 	# copy opentype prefix
 	if master.ot_classes:
-		ot_prefix = py_unicode(master.ot_classes).strip()
+		ot_prefix = py_unicode(master.ot_classes.strip())
 		if ot_prefix:
 			ufo.master.ot_prefix = '\n'.join(ot_prefix.splitlines())
 
@@ -121,6 +131,12 @@ def _load_opentype(ufo, font, master=0):
 
 def _tables(ufo, font):
 
+	if ufo.scale is not None:
+		global SCALE
+		SCALE = ufo.scale
+
+	fesetround(FE_TONEAREST)
+
 	tables = {}
 
 	tables['OS/2'] = [
@@ -134,7 +150,7 @@ def _tables(ufo, font):
 		('FSType', font.ttinfo.os2_fs_type),
 		('XHeight', font.x_height[0]),
 		('CapHeight', font.cap_height[0]),
-		('Panose', (' '.join([str(i) for i in font.panose])
+		('Panose', (' '.join(str(i) for i in font.panose)
 			if any(font.panose) else None)),
 		('Vendor', (f'"{font.vendor[:4]}"'
 			if font.vendor or font.vendor.lower() != b'pyrs' else None)),
@@ -171,14 +187,14 @@ def _tables(ufo, font):
 			pid = name_record['platformID']
 			eid = name_record['encodingID']
 			lid = name_record['languageID']
-			string = name_record['string']
-			ids = ' '.join([str(i) for i in [pid, eid, lid] if i])
-			tables['name'].append((nid, ('nameid', f'{nid} {ids} "{string}"')))
+			nid_str = name_record['string']
+			ids = ' '.join(str(i) for i in [pid, eid, lid] if i)
+			tables['name'].append((nid, ('nameid', f'{nid} {ids} "{nid_str}"')))
 
 	tables['name'] = [line for nid, line in sorted(tables['name'])]
 
 	def scaled_table(table):
-		return [(key, int(round(value * ufo.scale)))
+		return [(key, <long>nearbyint(value * SCALE))
 			if key in SCALABLE_TABLE_KEYS and value else (key, value)
 			for (key, value) in table]
 

@@ -1,19 +1,21 @@
 # coding: utf-8
 # cython: wraparound=False
 # cython: boundscheck=False
+# cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
-# distutils: extra_compile_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
-# distutils: extra_link_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
-from __future__ import absolute_import, division, unicode_literals
+# distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
+# distutils: extra_link_args=[-O3]
+from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 include 'includes/cp1252.pxi'
+
+cimport cython
 
 import os
 
 from FL import fl
 
-include 'includes/ignored.pxi'
 include 'includes/string.pxi'
 include 'includes/thread.pxi'
 include 'includes/io.pxi'
@@ -41,8 +43,7 @@ def _designspace(ufo):
 
 
 def designspace_axes(ufo, designspace):
-	axes = zip(ufo.master.axes_names, ufo.designspace.default)
-	for axis in axes:
+	for axis in zip(ufo.master.axes_names, ufo.designspace.default):
 		designspace.axes += dspace_axis(*axis)
 
 def designspace_sources(ufo, designspace):
@@ -100,8 +101,8 @@ def build(designspace):
 		doc += dspace_instances(designspace.instances)
 
 	designspace.text = file_str('\n'.join((
-		XML_PROLOG,
-		'<designspace format="3">',
+		"<?xml version='1.0' encoding='UTF-8'?>",
+		"<designspace format='3'>",
 		*doc,
-		'</designspace>\n',
+		"</designspace>\n",
 		)))

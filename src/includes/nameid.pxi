@@ -5,17 +5,17 @@ import unicodedata
 ENC_IDS = {1: 0, 3: 1}
 LANG_IDS = {1: 0, 3: 0x0409}
 
-def ascii_bytes(string):
-	string = unicodedata.normalize('NFKD', string)
-	return string.encode('ascii', 'ignore')
+def ascii_bytes(unicode_str):
+	unicode_str = unicodedata.normalize('NFKD', unicode_str)
+	return unicode_str.encode('ascii', 'ignore')
 
-def ascii_unicode(string):
-	string = unicodedata.normalize('NFKD', string)
-	return string.encode('ascii', 'ignore').decode('ascii')
+def ascii_unicode(unicode_str):
+	unicode_str = unicodedata.normalize('NFKD', unicode_str)
+	return unicode_str.encode('ascii', 'ignore').decode('ascii')
 
-def nameid_str(string, platform_id, fontlab):
+def nameid_str(unicode_str, platform_id, fontlab):
 
-	"""
+	'''
 	format nameid string for features.fea 'name' table
 
 	>>> nameid_string('© A Font Company', 3, 0)
@@ -57,7 +57,7 @@ def nameid_str(string, platform_id, fontlab):
 	slash (/) in place of the backslash (\)
 
 	https://adobe-type-tools.github.io/afdko/OpenTypeFeatureFileSpecification.html#9.e
-	"""
+	'''
 
 	# macintosh platform id 1
 	# microsoft platform id 3
@@ -65,22 +65,22 @@ def nameid_str(string, platform_id, fontlab):
 	if platform_id == 1:
 		enc_filter = 'mac_roman'
 		repl_char = '\\'
-	if platform_id == 3:
+	elif platform_id == 3:
 		enc_filter = 'utf_8'
 		repl_char = '\\00'
 
-	new_string = string.encode(enc_filter, 'ignore').decode(enc_filter)
-	if len(new_string) != len(string):
-		new_string = ascii_unicode(new_string)
+	new_str = unicode_str.encode(enc_filter, 'ignore').decode(enc_filter)
+	if len(new_str) != len(unicode_str):
+		new_str = ascii_unicode(new_str)
 
-	if '\\' in new_string:
-		new_string = new_string.replace('\\', '\\x5c')
-	if '"' in string:
-		new_string = new_string.replace('"', '\\x22')
+	if '\\' in new_str:
+		new_str = new_str.replace('\\', '\\x5c')
+	if '"' in unicode_str:
+		new_str = new_str.replace('"', '\\x22')
 
-	new_string = new_string.encode('ascii', 'backslashreplace').decode('ascii')
-	new_string = new_string.replace('\\x', repl_char).replace('\\u', '\\')
+	new_str = new_str.encode('ascii', 'backslashreplace').decode('ascii')
+	new_str = new_str.replace('\\x', repl_char).replace('\\u', '\\')
 
 	if fontlab:
-		return new_string.replace('\\', '/')
-	return new_string
+		return new_str.replace('\\', '/')
+	return new_str

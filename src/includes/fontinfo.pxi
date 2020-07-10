@@ -1,5 +1,10 @@
 # FONTINFO
 
+cimport cython
+
+cdef extern from 'Python.h':
+	int PyDict_SetItem(object, object, object) except -1
+
 @cython.final
 cdef class fontinfo_dict(dict):
 

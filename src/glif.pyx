@@ -5,20 +5,33 @@
 # cython: cdivision=True
 # cython: auto_pickle=False
 # distutils: language=c++
-# distutils: extra_compile_args=[-fopenmp, -fconcepts, -O3, -Wno-register, -fno-strict-aliasing, -std=c++17]
-# distutils: extra_link_args=[-fopenmp, -fconcepts, -O3, -Wno-register, -fno-strict-aliasing, -std=c++17]
-from __future__ import absolute_import, division, unicode_literals
+# distutils: extra_compile_args=[-O3, -fopenmp, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
+# distutils: extra_link_args=[-O3, -fopenmp]
+from __future__ import division, unicode_literals
 include 'includes/future.pxi'
 include 'includes/cp1252.pxi'
 
+from libcpp cimport bool as bint
+from libcpp.string cimport string
+from libcpp.vector cimport vector
+
+from glif cimport (
+	cpp_anchor, cpp_component, cpp_contour_point, cpp_glif,
+	cpp_contour, cpp_contours, cpp_anchors, cpp_components, cpp_glifs,
+	cpp_anchor_lib, cpp_contour_lib, cpp_completed_contour_lib,
+	add_anchor, add_component, add_contour_point, add_glif,
+	build_glif, write_glif_files
+	)
+
+cdef extern from 'fenv.h' nogil:
+	const int FE_TONEAREST
+	void fesetround(int)
+
 import time
 
-import FL
 from FL import fl
 
-include 'includes/ignored.pxi'
-include 'includes/string.pxi'
-include 'includes/glif.pxi'
+cdef double SCALE = 1.0
 
 def glifs(ufo):
 	start = time.clock()
@@ -28,7 +41,7 @@ def glifs(ufo):
 def _glifs(ufo):
 
 	'''
-	build and write .glif file
+	build and write .glif files
 
 	for glyph decomposition and overlap removal, UFO creation times can be
 	reduced considerably by checking the font for glyphs normally consisting of
@@ -38,7 +51,7 @@ def _glifs(ufo):
 	removed
 
 	the glyphs are selected based on Unicode code point and a user supplied glyph
-	name list; the default list of these code points is located in `ufo.pxi` as
+	name list; the default list of these code points is located in `core.pxi` as
 	`OPTIMIZE_CODE_POINTS`
 
 	during the build process, the components will remain in component-form
@@ -49,9 +62,8 @@ def _glifs(ufo):
 
 	if ufo.scale is not None:
 		global SCALE
-		SCALE = <float>ufo.scale
+		SCALE = ufo.scale
 
-	font = fl[ufo.instance.ifont]
 	optimize = ufo.opts.glyphs_optimize
 	decompose = ufo.opts.glyphs_decompose
 	remove_overlaps = ufo.opts.glyphs_remove_overlaps
@@ -61,31 +73,33 @@ def _glifs(ufo):
 	omit_glyphs = ufo.glyph_sets.omit
 
 	cdef:
+		object font = fl[ufo.instance.ifont]
 		size_t n = len(font.glyphs)
 		cpp_glif glif
 		cpp_glifs glifs
-		cpp_anchors anchors
-		cpp_components components
 		cpp_contour contour
 		cpp_contours contours
 		cpp_anchor_lib anchor_lib
 		cpp_component_lib component_lib
 		cpp_contour_lib contour_lib
 		cpp_completed_contour_lib completed_contour_lib
-		vector[string] unicodes
-		string path = b''
-		string text = b''
+		vector[int] unicodes
+		cpp_anchors anchors
+		cpp_components components
+		bytes instance_glifs_path = ufo.paths.instance.glyphs.encode('utf_8')
 		bytes name = b''
-		bytes code_point = b''
+		int code_point = 0
 		int mark = 0
 		bint omit = 0
-		size_t base = 0
+
+	fesetround(FE_TONEAREST)
 
 	anchor_lib.reserve(n)
 	component_lib.reserve(n)
 	contour_lib.reserve(n)
 	completed_contour_lib.reserve(n)
 	glifs.reserve(n)
+	unicodes.reserve(20)
 
 	if optimize and remove_overlaps:
 		for i, glyph in enumerate(font.glyphs):
@@ -114,74 +128,66 @@ def _glifs(ufo):
 			if i not in bases:
 				glyph.RemoveOverlap()
 
-
-	for i, (name, glif_name, mark, code_points, omit) in sorted(items(ufo.glifs)):
-		path.clear()
+	for i, (name, glif_name, mark, glyph_code_points, omit) in items(ufo.glifs):
 		unicodes.clear()
-		unicodes.reserve(len(code_points))
-		for code_point in code_points:
+		for code_point in glyph_code_points:
 			unicodes.push_back(code_point)
-		path = os.path.join(ufo.paths.instance.glyphs, glif_name).encode('utf_8')
 		glyph = font[i]
 		add_glif(
 			glifs,
 			name,
-			path,
+			b'%s\\%s' % (instance_glifs_path, glif_name),
 			unicodes,
 			mark,
 			glyph.width * SCALE,
 			i,
+			len(glyph.Layer(0)),
+			len(glyph.anchors),
+			len(glyph.components),
+			bool(glyph.components and optimize),
 			omit,
 			i in bases,
-			bool(glyph.anchors),
-			bool(glyph.components),
-			bool(glyph.nodes),
-			bool(glyph.components and optimize),
 			)
 
-	for glif in glifs:
-		glyph = font[glif.index]
 		if glyph.anchors:
-			anchor_lib[glif.index] = glif_anchors(glyph.anchors)
+			anchor_lib[i] = glif_anchors(glyph.anchors)
 		if glyph.components:
-			component_lib[glif.index] = glif_components(glyph.components, font)
+			component_lib[i] = glif_components(glyph.components, font)
 		if glyph.nodes:
-			contour_lib[glif.index] = glif_contours(glyph.nodes)
+			contour_lib[i] = glif_contours(glyph.nodes)
 
 	if ufo.opts.ufoz:
 		for glif in glifs:
-			text = build_glif(glif, anchor_lib, component_lib, contour_lib, completed_contour_lib, 1)
-			ufo.archive[glif.path] = text
+			ufo.archive[glif.path] = build_glif(glif, anchor_lib, component_lib, contour_lib, completed_contour_lib, 1)
 	else:
-		write_glif_files(glifs, anchor_lib, component_lib, contour_lib, completed_contour_lib, 0)
+		write_glif_files(glifs, anchor_lib, component_lib, contour_lib, completed_contour_lib)
 
-
-cdef cpp_anchors glif_anchors(object glyph_anchors):
+cdef cpp_anchors glif_anchors(glyph_anchors):
 
 	cdef:
 		cpp_anchors anchors
-		cpp_anchor anchor
 
 	anchors.reserve(len(glyph_anchors))
-	for glyph_anchor in glyph_anchors:
-		add_anchor(anchors, cp1252_utf8_bytes(glyph_anchor.name), glyph_anchor.x * SCALE, glyph_anchor.y * SCALE)
+	for anchor in glyph_anchors:
+		add_anchor(anchors, cp1252_utf8_bytes(anchor.name), anchor.x * SCALE, anchor.y * SCALE)
 	return anchors
 
-cdef cpp_components glif_components(object glyph_components, object font):
+cdef cpp_components glif_components(glyph_components, font):
 
 	cdef:
 		cpp_components components
-		cpp_component component
-		object offset, scale
 		size_t i = 0
+		bytes base = b''
 
 	components.reserve(len(glyph_components))
-	for glyph_component in glyph_components:
-		offset, scale, i = glyph_component.delta, glyph_component.scale, glyph_component.index
-		add_component(components, cp1252_utf8_bytes(font[i].name), i, offset.x * SCALE, offset.y * SCALE, scale.x, scale.y)
+	for component in glyph_components:
+		offset_x, offset_y = component.delta.x * SCALE, component.delta.y * SCALE
+		scale, i = component.scale, component.index
+		base = cp1252_utf8_bytes(font[i].name)
+		add_component(components, base, i, offset_x, offset_y, scale.x, scale.y)
 	return components
 
-cdef cpp_contours glif_contours(object glyph_nodes):
+cdef cpp_contours glif_contours(glyph_nodes):
 
 	cdef:
 		cpp_contours contours
@@ -191,26 +197,25 @@ cdef cpp_contours glif_contours(object glyph_nodes):
 		int point_type = 0
 		size_t n = len(glyph_nodes)
 
-	contour.reserve(n / 2)
-	for i, node in enumerate(glyph_nodes):
+	contours.reserve(n // 2)
+	contour.reserve(n)
+	for node in glyph_nodes:
 
 		if node.type == 17:
 			start_node = node[0]
 			if not contour.empty():
-				contour.shrink_to_fit()
 				contours.push_back(contour)
 				contour.clear()
-				contour.reserve(n - i + 1)
 
 		if node.count > 1:
 			cubic = 1
 			if start_node == node[0]:
-				add_contour_point(contour, node.points[1].x * SCALE, node.points[1].y * SCALE, 4, 0)
-				add_contour_point(contour, node.points[2].x * SCALE, node.points[2].y * SCALE, 4, 0)
+				add_contour_point(contour, node.points[1].x * SCALE, node.points[1].y * SCALE, 4)
+				add_contour_point(contour, node.points[2].x * SCALE, node.points[2].y * SCALE, 4)
 				contour[0] = cpp_contour_point(node.x * SCALE, node.y * SCALE, 1, node.alignment)
 			else:
-				add_contour_point(contour, node.points[1].x * SCALE, node.points[1].y * SCALE, 4, 0)
-				add_contour_point(contour, node.points[2].x * SCALE, node.points[2].y * SCALE, 4, 0)
+				add_contour_point(contour, node.points[1].x * SCALE, node.points[1].y * SCALE, 4)
+				add_contour_point(contour, node.points[2].x * SCALE, node.points[2].y * SCALE, 4)
 				add_contour_point(contour, node.x * SCALE, node.y * SCALE, 1, node.alignment)
 		else:
 			if cubic:
@@ -227,8 +232,9 @@ cdef cpp_contours glif_contours(object glyph_nodes):
 					else:
 						point_type = 3
 
-			add_contour_point(contour, node.x * SCALE, node.y * SCALE, point_type, 0)
+			add_contour_point(contour, node.x * SCALE, node.y * SCALE, point_type)
 
 	contour.shrink_to_fit()
 	contours.push_back(contour)
+	contours.shrink_to_fit()
 	return contours

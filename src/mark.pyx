@@ -1,13 +1,23 @@
 # coding: utf-8
 # cython: wraparound=False
 # cython: boundscheck=False
+# cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
-# distutils: extra_compile_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
-# distutils: extra_link_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
+# distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
+# distutils: extra_link_args=[-O3]
 from __future__ import absolute_import, division, unicode_literals
 include 'includes/future.pxi'
 include 'includes/cp1252.pxi'
+
+cdef extern from 'math.h' nogil:
+	double nearbyint(double x)
+
+cdef extern from 'fenv.h' nogil:
+	const int FE_TONEAREST
+	int fesetround(int)
+
+cdef double SCALE = 1.0
 
 from collections import defaultdict
 import os
@@ -18,7 +28,6 @@ from FL import fl
 from . import user
 
 include 'includes/fea.pxi'
-include 'includes/mark.pxi'
 
 def mark_feature(ufo):
 	return _mark_feature(ufo)
@@ -27,7 +36,7 @@ def _mark_feature(ufo):
 
 	if ufo.scale is not None:
 		global SCALE
-		SCALE = <double>ufo.scale
+		SCALE = ufo.scale
 
 	font = fl[ufo.instance.ifont]
 	fesetround(FE_TONEAREST)
@@ -39,26 +48,36 @@ def _mark_feature(ufo):
 			glyph_name = py_unicode(glyph.name)
 			for anchor in glyph.anchors:
 				if anchor.name:
-					if b'_' in anchor.name[0]:
+					if anchor.name.startswith(b'_'):
 						anchor_name = anchor.name[1:]
-						if anchor_name in ufo.anchors:
+						if anchor_name in ufo.mark_classes:
 							mark_classes.add(mark_class(glyph_name, anchor))
 							continue
-					bases[glyph_name].append(anchor)
+					if anchor.name in ufo.mark_classes:
+						bases[glyph_name].append(anchor)
 
 	mark_bases = defaultdict(list)
 	for base, anchors in items(bases):
 		for anchor in anchors:
-			if anchor.name in ufo.anchors:
+			if anchor.name in ufo.mark_bases:
 				mark_bases[anchor.name].append(mark_base(base, anchor))
 
-	mark_bases = [bases for i, bases in enumerate(values(mark_bases)) if bases]
-	mark_lookups = [fea_lookup(f'mark{i+1}', sorted(bases))
-		for i, bases in enumerate(mark_bases)]
+	mark_bases = list(values(mark_bases))
+	mark_lookups = [fea_lookup(f'mark{i}', sorted(bases))
+		for i, bases in enumerate(mark_bases, start=1)]
 	mark_classes = '\n'.join(sorted(mark_classes))
 
-	lookups = '\n'.join(f'\tlookup mark{i+1};' for i in range(len(mark_bases)))
-
-	fesetround(FE_MODE)
+	lookups = '\n'.join(f'\tlookup mark{i};' for i in range(1, len(mark_bases)))
 
 	return fea_feature('mark', [mark_classes, *mark_lookups, lookups])
+
+def int_anchor_coords(x, y):
+	return int(nearbyint(x * SCALE)), int(nearbyint(y * SCALE))
+
+def mark_class(parent, anchor):
+	x, y = int_anchor_coords(anchor.x, anchor.y)
+	return f'\tmarkClass {parent} <anchor {x} {y}> @{py_unicode(anchor.name[1:])};'
+
+def mark_base(base, anchor):
+	x, y = int_anchor_coords(anchor.x, anchor.y)
+	return f'\tpos base {base} <anchor {x} {y}> mark @{py_unicode(anchor.name)};'

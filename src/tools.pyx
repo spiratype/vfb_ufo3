@@ -1,15 +1,14 @@
 # coding: utf-8
 # cython: wraparound=False
 # cython: boundscheck=False
+# cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
-# distutils: extra_compile_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
-# distutils: extra_link_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
-from __future__ import absolute_import, division, unicode_literals, print_function
+# distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
+# distutils: extra_link_args=[-O3]
+from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 include 'includes/cp1252.pxi'
-
-cimport cython
 
 import gc
 import os
@@ -18,11 +17,8 @@ import zipfile
 
 from FL import fl
 
-from . import user
 from .user import print
 
-include 'includes/ignored.pxi'
-include 'includes/string.pxi'
 include 'includes/thread.pxi'
 include 'includes/path.pxi'
 include 'includes/defaults.pxi'
@@ -50,19 +46,24 @@ def finish(ufo, instance=0):
 			write_zip(ufo.paths.instance.ufoz, ufo.archive, ufo.opts.ufoz_compress)
 		if ufo.opts.vfb_save or not ufo.opts.vfb_close:
 			fl[ufo.instance.ifont].Save(ufo.paths.instance.vfb)
+
 		fl.Close(ufo.instance.ifont)
 
-		total = time_str(time.clock() - ufo.instance_times.total)
-		ufo_path = ufo.instance_paths[ufo.instance.completed]
+		total_time = time_str(time.clock() - ufo.instance_times.total)
+
+		if ufo.opts.ufoz:
+			ufo_path = ufo.paths.instance.ufoz
+		else:
+			ufo_path = ufo.instance_paths[ufo.instance.completed]
 		filename = os.path.basename(ufo_path)
 		if 'masters' in ufo_path:
 			filename = os.path.join('masters', filename)
 		ufo.instance.completed += 1
 		if not ufo.opts.report_verbose:
-			print(f' {filename} completed {total}')
+			print(f' {filename} completed {total_time}')
 			return
 
-		print(f'\n {filename} completed {total}:\n'
+		print(f'\n {filename} completed {total_time}:\n'
 			f'{report_times(ufo.instance_times, ufo.opts.ufoz)}')
 
 		ufo.total_times.glifs += ufo.instance_times.glifs
@@ -81,14 +82,18 @@ def finish(ufo, instance=0):
 		fl[ufo.master_copy.ifont].Save(ufo.paths.vfb)
 	fl.Close(ufo.master_copy.ifont)
 
-	total = time_str(time.clock() - ufo.total_times.start)
+	total_time = time_str(time.clock() - ufo.total_times.start)
+	if ufo.instance.completed > 1:
+		message = f'\n{ufo.instance.completed} UFOs completed ({total_time})'
+	else:
+		message = f'\n1 UFO completed ({total_time})'
 	if not ufo.opts.report_verbose:
-		print(f'\n{ufo.instance.completed} UFO(s) completed ({total})')
+		print(message)
 		open_vfbs(ufo)
 		return reset(ufo)
 
 	report = [
-		f'\n{ufo.instance.completed} UFO(s) completed ({total}):\n',
+		f'{message}\n',
 		f'{report_times(ufo.total_times, ufo.opts.ufoz)}\n'.replace('  ', ' '),
 		]
 	if ufo.opts.scale_auto:
@@ -115,6 +120,7 @@ def open_vfbs(ufo):
 	for path in ufo.paths.vfbs:
 		if os.path.isfile(path):
 			fl.Open(path)
+
 
 def reset(ufo, instance=0):
 
@@ -146,6 +152,7 @@ def reset(ufo, instance=0):
 	gc.collect()
 	del gc.garbage[:]
 
+
 def write_zip(path, archive, compress=0):
 
 	try:
@@ -154,9 +161,9 @@ def write_zip(path, archive, compress=0):
 				z.writestr(path, contents)
 	except IOError as e:
 		if e.errno == 13:
-			raise IOError(f' {os.path.basename(path)} is open.\n Please close the file.')
-		raise IOError(f' {os.path.basename(path)} already exists.\n'
-			" Please rename or delete the existing file, or set 'force_overwrite' to True")
+			raise IOError(b'%s is open.\nPlease close the file.' % os.path.basename(path))
+		raise IOError(b'%s already exists.\nPlease rename or delete the existing'
+			b" file, or set 'force_overwrite' to True" % os.path.basename(path))
 
 # ------------
 #  time tools
@@ -178,71 +185,62 @@ def time_str(duration, precision=1, simple_output=False):
 
 		if simple_output:
 			return hours, minutes, seconds
-		else:
-			return f'{hours} hr {minutes} min {seconds} sec'
+		return f'{hours} hr {minutes} min {seconds} sec'
 
 	def minutes_time(minutes, seconds, duration):
 
 		if simple_output :
 			return minutes, seconds
-		else:
-			return f'{minutes} min {seconds} sec'
+		return f'{minutes} min {seconds} sec'
 
 	def seconds_time(seconds, duration):
 
 		str_seconds = f'{seconds}'
-		if str_seconds.count('.0000'):
+		if '.0000' in str_seconds:
 			seconds = str_seconds[:str_seconds.find('.')] + '.000'
 		if simple_output:
 			return seconds
-		else:
-			return f'{seconds} sec'
+		return f'{seconds} sec'
 
 	def milliseconds_time(milliseconds, duration):
 
 		milliseconds = int(round(milliseconds))
 		if simple_output:
 			return int(round(milliseconds))
-		else:
-			return f'{milliseconds} msec'
+		return f'{milliseconds} msec'
 
 	def microseconds_time(microseconds, duration):
 
 		microseconds = int(round(microseconds))
 		if simple_output:
 			return int(round(microseconds))
-		else:
-			return f'{microseconds} µsec'
+		return f'{microseconds} µsec'
 
 	def nanoseconds_time(nanoseconds, duration):
 
 		nanoseconds = int(round(nanoseconds))
 		if simple_output:
 			return round(duration, 9)
-		else:
-			return f'{nanoseconds} nsec'
+		return f'{nanoseconds} nsec'
 
 
 	if 1 > duration >= 1e-9:
 		milliseconds = duration * 1e3
 		if 999 > milliseconds >= 1:
 			return milliseconds_time(milliseconds, duration)
-		else:
-			microseconds = duration * 1e6
-			if 999 > microseconds >= 1:
-				return microseconds_time(microseconds, duration)
-			else:
-				nanoseconds = duration * 1e9
-				if 999 > nanoseconds >= 1:
-					return nanoseconds_time(nanoseconds, duration)
+		microseconds = duration * 1e6
+		if 999 > microseconds >= 1:
+			return microseconds_time(microseconds, duration)
+		nanoseconds = duration * 1e9
+		if 999 > nanoseconds >= 1:
+			return nanoseconds_time(nanoseconds, duration)
 
 	if 3600 > duration >= 1:
 			minutes, seconds = duration // 60, duration % 60
 			if 59 > minutes >= 1:
 				return minutes_time(minutes, round(seconds, precision), duration)
-			else:
-				seconds = round(duration, precision)
-				return seconds_time(seconds, duration)
+			seconds = round(duration, precision)
+			return seconds_time(seconds, duration)
 
 	if duration >= 3600:
 		hours, minutes = duration // 3600, duration % 3600

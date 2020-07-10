@@ -1,29 +1,27 @@
 // glif.hpp
 
-#include <cfenv>
+#define FMT_HEADER_ONLY
+#include <fmt/format.h>
+
 #include <cmath>
-#include <iomanip>
-#include <omp.h>
-#include <sstream>
+#include <cstdio>
 #include <string>
-#include <thread>
 #include <unordered_map>
 #include <vector>
 
+#include <omp.h>
+
 #include "io.hpp"
 #include "string.hpp"
-#include "srgb.hpp"
 #include "mark.hpp"
 
-const std::string XML_PROLOG = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
-
-std::unordered_map<int, const std::string> POINT_TYPES = {
-	{0, ""},
-	{1, "curve"},
-	{2, "qcurve"},
-	{3, "line"},
-	{4, "off"},
-	{5, "move"},
+static const std::vector<std::string> POINT_TYPES = {
+	"",
+	"curve",
+	"qcurve",
+	"line",
+	"off",
+	"move"
 	};
 
 class cpp_point;
@@ -32,30 +30,33 @@ class cpp_contour_point;
 class cpp_component;
 class cpp_glif;
 
+typedef std::vector<cpp_anchor> cpp_anchors;
+typedef std::vector<cpp_component> cpp_components;
 typedef std::vector<cpp_contour_point> cpp_contour;
 typedef std::vector<cpp_contour> cpp_contours;
 
-std::string items_repr(auto &items) {
-	std::stringstream items_stream;
-	for (auto &item : items)
-		items_stream << item.repr();
-	return items_stream.str();
+std::string items_repr(const auto &items, const int avg_len=80) {
+	std::string repr;
+	repr.reserve(items.size() * avg_len);
+	for (const auto &item : items)
+		repr += item.repr();
+	return repr;
 	}
 
 class cpp_point {
 	public:
 		float x;
 		float y;
-		cpp_point() {};
+		cpp_point() {}
 		cpp_point(float x, float y) {
 			this->x = x;
 			this->y = y;
 			}
-		bool operator==(const cpp_point& other) const {
-			return std::tie(x, y) == std::tie(other.x, other.y);
+		bool operator==(const cpp_point other) const {
+			return (this->x == other.x and this->y == other.y);
 			}
-		bool operator!=(const cpp_point& other) const {
-			return std::tie(x, y) != std::tie(other.x, other.y);
+		bool operator!=(const cpp_point other) const {
+			return (this->x != other.x or this->y != other.y);
 			}
 	};
 
@@ -65,22 +66,21 @@ class cpp_anchor {
 		float x;
 		float y;
 	public:
-		cpp_anchor() {};
+		cpp_anchor() {}
 		cpp_anchor(std::string name, float x, float y) {
 			this->name = name;
 			this->x = x;
 			this->y = y;
 			}
-		std::vector<std::string> attrs() {
-			std::vector<std::string> attrs = {
+		std::vector<std::string> attrs() const {
+			return {
 				attr("name", this->name),
 				attr("x", number_str(this->x)),
 				attr("y", number_str(this->y)),
 				};
-			return attrs;
 			}
-		std::string repr() {
-			return "\t<anchor " + attrs_str(this->attrs()) + "/>\n";
+		std::string repr() const {
+			return fmt::format("\t<anchor {}/>\n", attrs_str(this->attrs()));
 			}
 	};
 
@@ -91,7 +91,7 @@ class cpp_contour_point {
 		int type;
 		int alignment;
 	public:
-		cpp_contour_point() {};
+		cpp_contour_point() {}
 		cpp_contour_point(float x, float y, int type, int alignment) {
 			this->x = x;
 			this->y = y;
@@ -112,33 +112,27 @@ class cpp_contour_point {
 			this->x += offset.x;
 			this->y += offset.y;
 			}
-		std::vector<std::string> attrs() {
-			std::vector<std::string> attrs;
-			if (this->type == 4) {
-				attrs = {
+		std::vector<std::string> attrs() const {
+			if (this->type == 4)
+				return {
 					attr("x", number_str(this->x)),
 					attr("y", number_str(this->y)),
 					};
-				}
-			else if (this->alignment != 0) {
-				attrs = {
+			if (this->alignment > 0)
+				return {
 					attr("x", number_str(this->x)),
 					attr("y", number_str(this->y)),
 					attr("type", POINT_TYPES[this->type]),
 					attr("smooth", "yes"),
 					};
-				}
-			else {
-				attrs = {
+			return {
 					attr("x", number_str(this->x)),
 					attr("y", number_str(this->y)),
 					attr("type", POINT_TYPES[this->type]),
 					};
-				}
-			return attrs;
 			}
-		std::string repr() {
-			return "\t\t\t<point " + attrs_str(this->attrs()) + "/>\n";
+		std::string repr() const {
+			return fmt::format("\t\t\t<point {}/>\n", attrs_str(this->attrs()));
 			}
 	};
 
@@ -149,32 +143,24 @@ class cpp_component {
 		size_t index;
 		cpp_point offset;
 		cpp_point scale;
-		cpp_component() {};
-		cpp_component(
-			std::string base,
-			size_t index,
-			float offset_x,
-			float offset_y,
-			float scale_x,
-			float scale_y
-			) {
+		cpp_component() {}
+		cpp_component(std::string base, size_t index, float offset_x, float offset_y, float scale_x, float scale_y) {
 			this->base = base;
 			this->index = index;
 			this->offset = cpp_point(offset_x, offset_y);
 			this->scale = cpp_point(scale_x, scale_y);
 			}
-		std::vector<std::string> attrs() {
-			std::vector<std::string> attrs = {
+		std::vector<std::string> attrs() const {
+			return {
 				attr("base", this->base),
 				attr("xOffset", number_str(this->offset.x)),
 				attr("yOffset", number_str(this->offset.y)),
 				attr("xScale", float_str(this->scale.x, 2)),
 				attr("yScale", float_str(this->scale.y, 2)),
 				};
-			return attrs;
 			}
-		std::string repr() {
-			return "\t\t<component " + attrs_str(this->attrs()) + "/>\n";
+		std::string repr() const {
+			return fmt::format("\t\t\t<component {}/>\n", attrs_str(this->attrs()));
 			}
 	};
 
@@ -182,79 +168,84 @@ class cpp_glif {
 	public:
 		std::string name;
 		std::string path;
-		std::string text;
+		std::vector<int> unicodes;
+		int mark;
 		float width;
 		size_t index;
-		int mark;
-		std::vector<std::string> unicodes;
+		size_t points_count;
+		size_t anchors_count;
+		size_t components_count;
+		bool optimize;
 		bool omit;
 		bool base;
-		bool has_anchors;
-		bool has_components;
-		bool has_contours;
-		bool optimize;
-		cpp_glif() {};
+		cpp_glif() {}
 		cpp_glif(
 			std::string &name,
 			std::string &path,
-			std::vector<std::string> &unicodes,
+			std::vector<int> &unicodes,
 			int mark,
 			float width,
 			size_t index,
+			size_t points_count,
+			size_t anchors_count,
+			size_t components_count,
+			bool optimize,
 			bool omit,
-			bool base,
-			bool has_anchors,
-			bool has_components,
-			bool has_contours,
-			bool optimize
+			bool base
 			) {
 			this->name = name;
 			this->path = path;
 			this->unicodes = unicodes;
-			if (mark == 255)
+			if (mark >= 255)
 				mark = 254;
 			this->mark = mark;
 			this->width = width;
 			this->index = index;
+			this->points_count = points_count;
+			this->anchors_count = anchors_count;
+			this->components_count = components_count;
+			this->optimize = optimize;
 			this->omit = omit;
 			this->base = base;
-			this->has_anchors = has_anchors;
-			this->has_components = has_components;
-			this->has_contours = has_contours;
-			this->optimize = optimize;
+			}
+		size_t len() const {
+			return (this->unicodes.size() + this->anchors_count + this->components_count + this->points_count);
 			}
 	};
 
-std::string contours_repr(auto &contours) {
-	std::stringstream contours_stream;
-	for (auto &contour : contours)
-		contours_stream << contour_repr(contour);
-	return contours_stream.str();
+std::string contour_repr(const auto &contour) {
+	return fmt::format("\t\t<contour>\n{}\t\t</contour>\n", items_repr(contour));
 	}
 
-std::string contour_repr(auto &contour) {
-	return "\t\t<contour>\n" + items_repr(contour) + "\t\t</contour>\n";
+std::string contours_repr(const auto &contours) {
+	std::string repr;
+	int i = 0;
+	for (const auto &contour : contours)
+		i += contour.size();
+	repr.reserve(i * 80);
+	for (const auto &contour : contours)
+		repr += contour_repr(contour);
+	return repr;
 	}
 
 std::string unicode_repr(const auto &code_point) {
-	return "\t<unicode hex=\"" + code_point + "\"/>\n";
+	if (code_point <= 0xffff)
+		return fmt::format("\t<unicode hex='{:04X}'/>\n", code_point);
+	return fmt::format("\t<unicode hex='{:05X}'/>\n", code_point);
 	}
 
-const cpp_point NO_SCALE = cpp_point(0.0, 0.0);
-const cpp_point NO_OFFSET = cpp_point(0.0, 0.0);
+static const cpp_point NO_SCALE = cpp_point(0.0, 0.0);
+static const cpp_point NO_OFFSET = cpp_point(0.0, 0.0);
 
-typedef std::vector<cpp_anchor> cpp_anchors;
-typedef std::vector<cpp_component> cpp_components;
 typedef std::vector<cpp_glif> cpp_glifs;
 typedef std::unordered_map<size_t, cpp_anchors> cpp_anchor_lib;
 typedef std::unordered_map<size_t, cpp_components> cpp_component_lib;
 typedef std::unordered_map<size_t, cpp_contours> cpp_contour_lib;
 typedef std::unordered_map<size_t, std::string> cpp_completed_contour_lib;
 
-void add_contours(auto &contour_lib, auto &completed_contour_lib, auto &component, auto &text_stream) {
+std::string add_contours(auto &contour_lib, auto &completed_contour_lib, auto &component) {
 
-	bool use_default = false;
-	std::string repr = "";
+	std::string repr;
 	cpp_contours contours(contour_lib[component.index]);
 
 	if (component.offset != NO_OFFSET and component.scale != NO_SCALE) {
@@ -273,10 +264,6 @@ void add_contours(auto &contour_lib, auto &completed_contour_lib, auto &componen
 				point.scale(component.scale);
 		}
 	else {
-		use_default = true;
-		}
-
-	if (use_default) {
 		if (completed_contour_lib.find(component.index) == completed_contour_lib.end()) {
 			repr = contours_repr(contours);
 			completed_contour_lib[component.index] = repr;
@@ -289,85 +276,86 @@ void add_contours(auto &contour_lib, auto &completed_contour_lib, auto &componen
 	if (repr.empty())
 		repr = contours_repr(contours);
 
-	text_stream << repr;
+	return repr;
 	}
 
-std::string build_glif(
-	auto &glif,
-	auto &anchor_lib,
-	auto &component_lib,
-	auto &contour_lib,
-	auto &completed_contour_lib,
-	bool ufoz
-	) {
-	std::stringstream text_stream;
-	text_stream << XML_PROLOG <<
-		"<glyph name=\"" << glif.name << "\" format=\"2\">\n" <<
-		"\t<advance width=\"" << number_str(glif.width) << "\"/>\n";
+std::string build_glif(const auto &glif, auto &anchor_lib, auto &component_lib, auto &contour_lib, auto &completed_contour_lib, bool ufoz=false) {
+	std::string text;
+	std::string mark;
+	text.reserve(glif.len() * 120);
+	text += fmt::format(
+		"<?xml version='1.0' encoding='UTF-8'?>\n"
+		"<glyph name='{}' format='2'>\n"
+		"\t<advance width='{}'/>\n",
+		glif.name, number_str(glif.width));
+
 	if (!glif.unicodes.empty())
-		for (auto &code_point : glif.unicodes)
-			text_stream << unicode_repr(code_point);
-	if (glif.has_anchors)
-		text_stream << items_repr(anchor_lib[glif.index]);
-	if (glif.has_components or glif.has_contours)
-		text_stream << "\t<outline>\n";
-	if (glif.has_components and !glif.optimize)
-		text_stream << items_repr(component_lib[glif.index]);
-	if (glif.optimize and glif.has_components)
-		for (auto &component : component_lib[glif.index])
-			add_contours(contour_lib, completed_contour_lib, component, text_stream);
-	if (glif.has_contours)
-		text_stream << contours_repr(contour_lib[glif.index]);
-	if (glif.has_components or glif.has_contours)
-		text_stream << "\t</outline>\n";
-	if (glif.mark > 0 and glif.mark < 256)
-		text_stream <<
+		for (const auto &code_point : glif.unicodes)
+			text += unicode_repr(code_point);
+
+	if (glif.anchors_count)
+		text += items_repr(anchor_lib[glif.index]);
+
+	if (glif.components_count or glif.points_count)
+		text += "\t<outline>\n";
+
+	if (glif.components_count) {
+		if (!glif.optimize) {
+			text += items_repr(component_lib[glif.index]);
+			}
+		else {
+			for (auto &component : component_lib[glif.index])
+				text += add_contours(contour_lib, completed_contour_lib, component);
+			}
+		}
+
+	if (glif.points_count)
+		text += contours_repr(contour_lib[glif.index]);
+
+	if (glif.components_count or glif.points_count)
+		text += "\t</outline>\n";
+
+	if (glif.mark > 0)
+		mark = MARK_COLORS[glif.mark];
+
+	if (!mark.empty())
+		text += fmt::format(
 			"\t<lib>\n"
 			"\t\t<dict>\n"
 			"\t\t\t<key>public.markColor</key>\n"
-			"\t\t\t<string>" + MARK_COLORS[glif.mark] + "</string>\n"
+			"\t\t\t<string>{}</string>\n"
 			"\t\t</dict>\n"
-			"\t</lib>\n";
-	text_stream << "</glyph>\n";
-	const std::string text = text_stream.str();
+			"\t</lib>\n",
+			mark);
+
+	text += "</glyph>\n";
+	text.shrink_to_fit();
+
 	if (!ufoz)
 		write_file(glif.path.c_str(), text.c_str(), text.size());
+
 	return text;
 	}
 
-void add_anchor(cpp_anchors &anchors, std::string name, float x, float y) {
+void add_anchor(auto &anchors, auto &name, float x, float y) {
 	anchors.emplace_back(name, x, y);
 	}
 
-void add_component(cpp_components &components, std::string base, size_t index, float offset_x, float offset_y, float scale_x, float scale_y) {
+void add_component(auto &components, auto &base, size_t index, float offset_x, float offset_y, float scale_x, float scale_y) {
 	components.emplace_back(base, index, offset_x, offset_y, scale_x, scale_y);
 	}
 
-void add_contour_point(cpp_contour &contour, float x, float y, int type, int alignment) {
+void add_contour_point(auto &contour, float x, float y, int type, int alignment=0) {
 	contour.emplace_back(x, y, type, alignment);
 	}
 
-void add_glif(
-	cpp_glifs &glifs,
-	std::string &name,
-	std::string &path,
-	std::vector<std::string> &unicodes,
-	int mark,
-	float width,
-	size_t index,
-	bool omit,
-	bool base,
-	bool has_anchors,
-	bool has_components,
-	bool has_contours,
-	bool optimize
-	) {
-	glifs.emplace_back(name, path, unicodes, mark, width, index, omit, base, has_anchors, has_components, has_contours, optimize);
+void add_glif(auto &glifs, auto &name, auto &path, auto &unicodes, int mark, float width, size_t index, size_t points_count, size_t anchors_count, size_t components_count, bool optimize, bool omit, bool base) {
+	glifs.emplace_back(name, path, unicodes, mark, width, index, points_count, anchors_count, components_count, optimize, omit, base);
 	}
 
-void write_glif_files(const auto &glifs, auto &anchor_lib, auto &component_lib, auto &contour_lib, auto &completed_contour_lib, bool ufoz) {
-	std::fesetround(FE_TONEAREST);
-	#pragma omp parallel for schedule(dynamic) num_threads(std::thread::hardware_concurrency())
+void write_glif_files(const auto &glifs, auto &anchor_lib, auto &component_lib, auto &contour_lib, auto &completed_contour_lib) {
+	#pragma omp parallel for schedule(runtime)
 	for (const auto &glif : glifs)
-		if (!glif.omit) build_glif(glif, anchor_lib, component_lib, contour_lib, completed_contour_lib, ufoz);
+		if (!glif.omit)
+			build_glif(glif, anchor_lib, component_lib, contour_lib, completed_contour_lib);
 	}

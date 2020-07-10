@@ -1,28 +1,26 @@
 # coding: utf-8
 # cython: wraparound=False
 # cython: boundscheck=False
+# cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
-# distutils: extra_compile_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
-# distutils: extra_link_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
+# distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
+# distutils: extra_link_args=[-O3]
 from __future__ import absolute_import, division, unicode_literals
 include 'includes/future.pxi'
 include 'includes/cp1252.pxi'
-
-from xml cimport plist_doc
 
 import os
 import time
 
 from FL import fl
 
-include 'includes/ignored.pxi'
 include 'includes/thread.pxi'
 include 'includes/io.pxi'
 include 'includes/path.pxi'
-include 'includes/objects.pxi'
-include 'includes/plist.pxi'
 include 'includes/string.pxi'
+include 'includes/xml.pxi'
+include 'includes/ordered_dict.pxi'
 
 def plists(ufo):
 	start = time.clock()

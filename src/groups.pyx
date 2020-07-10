@@ -1,11 +1,12 @@
 # coding: utf-8
 # cython: wraparound=False
 # cython: boundscheck=False
+# cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
-# distutils: extra_compile_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
-# distutils: extra_link_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
-from __future__ import absolute_import, division, unicode_literals, print_function
+# distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
+# distutils: extra_link_args=[-O3]
+from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 include 'includes/cp1252.pxi'
 
@@ -14,18 +15,16 @@ import time
 
 from FL import fl
 
-from . import user
-from .user import print
+from .user import print, read_file
 
-include 'includes/ignored.pxi'
-include 'includes/string.pxi'
 include 'includes/thread.pxi'
 include 'includes/path.pxi'
 include 'includes/io.pxi'
-include 'includes/objects.pxi'
 include 'includes/groups.pxi'
 include 'includes/flc.pxi'
 include 'includes/plist.pxi'
+include 'includes/ordered_dict.pxi'
+include 'includes/string.pxi'
 
 def groups(ufo):
 	start = time.clock()
@@ -65,12 +64,11 @@ def finish_groups(ufo):
 	if ufo.groups.kerning:
 		for name, (second, glyphs) in sorted(items(ufo.groups.kerning)):
 			ufo.groups.all[name] = glyphs
+			ufo.kern.glyphs_len[name] = len(glyphs)
 			if second:
 				ufo.kern.seconds.update(glyphs)
-				ufo.kern.glyphs_len[name] = len(glyphs)
 			else:
 				ufo.kern.firsts.update(glyphs)
-				ufo.kern.glyphs_len[name] = len(glyphs)
 
 	if ufo.opts.vfb_save:
 		update_groups(ufo)
@@ -87,7 +85,7 @@ def rename_groups(ufo):
 
 	no_kerning = {}
 	for i, (name, glyphs) in items(font_groups):
-		if '_' not in name[0]:
+		if not name.startswith('_'):
 			ufo.groups.opentype[name] = glyphs.split()
 			continue
 		name = name[1:]
@@ -143,12 +141,13 @@ def groups_from_kern_feature(font):
 
 	firsts, seconds = set(), set()
 	kern_feature = py_unicode(font.MakeKernFeature().value).replace('enum ', '')
-	kern_feature = [line.split()[1:3] for line in kern_feature.splitlines()
+	kern_feature = [line.split()[1:3]
+		for line in kern_feature.splitlines()
 		if '@' in line]
 	for first, second in kern_feature:
-		if '@' in first[0]:
+		if first.startswith('@'):
 			firsts.add(first[2:])
-		if '@' in second[0]:
+		if second.startswith('@'):
 			seconds.add(second[2:])
 
 	return font_groups, firsts, seconds
@@ -159,7 +158,7 @@ def import_flc(ufo):
 	print(f' Importing groups from {os.path.basename(ufo.paths.flc)}..')
 
 	font = fl[ufo.master_copy.ifont]
-	flc_file = user.read_file(ufo.paths.flc)
+	flc_file = read_file(ufo.paths.flc)
 	flc_groups = parse_flc(flc_file)
 
 	for name, (flag, glyphs) in items(flc_groups):
@@ -191,10 +190,10 @@ def import_groups_plist(ufo):
 	print(f' Importing groups from {os.path.basename(ufo.paths.groups_plist)}..')
 
 	font = fl[ufo.master_copy.ifont]
-	plist = user.read_file(ufo.paths.groups_plist)
+	plist = read_file(ufo.paths.groups_plist)
 
 	if '@MMK' in plist:
-		for (ver1, ver2) in [('@MMK_L_', PREFIX_1), ('@MMK_R_', PREFIX_2)]:
+		for (ver1, ver2) in (('@MMK_L_', PREFIX_1), ('@MMK_R_', PREFIX_2)):
 			plist = plist.replace(ver1, ver2)
 
 	plist_groups = parse_plist(plist)
@@ -227,17 +226,17 @@ def update_groups(ufo):
 
 	font_classes = []
 	for name, glyphs in sorted(items(ufo.groups.opentype)):
-		font_classes.append(f"{name}: {' '.join(glyphs)}")
+		font_classes.append(f'{name}: {" ".join(glyphs)}')
 	for name, (_, glyphs) in sorted(items(ufo.groups.kerning)):
 		key_glyph = ufo.kern.key_glyph_from_group[name]
-		font_classes.append(f"_{name}: {insert_key_glyph(glyphs, key_glyph)}")
+		font_classes.append(f'_{name}: {insert_key_glyph(glyphs, key_glyph)}')
 
 	font.classes = py_bytes('\n'.join(font_classes)).splitlines()
 	for i, group in enumerate(font.classes):
 		if ufo.opts.groups_ignore_no_kerning:
 			if i in ufo.groups.no_kerning:
 				continue
-		if b'_' in group[0]:
+		if group.startswith(b'_'):
 			if b'.kern1.' in group:
 				font.SetClassFlags(i, 1, 0)
 			elif b'.kern2.' in group:
@@ -247,48 +246,43 @@ def update_groups(ufo):
 def write_flc(ufo):
 
 	if ufo.opts.groups_export_flc_path:
-		flc_export_path = ufo.opts.groups_export_flc_path.encode('utf_8')
+		filename = os.path.basename(ufo.opts.groups_export_flc_path)
+		flc_export_path = file_str(ufo.opts.groups_export_flc_path)
 	else:
 		version = ufo.master.version.replace('.', '_')
 		if ufo.master.font_style in (1, 33):
 			filename = f'{ufo.master.family_name}_Italic_{version}.flc'
 		else:
 			filename = f'{ufo.master.family_name}_{version}.flc'
-		flc_export_path = os.path.join(ufo.paths.out, filename).encode('utf_8')
+		flc_export_path = file_str(os.path.join(ufo.paths.out, filename))
 
 	if os.path.isfile(flc_export_path):
 		if ufo.opts.force_overwrite:
 			remove_path(flc_export_path, force=1)
 		else:
-			raise UserWarning(f'{flc_export_path} already exists.\n'
-				'Please rename or move existing class file')
+			raise RuntimeError(b'%s already exists.\n'
+				b'Please rename or move existing class file' % py_bytes(flc_export_path))
 
 	print(f' Writing {filename}..')
 
-	flc_file = [FLC_HEADER + '\n']
-	flc_end_marker = FLC_END_MARKER + '\n'
+	flc_file = [f'{FLC_HEADER}\n']
+	flc_end_marker = f'{FLC_END_MARKER}\n'
 	for name, glyphs in sorted(items(ufo.groups.opentype)):
 		flc_file += [
 			f'{FLC_GROUP_MARKER} {name}',
-			f"{FLC_GLYPHS_MARKER} {' '.join(glyphs)}",
+			f'{FLC_GLYPHS_MARKER} {" ".join(glyphs)}',
 			flc_end_marker,
 			]
 	for name, (second, glyphs) in sorted(items(ufo.groups.kerning)):
 		key_glyph = ufo.kern.key_glyph_from_group[name]
-		if second:
-			flc_file += [
-				f'{FLC_GROUP_MARKER} _{name}',
-				f'{FLC_GLYPHS_MARKER} {insert_key_glyph(glyphs, key_glyph)}',
-				FLC_RIGHT_KERNING_MARKER,
-				flc_end_marker,
-				]
-		else:
-			flc_file += [
-				f'{FLC_GROUP_MARKER} _{name}',
-				f'{FLC_GLYPHS_MARKER} {insert_key_glyph(glyphs, key_glyph)}',
-				FLC_LEFT_KERNING_MARKER,
-				flc_end_marker,
-				]
+		glyphs = insert_key_glyph(glyphs, key_glyph)
+		group_marker = FLC_RIGHT_KERNING_MARKER if second else FLC_LEFT_KERNING_MARKER
+		flc_file += [
+			f'{FLC_GROUP_MARKER} _{name}',
+			f'{FLC_GLYPHS_MARKER} {glyphs}',
+			group_marker,
+			flc_end_marker,
+			]
 
 	flc_file = file_str('\n'.join(flc_file))
 	write_file(flc_export_path, flc_file)

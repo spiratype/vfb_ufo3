@@ -187,29 +187,31 @@ SCALABLE_TABLE_KEYS = {
 
 def fea_group(name, glyphs, indent=0):
 	if indent:
-		return f"\t@{name}=[{' '.join(glyphs)}];"
-	return f"@{name}=[{' '.join(glyphs)}];"
+		return f'\t@{name}=[{" ".join(glyphs)}];'
+	return f'@{name}=[{" ".join(glyphs)}];'
 
 def fea_table(label, table):
-	table = '\n'.join([f'\t{key} {value};' for (key, value) in table
-		if value is not None])
+	table = '\n'.join(f'\t{key} {value};' for (key, value) in table
+		if value is not None)
 	return f'table {label} {{\n{table}\n}} {label};'
 
 def fea_lookup(label, lookup, kern=0):
 	if kern:
 		return fea_kern_lookup(label, lookup)
-	lookup = [
+	return '\n'.join((
 		f'\tlookup {label} {{',
-		*['\t' + line for line in lookup],
+		*[f'\t{line}' for line in lookup],
 		f'\t}} {label};',
-		]
-	return '\n'.join(lookup)
+		))
 
 def fea_kern_lookup(label, lookup):
 	lookup = [
-		f'\tlookup {label} useExtension {{\n\t\tlookupflag IgnoreMarks;',
-		*['\t' + line for line in lookup],
-		f'\t\tlookupflag 0;\n\t}} {label};\n\tlookup {label};',
+		f'\tlookup {label} useExtension {{\n'
+		'\t\tlookupflag IgnoreMarks;',
+		*[f'\t{line}' for line in lookup],
+		f'\t\tlookupflag 0;\n'
+		f'\t}} {label};\n'
+		f'\tlookup {label};',
 		]
 	return lookup
 

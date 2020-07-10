@@ -1,14 +1,7 @@
 # STRING
 
-cdef extern from '<math.h>' nogil:
-	double nearbyint(double x)
-
-cdef extern from '<fenv.h>' nogil:
-	const int FE_TONEAREST
-	int fesetround(int mode)
-	int fegetround()
-
-cdef int FE_MODE = fegetround()
+cdef extern from 'math.h' nogil:
+	double nearbyint(double)
 
 def file_str(unicode_str):
 
@@ -32,10 +25,12 @@ def uni_name(code_point):
 	u1F657
 	'''
 
-	return 'uni%04X' % code_point if code_point <= 0xffff else 'u%05X' % code_point
+	if code_point <= 0xffff:
+		return f'uni{code_point:04X}'
+	return f'u{code_point:05X}'
 
 
-cdef inline bytes hex_code_point(code_point):
+def hex_code_point(code_point):
 
 	'''
 	convert integer to a zero-filled, uppercase hexadecimal value string
@@ -47,7 +42,9 @@ cdef inline bytes hex_code_point(code_point):
 	0050
 	'''
 
-	return b'%04X' % code_point if code_point <= 0xffff else b'%05X' % code_point
+	if code_point <= 0xffff:
+		return f'{code_point:04X}'
+	return f'{code_point:05X}'
 
 
 cdef inline number_str(double n):
@@ -61,17 +58,14 @@ cdef inline number_str(double n):
 	4.1
 	'''
 
-	cdef:
-		double k
-		bint a
+	cdef double k = nearbyint(n)
 
-	with nogil:
-		k = nearbyint(n)
-		a = 1 if k == n else 0
+	if k == n:
+		return str(<long>k)
+	return f'{n:.1f}'
 
-	return str(<long>k) if a else '%.1f' % n
 
-cdef inline float_str(double n, unsigned int precision):
+def float_str(n, precision):
 
 	'''
 	return float to `precision` decimal places

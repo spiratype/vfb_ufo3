@@ -1,14 +1,16 @@
 # coding: utf-8
 # cython: wraparound=False
 # cython: boundscheck=False
+# cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
-# distutils: extra_compile_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
-# distutils: extra_link_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
-from __future__ import absolute_import, division, unicode_literals, print_function
+# distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
+# distutils: extra_link_args=[-O3]
+from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 include 'includes/cp1252.pxi'
 
+from collections import defaultdict
 import os
 import time
 
@@ -19,16 +21,14 @@ from . import fea, kern, user
 from .fontinfo import fontinfo
 from .user import print
 
-include 'includes/ignored.pxi'
 include 'includes/thread.pxi'
 include 'includes/io.pxi'
 include 'includes/path.pxi'
-include 'includes/string.pxi'
 include 'includes/defaults.pxi'
 include 'includes/nameid.pxi'
-include 'includes/flc.pxi'
 include 'includes/glifname.pxi'
 include 'includes/codepoints.pxi'
+include 'includes/string.pxi'
 
 def process_master_copy(ufo, master_copy):
 	_process_master_copy(ufo, master_copy)
@@ -52,7 +52,9 @@ def _process_master_copy(ufo, master_copy):
 	ufo.kern.seconds = set()
 	ufo.glyph_sets.bases = set()
 	ufo.glyph_sets.omit = {-1}
-	ufo.anchors = set()
+	anchors = set()
+	ufo.mark_classes = set()
+	ufo.mark_bases = set()
 	for i, glyph in enumerate(master_copy.glyphs):
 
 		if glyph.kerning:
@@ -61,8 +63,9 @@ def _process_master_copy(ufo, master_copy):
 				ufo.kern.seconds.add(py_unicode(master_copy[kerning_pair.key].name))
 
 		if glyph.anchors:
-			ufo.anchors.update({anchor.name for anchor in glyph.anchors
-				if anchor.name})
+			for anchor in glyph.anchors:
+				if anchor.name:
+					anchors.add(anchor.name)
 
 		for component in glyph.components:
 			ufo.glyph_sets.bases.add(component.index)
@@ -76,11 +79,19 @@ def _process_master_copy(ufo, master_copy):
 					ufo.glyph_sets.omit.add(i)
 					break
 
-	if ufo.anchors:
+	if anchors and ufo.opts.mark_feature_generate:
 		if ufo.opts.mark_anchors_omit:
-			ufo.anchors = ufo.anchors ^ ufo.opts.mark_anchors_omit
+			anchors ^= ufo.opts.mark_anchors_omit
 		elif ufo.opts.mark_anchors_include:
-			ufo.anchors = ufo.anchors & ufo.opts.mark_anchors_include
+			anchors &= ufo.opts.mark_anchors_include
+		for anchor in anchors:
+			if anchor.startswith(b'_'):
+				ufo.mark_classes.add(anchor[1:])
+			else:
+				ufo.mark_bases.add(anchor)
+		ufo.mark_classes = {anchor for anchor in ufo.mark_classes
+			if anchor in ufo.mark_bases}
+
 
 	for i, glyph in enumerate(master_copy.glyphs):
 		omit = i in ufo.glyph_sets.omit
@@ -223,7 +234,8 @@ def build_instance_paths(ufo, attributes, path):
 def _build_goadb(ufo, font):
 
 	if os.path.isfile(ufo.paths.GOADB):
-		ufo.afdko.GOADB = [line.split() for line in user.read_file(ufo.paths.GOADB).splitlines()]
+		ufo.afdko.GOADB = [line.split()
+			for line in user.read_file(ufo.paths.GOADB).splitlines()]
 	else:
 		goadb_from_encoding(ufo, font)
 
@@ -281,7 +293,7 @@ def _font_names(ufo, font):
 	else:
 		font.tt_u_id = py_bytes(f'{font.full_name}: {font.year}')
 	# Font style name
-	if font.font_style in (1, 33):
+	if font.font_style in {1, 33}:
 		font.style_name = py_bytes(f'{font.weight} Italic')
 	else:
 		font.style_name = font.weight
@@ -299,13 +311,12 @@ def _font_names(ufo, font):
 def name_records(ufo, font):
 
 	name_records = {platform_id: ms_mac_names(ufo, font, platform_id)
-		for platform_id in (1, 3)}
+		for platform_id in {1, 3}}
 
 	name_records = [
 		NameRecord(nid, pid, ENC_IDS[pid], LANG_IDS[pid], py_bytes(name))
 		for pid, names in sorted(items(name_records))
-		for nid, name in names
-		]
+		for nid, name in names]
 
 	font.fontnames.clean()
 	for name_record in name_records:
@@ -359,17 +370,14 @@ def ms_mac_names(ufo, font, platform_id):
 def _check_glyph_unicodes(font):
 
 	code_points = set()
-	unicode_errors = {}
+	unicode_errors = defaultdict(list)
 	for glyph in font.glyphs:
 		for code_point in glyph.unicodes:
 			if code_point not in code_points:
 				code_points.add(code_point)
 			else:
 				glyph_name = py_unicode(glyph.name)
-				if code_point not in unicode_errors:
-					unicode_errors[code_point] = [glyph_name]
-				else:
-					unicode_errors[code_point].append(glyph_name)
+				unicode_errors[code_point].append(glyph_name)
 
 	message = []
 	if unicode_errors:
@@ -432,10 +440,7 @@ def component_lib(ufo, font):
 
 def Glif(glyph, release, omit):
 	glyph_name = glyph.name
-	glif_name = GLIFNAMES.get(glyph_name, glifname(glyph.name, release, omit))
-	return cp1252_utf8_bytes(glyph_name), glif_name, glyph.mark, unicodes(glyph), omit
-
-def unicodes(glyph):
-	if glyph.unicodes:
-		return [hex_code_point(code_point) for code_point in glyph.unicodes]
-	return []
+	glif_name = GLIFNAMES.get(glyph_name)
+	if glif_name is None:
+		glif_name = glifname(glyph_name, release, omit)
+	return cp1252_utf8_bytes(glyph_name), glif_name, glyph.mark, list(glyph.unicodes), omit

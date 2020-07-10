@@ -1,34 +1,27 @@
 // string.hpp
 
-std::string str_vector_join(const std::vector<std::string> &str_vec, const char join_char) {
-	std::stringstream out;
-	for (auto &str : str_vec)
-		out << str << join_char;
-	std::string out_str = out.str();
-	out_str.pop_back();
-	return out_str;
+std::string float_str(const double n, const int precision=1) {
+	return fmt::format("{:.{}f}", n, precision);
 	}
 
-std::string float_str(const double &n, const int &precision) {
-	std::stringstream stream;
-	stream << std::fixed << std::setprecision(precision) << n;
-	return stream.str();
-	}
-
-std::string number_str(const double &n) {
+std::string number_str(const double n) {
 	const double k = std::nearbyint(n);
 	const double l = std::fabs(n - k);
 
 	if (l < 0.05)
 		return std::to_string((long) k);
-	return float_str(n, 1);
+	return float_str(n);
 	}
 
-std::string attr(std::string name, std::string value) {
-	return name + "=\"" + value + '\"';
+std::string attr(const std::string name, const std::string value) {
+	return fmt::format("{}='{}' ", name, value);
 	}
 
-std::string attrs_str(const std::vector<std::string> &attrs) {
-	const std::string str_attrs = str_vector_join(attrs, ' ');
-	return str_attrs;
+std::string attrs_str(const std::vector<std::string> attrs) {
+	std::string out;
+	out.reserve(140);
+	for (const auto &str : attrs)
+		out += str;
+	out.pop_back();
+	return out;
 	}

@@ -1,7 +1,5 @@
 from future_builtins import zip
 
-from io import open
-
 range = xrange
 str = unicode
 chr = unichr

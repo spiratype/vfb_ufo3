@@ -1,10 +1,11 @@
 # coding: utf-8
 # cython: wraparound=False
 # cython: boundscheck=False
+# cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
-# distutils: extra_compile_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
-# distutils: extra_link_args=[-fconcepts, -O3, -fno-strict-aliasing, -Wno-register]
+# distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
+# distutils: extra_link_args=[-O3]
 from __future__ import absolute_import, division, unicode_literals
 include 'includes/future.pxi'
 include 'includes/cp1252.pxi'
@@ -13,9 +14,8 @@ import time
 
 from FL import fl
 
-include 'includes/objects.pxi'
-include 'includes/kern.pxi'
 include 'includes/fea.pxi'
+include 'includes/ordered_dict.pxi'
 
 def kerning(ufo, font):
 	start = time.clock()
@@ -24,6 +24,24 @@ def kerning(ufo, font):
 
 def kern_feature(ufo):
 	return _kern_feature(ufo)
+
+cdef inline long pair_calc(int n_glyphs):
+
+	'''
+	find the number of possible pairs for a number of glyphs
+
+	>>> pair_calc(20)
+	190
+	>>> pair_calc(10)
+	45
+	'''
+
+	cdef int n_pairs = n_glyphs
+
+	n_pairs *= n_glyphs - 1
+	n_pairs /= 2
+
+	return n_pairs
 
 def _kerning(ufo, font):
 
@@ -60,18 +78,24 @@ def _instance_kerning(font, scale):
 
 def _kern_feature(ufo):
 
-	CHECK_LIMIT = 700_000
-	BLOCK_LIMIT = 720_000 # first subtable
-	STEP = 208_000 # step down for subsequent subtables
+	cdef:
+		long CHECK_LIMIT = 700_000
+		long BLOCK_LIMIT = 720_000 # first subtable
+		long STEP = 208_000 # step down for subsequent subtables
+		int MIN_VALUE = 0
+		int n_glyphs = 0
+		int kerns = 0
+		int new_kerns = 0
+		int subtables = 0
+		bint check_next = 0
+		bint first_group = 0
+		bint second_group = 0
 
 	if ufo.opts.kern_min_value is not None:
 		MIN_VALUE = ufo.opts.kern_min_value
-	else:
-		MIN_VALUE = 0
 
 	pair_calcs = {}
 	feature, no_block, block = [], [], []
-	kerns, subtables, check_next = 0, 0, 0
 	first_enum_block, second_enum_block = [], []
 	for first, kerning_pairs in ufo.instance.kerning.items():
 		first_group = 0
@@ -118,14 +142,12 @@ def _kern_feature(ufo):
 
 	feature += block
 
-	if no_block:
-		if len(no_block) > 500:
-			no_block.append('\tsubtable;')
+	if len(no_block) > 500:
+		no_block.append('\tsubtable;')
 
 	enum_block = first_enum_block + second_enum_block
-	if enum_block:
-		if len(enum_block) > 200:
-			enum_block.append('\tsubtable;')
+	if len(enum_block) > 200:
+		enum_block.append('\tsubtable;')
 
 	feature = no_block + enum_block + feature
 
