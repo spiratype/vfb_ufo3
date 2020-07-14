@@ -5,11 +5,14 @@ Multiple master-compatible **Unified Font Object** (UFO) version 3 font writer A
 **VFB2UFO3** is primarily intended to create scaled UFO instances from a > 1000 UPM multiple master FontLab `.vfb` font with PostScript outlines for use with the AFDKO tools for creating binary fonts while still working with Windows FontLab 5.2. The most significant non-trivial change that will occur in export is the renaming of kerning glyph groups (FontLab *classes*). Providing a `.flc` (FontLab-class) file can speed up conversion significantly when font groups are not identifiable as first/second from their name. All glyph hints/links are ignored. A batch command can be created for use with `psautohint`, which supports hinting outlines with decimal coordinates.
 
 ## Installation
-This package may be installed via PyPi:
-
+#### PyPi
 `pip install vfb2ufo3`
 
-Alternatively, the latest release `.zip` may be downloaded, unzipped, and added to your FontLab Macros folder as shown:
+#### FontLab Installer
+Download the lastest release FontLab installer (`.flw`) file and drag it into the FontLab main window then restart FontLab or reset macro system.
+
+#### ZIP Archive
+Download and extract the latest release `.zip` file and move the extracted files to your FontLab Macros folder. The default directory structure is shown below.
 
 ```
 [user folder]
@@ -448,6 +451,10 @@ Jameson R Spires
 The GCC DLLs are covered under the [GPL License](https://opensource.org/licenses/gpl-license); all other source is covered under the [MIT License](https://opensource.org/licenses/MIT).
 
 #### Version history
+* version 0.6.6  
+change to `setup.py` for PyPi package  
+created FontLab installer  
+
 * version 0.6.5  
 change to `glif.hpp`  
 

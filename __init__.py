@@ -12,7 +12,7 @@ from . import core
 
 show_default_optimize_code_points = core.show_default_optimize_code_points
 
-__version__ = '0.6.5'
+__version__ = '0.6.6'
 __doc__ = """
 VFB2UFO3
 DESCRIPTION
@@ -30,12 +30,17 @@ ignored. A batch command can be created for use with `psautohint`, which
 supports hinting outlines with decimal coordinates.
 
 INSTALLATION
-This package may be installed via PyPi:
-
+PyPi
 `pip install vfb2ufo3`
 
-Alternatively, the latest release `.zip` may be downloaded, unzipped, and added
-to your FontLab Macros folder as shown:
+FontLab Installer
+Download the lastest release FontLab installer (`.flw`) file and drag it into
+the FontLab main window then restart FontLab or reset macro system.
+
+ZIP Archive
+Download and extract the latest release `.zip` file and move the extracted
+files to your FontLab Macros folder. The default directory structure is shown
+below.
 
 
 ```
@@ -632,6 +637,10 @@ The GCC DLLs are covered under the GPL License; all other source is covered
 under the MIT License.
 
 Version history
+version 0.6.6
+change to `setup.py` for PyPi package
+created FontLab installer
+
 version 0.6.5
 change to `glif.hpp`
 
