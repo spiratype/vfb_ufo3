@@ -11,7 +11,6 @@
 
 #include <omp.h>
 
-#include "io.hpp"
 #include "string.hpp"
 #include "mark.hpp"
 
@@ -20,8 +19,7 @@ static const std::vector<std::string> POINT_TYPES = {
 	"curve",
 	"qcurve",
 	"line",
-	"off",
-	"move"
+	"off"
 	};
 
 class cpp_point;
@@ -280,6 +278,7 @@ std::string add_contours(auto &contour_lib, auto &completed_contour_lib, auto &c
 	}
 
 std::string build_glif(const auto &glif, auto &anchor_lib, auto &component_lib, auto &contour_lib, auto &completed_contour_lib, bool ufoz=false) {
+
 	std::string text;
 	std::string mark;
 	text.reserve(glif.len() * 120);
@@ -331,8 +330,11 @@ std::string build_glif(const auto &glif, auto &anchor_lib, auto &component_lib, 
 	text += "</glyph>\n";
 	text.shrink_to_fit();
 
-	if (!ufoz)
-		write_file(glif.path.c_str(), text.c_str(), text.size());
+	if (!ufoz) {
+		std::FILE* f = std::fopen(glif.path.c_str(), "w");
+		std::fwrite(text.c_str(), 1, text.size(), f);
+		std::fclose(f);
+		}
 
 	return text;
 	}
@@ -354,7 +356,7 @@ void add_glif(auto &glifs, auto &name, auto &path, auto &unicodes, int mark, flo
 	}
 
 void write_glif_files(const auto &glifs, auto &anchor_lib, auto &component_lib, auto &contour_lib, auto &completed_contour_lib) {
-	#pragma omp parallel for schedule(runtime)
+	#pragma omp parallel for
 	for (const auto &glif : glifs)
 		if (!glif.omit)
 			build_glif(glif, anchor_lib, component_lib, contour_lib, completed_contour_lib);
