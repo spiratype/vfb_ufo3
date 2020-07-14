@@ -448,6 +448,9 @@ Jameson R Spires
 The GCC DLLs are covered under the [GPL License](https://opensource.org/licenses/gpl-license); all other source is covered under the [MIT License](https://opensource.org/licenses/MIT).
 
 #### Version history
+* version 0.6.5  
+change to `glif.hpp`  
+
 * version 0.6.4  
 remove schedule from OpenMP pragma  
 correction for quadratic curves in `glif.pyx`  

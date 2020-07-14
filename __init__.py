@@ -12,7 +12,7 @@ from . import core
 
 show_default_optimize_code_points = core.show_default_optimize_code_points
 
-__version__ = '0.6.4'
+__version__ = '0.6.5'
 __doc__ = """
 VFB2UFO3
 DESCRIPTION
@@ -632,6 +632,9 @@ The GCC DLLs are covered under the GPL License; all other source is covered
 under the MIT License.
 
 Version history
+version 0.6.5
+change to `glif.hpp`
+
 version 0.6.4
 remove schedule from OpenMP pragma
 correction for quadratic curves in `glif.pyx`
