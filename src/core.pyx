@@ -12,6 +12,7 @@ include 'includes/cp1252.pxi'
 
 import linecache
 import os
+import sys
 import time
 
 from . import fea, user, vfb
@@ -68,8 +69,11 @@ def parse_options(options):
 	parse and check user options
 	'''
 
+	fl.output = b''
+
 	if not len(fl):
-		raise RuntimeError(b'No open fonts')
+		print('No open fonts')
+		sys.exit()
 
 	start = time.clock()
 	ufo = attribute_dict(UFO_BASE)
@@ -79,7 +83,6 @@ def parse_options(options):
 	ufo.total_times.start = start
 	ufo.paths.encoding = unique_path('__temp__.enc')
 
-	fl.output = b''
 	print('Processing user options..\n')
 	ufo.master.ifont = fl.ifont
 	master = fl[fl.ifont]
