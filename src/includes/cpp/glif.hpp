@@ -105,10 +105,12 @@ class cpp_contour_point {
 			this->y += offset.y;
 			}
 		void scale_offset(cpp_point &scale, cpp_point &offset) {
-			this->x *= scale.x;
-			this->y *= scale.y;
-			this->x += offset.x;
-			this->y += offset.y;
+			this->scale(scale);
+			this->offset(offset);
+			// this->x *= scale.x;
+			// this->y *= scale.y;
+			// this->x += offset.x;
+			// this->y += offset.y;
 			}
 		std::vector<std::string> attrs() const {
 			if (this->type == 4)
@@ -246,7 +248,16 @@ std::string add_contours(auto &contour_lib, auto &completed_contour_lib, auto &c
 	std::string repr;
 	cpp_contours contours(contour_lib[component.index]);
 
-	if (component.offset != NO_OFFSET and component.scale != NO_SCALE) {
+	if (component.offset == NO_OFFSET and component.scale == NO_SCALE) {
+		if (completed_contour_lib.find(component.index) == completed_contour_lib.end()) {
+			repr = contours_repr(contours);
+			completed_contour_lib[component.index] = repr;
+			}
+		else {
+			repr = completed_contour_lib[component.index];
+			}
+		}
+	else if (component.offset != NO_OFFSET and component.scale != NO_SCALE) {
 		for (auto &contour : contours)
 			for (auto &point : contour)
 				point.scale_offset(component.scale, component.offset);
@@ -256,19 +267,10 @@ std::string add_contours(auto &contour_lib, auto &completed_contour_lib, auto &c
 			for (auto &point : contour)
 				point.offset(component.offset);
 		}
-	else if (component.scale != NO_SCALE) {
+	else {
 		for (auto &contour : contours)
 			for (auto &point : contour)
 				point.scale(component.scale);
-		}
-	else {
-		if (completed_contour_lib.find(component.index) == completed_contour_lib.end()) {
-			repr = contours_repr(contours);
-			completed_contour_lib[component.index] = repr;
-			}
-		else {
-			repr = completed_contour_lib[component.index];
-			}
 		}
 
 	if (repr.empty())
