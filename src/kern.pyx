@@ -5,8 +5,7 @@
 # cython: cdivision=True
 # cython: auto_pickle=False
 # distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
-# distutils: extra_link_args=[-O3]
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import division, unicode_literals
 include 'includes/future.pxi'
 include 'includes/cp1252.pxi'
 
@@ -82,10 +81,10 @@ def _kern_feature(ufo):
 		long CHECK_LIMIT = 700_000
 		long BLOCK_LIMIT = 720_000 # first subtable
 		long STEP = 208_000 # step down for subsequent subtables
+		long new_kerns = 0
 		int MIN_VALUE = 0
 		int n_glyphs = 0
 		int kerns = 0
-		int new_kerns = 0
 		int subtables = 0
 		bint check_next = 0
 		bint first_group = 0

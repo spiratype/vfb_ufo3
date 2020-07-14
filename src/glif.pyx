@@ -6,7 +6,7 @@
 # cython: auto_pickle=False
 # distutils: language=c++
 # distutils: extra_compile_args=[-O3, -fopenmp, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
-# distutils: extra_link_args=[-O3, -fopenmp]
+# distutils: extra_link_args=[-fopenmp]
 from __future__ import division, unicode_literals
 include 'includes/future.pxi'
 include 'includes/cp1252.pxi'

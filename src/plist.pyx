@@ -5,8 +5,7 @@
 # cython: cdivision=True
 # cython: auto_pickle=False
 # distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
-# distutils: extra_link_args=[-O3]
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import division, unicode_literals
 include 'includes/future.pxi'
 include 'includes/cp1252.pxi'
 
