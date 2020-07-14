@@ -2,7 +2,5 @@
 
 import threading
 
-def start_new_thread(target, args=(), kwargs={}):
-	if not isinstance(args, tuple):
-		args = (args,)
+def start_new_thread(target, *args, **kwargs):
 	threading.Thread(target=target, args=args, kwargs=kwargs).start()

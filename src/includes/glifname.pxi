@@ -132,17 +132,17 @@ GLIFNAMES = {
 	}
 
 INVALID_CHARACTERS = {
-	'“', '*', '+', '/', ':', '<', '>', '?', '[', ']', '|',
-	'\t', '&', '\r', '\\', '\x00', '\x01', '\x02', '\x03',
-	'\x04', '\x05', '\x06', '\x07', '\x08', '\x0b', '\x0c',
-	'\x0e', '\x0f', '\x10', '\x11', '\x12', '\x13', '\x14',
-	'\x15', '\x16', '\x17', '\x18', '\x19', '\x1a', '\x1b',
-	'\x1c', '\x1d', '\x1e', '\x1f', '\x7f',
+	'"', '*', '+', '/', '\\', ':', '<', '>', '?', '|', '\t', '\r',
+	'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07', '\x08',
+	'\x0b', '\x0c', '\x0e', '\x0f', '\x10', '\x11', '\x12', '\x13', '\x14',
+	'\x15', '\x16', '\x17', '\x18', '\x19', '\x1a', '\x1b', '\x1c', '\x1d',
+	'\x1e', '\x1f', '\x7f',
 	}
 
 INVALID_NAMES = {
-	'lpt1', 'lpt2', 'lpt3', 'a:-z:', 'com1', 'com2', 'com3',
-	'com4', 'con', 'prn', 'aux', 'nul', 'clock$',
+	'lpt1', 'lpt2', 'lpt3', 'lpt4', 'lpt5', 'lpt6', 'lpt7', 'lpt8', 'lpt9',
+	'com1', 'com2', 'com3', 'com4', 'com5', 'com6', 'com7', 'com8', 'com9',
+	'con', 'prn', 'aux', 'nul', 'clock$', 'a:-z:',
 	}
 
 BYTES_INVALID_NAMES = {py_bytes(name) for name in INVALID_NAMES}
@@ -150,7 +150,7 @@ BYTES_INVALID_NAMES = {py_bytes(name) for name in INVALID_NAMES}
 class GlyphNameError(Exception):
 	def __init__(self, name):
 		message = py_bytes(
-			f"{name!r} contains at least 1 invalid character.\n"
+			f"'{name}' contains at least 1 invalid character.\n"
 			f"Glyph should be renamed or 'fdk_release' set to False\n"
 			f"Valid Type 1 spec glyph name character set:\n"
 			f"A-Z, a-z, 0-9, '.' (period), and '_' (underscore)."
@@ -162,15 +162,15 @@ class GlyphUnicodeError(Exception):
 		super(GlyphUnicodeError, self).__init__(py_bytes(message))
 
 def GlyphNameWarning(name):
-	message = (
-		f'  GlyphNameWarning: {name!r} contains at least 1 non-ASCII character.\n'
+	message = py_bytes(
+		f"  GlyphNameWarning: '{name}' contains at least 1 non-ASCII character.\n"
 		f'  Valid production glyph name character set:\n'
 		f'  A-Z, a-z, 0-9, and [_ . - + * : ~ ^ !]'
 		)
 	print(message)
 
-REGEX_PRODUCTION = re.compile('[A-Za-z_\-\+\*\:\~\^\!][A-Za-z0-9_.\-\+\*\:\~\^\!]* *$')
-REGEX_RELEASE = re.compile('[A-Za-z_][A-Za-z0-9_.]* *$')
+REGEX_PRODUCTION = re.compile('[A-Za-z0-9_.\-\+\*\:\~\^\!]* *$')
+REGEX_RELEASE = re.compile('[A-Za-z0-9_.]* *$')
 REGEX_EARLY_MATCH = re.compile('[a-z0-9]* *$')
 
 def glifname(bytes_glyph_name, release_mode, omit):

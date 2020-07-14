@@ -46,7 +46,10 @@ def remove_path(path, force=0):
 			remove(temp_path)
 
 def move(src_path, dest_path):
-	os.rename(src_path, dest_path)
+	try:
+		os.rename(src_path, dest_path)
+	except OSError:
+		pass
 
 def make_dir(path):
 	try:
@@ -66,10 +69,10 @@ def unlink(file):
 		pass
 
 def copy_file(src_path, dest_path):
-	start_new_thread(shutil.copyfile, args=(src_path, dest_path))
+	start_new_thread(shutil.copyfile, src_path, dest_path)
 
 def remove_file(file):
-	start_new_thread(unlink, args=(file,))
+	start_new_thread(unlink, file)
 
 def remove_tree(tree):
-	start_new_thread(shutil.rmtree, args=(tree,), kwargs={'ignore_errors': 1})
+	start_new_thread(shutil.rmtree, tree, ignore_errors=1)
