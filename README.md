@@ -13,32 +13,32 @@ Alternatively, the latest release `.zip` may be downloaded, unzipped, and added 
 
 ```
 [user folder]
-  `-- Documents
-      `-- Fontlab
-          `-- Studio 5
-              `-- Macros
-                  `-- System
-                      `-- Modules
-                          `-- vfb2ufo3
-                           |  `-- __init__.py
-                           |  `-- core.pyd
-                           |  `-- designspace.pyd
-                           |  `-- fdk.pyd
-                           |  `-- fea.pyd
-                           |  `-- fontinfo.pyd
-                           |  `-- glif.pyd
-                           |  `-- groups.pyd
-                           |  `-- kern.pyd
-                           |  `-- mark.pyd
-                           |  `-- plist.pyd
-                           |  `-- tools.pyd
-                           |  `-- user.py
-                           |  `-- vfb.pyd
-                            `-- dlls
-                                `-- libgcc_s_dw2-1.dll
-                                `-- libgomp-1.dll
-                                `-- libstdc++-6.dll
-                                `-- libwinpthread-1.dll
+  └── Documents
+      └── Fontlab
+          └── Studio 5
+              └── Macros
+                  └── System
+                      └── Modules
+                          └── vfb2ufo3
+                              ├── dlls
+                              │   ├── libgcc_s_dw2-1.dll
+                              │   ├── libgomp-1.dll
+                              │   ├── libstdc++-6.dll
+                              │   └── libwinpthread-1.dll
+                              ├── __init__.py
+                              ├── core.pyd
+                              ├── designspace.pyd
+                              ├── fdk.pyd
+                              ├── fea.pyd
+                              ├── fontinfo.pyd
+                              ├── glif.pyd
+                              ├── groups.pyd
+                              ├── kern.pyd
+                              ├── mark.pyd
+                              ├── plist.pyd
+                              ├── tools.pyd
+                              ├── user.py
+                              └── vfb.pyd
 ```
 
 ## Requirements
@@ -297,7 +297,7 @@ Recommended naming for FontLab-style kerning groups:
 _public.kern1.A: A' Agrave Aacute Acircumflex Atilde Adieresis Aring...
 _public.kern2.A: A' AE Agrave Aacute Acircumflex Atilde Adieresis Aring...
 
-Final output (UFO group plist):
+Final output (UFO groups.plist):
 <key>public.kern1.A</key>
 <array>
 	<string>A</string>
