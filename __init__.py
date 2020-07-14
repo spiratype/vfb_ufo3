@@ -47,20 +47,20 @@ to your FontLab Macros folder as shown:
                   `-- System
                       `-- Modules
                           `-- vfb2ufo3
-                              `-- __init__.py
-                              `-- core.pyd
-                              `-- designspace.pyd
-                              `-- fdk.pyd
-                              `-- fea.pyd
-                              `-- fontinfo.pyd
-                              `-- glif.pyd
-                              `-- groups.pyd
-                              `-- kern.pyd
-                              `-- mark.pyd
-                              `-- plist.pyd
-                              `-- tools.pyd
-                              `-- user.py
-                              `-- vfb.pyd
+                           |  `-- __init__.py
+                           |  `-- core.pyd
+                           |  `-- designspace.pyd
+                           |  `-- fdk.pyd
+                           |  `-- fea.pyd
+                           |  `-- fontinfo.pyd
+                           |  `-- glif.pyd
+                           |  `-- groups.pyd
+                           |  `-- kern.pyd
+                           |  `-- mark.pyd
+                           |  `-- plist.pyd
+                           |  `-- tools.pyd
+                           |  `-- user.py
+                           |  `-- vfb.pyd
                             `-- dlls
                                 `-- libgcc_s_dw2-1.dll
                                 `-- libgomp-1.dll
@@ -87,6 +87,10 @@ OPTIONAL
   AFDKO
   pip install afdko
   https://github.com/adobe-type-tools/afdko
+
+  MinGW 32-bit/i686 GCC 9.3.0
+  http://winlibs.com
+  http://mingw.org
 
 FUNCTIONALITY
 UFO output is produced without changes to the source font. The source font will
@@ -628,6 +632,11 @@ The GCC DLLs are covered under the GPL License; all other source is covered
 under the MIT License.
 
 Version history
+version 0.6.4
+remove schedule from OpenMP pragma
+correction for quadratic curves in `glif.pyx`
+correction for `glif` file name creation
+
 version 0.6.3
 added 32-bit GCC DLLs
 C++ string formatting improved utilizing {fmt} formatting library

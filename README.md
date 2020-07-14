@@ -20,20 +20,20 @@ Alternatively, the latest release `.zip` may be downloaded, unzipped, and added 
                   `-- System
                       `-- Modules
                           `-- vfb2ufo3
-                              `-- __init__.py
-                              `-- core.pyd
-                              `-- designspace.pyd
-                              `-- fdk.pyd
-                              `-- fea.pyd
-                              `-- fontinfo.pyd
-                              `-- glif.pyd
-                              `-- groups.pyd
-                              `-- kern.pyd
-                              `-- mark.pyd
-                              `-- plist.pyd
-                              `-- tools.pyd
-                              `-- user.py
-                              `-- vfb.pyd
+                           |  `-- __init__.py
+                           |  `-- core.pyd
+                           |  `-- designspace.pyd
+                           |  `-- fdk.pyd
+                           |  `-- fea.pyd
+                           |  `-- fontinfo.pyd
+                           |  `-- glif.pyd
+                           |  `-- groups.pyd
+                           |  `-- kern.pyd
+                           |  `-- mark.pyd
+                           |  `-- plist.pyd
+                           |  `-- tools.pyd
+                           |  `-- user.py
+                           |  `-- vfb.pyd
                             `-- dlls
                                 `-- libgcc_s_dw2-1.dll
                                 `-- libgomp-1.dll
@@ -448,6 +448,11 @@ Jameson R Spires
 The GCC DLLs are covered under the [GPL License](https://opensource.org/licenses/gpl-license); all other source is covered under the [MIT License](https://opensource.org/licenses/MIT).
 
 #### Version history
+* version 0.6.4  
+remove schedule from OpenMP pragma  
+correction for quadratic curves in `glif.pyx`  
+correction for `glif` file name creation  
+
 * version 0.6.3  
 added 32-bit GCC DLLs  
 C++ string formatting improved utilizing [{fmt}](https://github.com/fmtlib/fmt) formatting library  
