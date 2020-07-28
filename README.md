@@ -16,38 +16,39 @@ Download and extract the latest release `.zip` file and move the extracted files
 
 ```
 [user folder]
-  └── Documents
-      └── Fontlab
-          └── Studio 5
-              └── Macros
-                  └── System
-                      └── Modules
-                          └── vfb2ufo3
-                              ├── dlls
-                              │   ├── libgcc_s_dw2-1.dll
-                              │   ├── libgomp-1.dll
-                              │   ├── libstdc++-6.dll
-                              │   └── libwinpthread-1.dll
-                              ├── __init__.py
-                              ├── core.pyd
-                              ├── designspace.pyd
-                              ├── fdk.pyd
-                              ├── fea.pyd
-                              ├── fontinfo.pyd
-                              ├── glif.pyd
-                              ├── groups.pyd
-                              ├── kern.pyd
-                              ├── mark.pyd
-                              ├── plist.pyd
-                              ├── tools.pyd
-                              ├── user.py
-                              └── vfb.pyd
+    └── Documents
+        └── Fontlab
+            └── Studio 5
+                └── Macros
+                    └── System
+                        └── Modules
+                            └── vfb2ufo3
+                                ├── resources
+                                │   ├── libgcc_s_dw2-1.dll
+                                │   ├── libgomp-1.dll
+                                │   ├── libstdc++-6.dll
+                                │   ├── libwinpthread-1.dll
+                                │   └── zlib1.dll
+                                ├── __init__.py
+                                ├── core.pyd
+                                ├── designspace.pyd
+                                ├── fdk.pyd
+                                ├── fea.pyd
+                                ├── fontinfo.pyd
+                                ├── glif.pyd
+                                ├── groups.pyd
+                                ├── kern.pyd
+                                ├── mark.pyd
+                                ├── plist.pyd
+                                ├── tools.pyd
+                                ├── user.py
+                                └── vfb.pyd
 ```
 
 ## Requirements
 This package has no Python dependencies outside of the standard library. It is written in C++ and Cython. The submodules are compiled into `.pyd` extension modules. To recompile the submodules, the PyPi `cython` package and a compiler for Cython to utilize during extension module compilation will be required.
 
-The `glif.pyd` extension module requires DLLs from the MinGW 32-bit GCC: `libgcc_s_dw2-1.dll`, `libgomp-1.dll`, `libwinpthread-1.dll`, and `libstdc++-6.dll`. These DLLs are included in the release `.zip` archives and the PyPi package.
+The `glif.pyd` and `plist.pyd` extension modules require several DLLs included in the release `.zip` archive, FontLab installer, and PyPi package.
 
 ### Optional
 * cython  
@@ -58,8 +59,9 @@ The `glif.pyd` extension module requires DLLs from the MinGW 32-bit GCC: `libgcc
 **pip install afdko**  
 <https://github.com/adobe-type-tools/afdko>  
 
-* [MinGW 32-bit/i686 GCC 9.3.0](https://github.com/brechtsanders/winlibs_mingw/releases/download/9.3.0-10.0.0-7.0.0-r4/winlibs-i686-posix-dwarf-gcc-9.3.0-llvm-10.0.0-mingw-w64-7.0.0-r4.7z)  
+* MinGW 32-bit/i686 GCC >= 9.3.0  
 <http://winlibs.com>  
+<https://www.msys2.org>  
 <http://mingw.org>  
 
 ### Functionality
@@ -432,12 +434,33 @@ vfb2ufo3.write_ufo(
 	)
 ```
 
-**Test (~3200 glyphs @ 10,000 UPM -> 1,000 UPM), ≈3-4 sec**
+**Test (~3200 glyphs @ 10,000 UPM -> 1,000 UPM), ≈3 sec**
 ```
 flc_path = <path to .flc file>
 
 vfb2ufo3.write_ufo(
 	groups_flc_path=flc_path,
+	)
+```
+
+**Test (~3200 glyphs @ 10,000 UPM -> 1,000 UPM), ≈1.5 sec**
+```
+flc_path = <path to .flc file>
+
+vfb2ufo3.write_ufo(
+	groups_flc_path=flc_path,
+	ufoz=True,
+	)
+```
+
+**Test (~3200 glyphs @ 10,000 UPM -> 1,000 UPM), <1.5 sec**
+```
+flc_path = <path to .flc file>
+
+vfb2ufo3.write_ufo(
+	groups_flc_path=flc_path,
+	ufoz=True,
+	ufoz_compress=False,
 	)
 ```
 
@@ -448,9 +471,13 @@ Generally, no assumptions are made about the correctness of the input. When `adf
 Jameson R Spires
 
 #### License
-The GCC DLLs are covered under the [GPL License](https://opensource.org/licenses/gpl-license); all other source is covered under the [MIT License](https://opensource.org/licenses/MIT).
+Source files are covered under the [MIT License](https://opensource.org/licenses/MIT).
 
 #### Version history
+* version 0.7.0  
+additional C++ conversion for `.ufoz` file creation utilizing [zlib](https://zlib.net) compression  
+small changes and corrections  
+
 * version 0.6.6  
 change to `setup.py` for PyPi package  
 created FontLab installer  
