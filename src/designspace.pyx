@@ -4,21 +4,21 @@
 # cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
-# distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
+# distutils: language=c++
+# distutils: extra_compile_args=[-O3, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
-include 'includes/cp1252.pxi'
 
+from io cimport cpp_file, write_file
+from string cimport cp1252_bytes_str, cp1252_unicode_str, file_bytes_str, number_str
 cimport cython
 
 import os
 
 from FL import fl
 
-include 'includes/string.pxi'
-include 'includes/thread.pxi'
-include 'includes/io.pxi'
 include 'includes/designspace.pxi'
+include 'includes/dict.pxi'
 include 'includes/xml.pxi'
 
 def designspace(ufo):
@@ -99,7 +99,7 @@ def build(designspace):
 	if designspace.instances:
 		doc += dspace_instances(designspace.instances)
 
-	designspace.text = file_str('\n'.join((
+	designspace.text = file_bytes_str('\n'.join((
 		"<?xml version='1.0' encoding='UTF-8'?>",
 		"<designspace format='3'>",
 		*doc,

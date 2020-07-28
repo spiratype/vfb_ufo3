@@ -7,7 +7,8 @@
 # distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
-include 'includes/cp1252.pxi'
+
+from string cimport cp1252_unicode_str, cp1252_bytes_str, file_bytes_str
 
 import linecache
 import os
@@ -28,10 +29,8 @@ from .vfb import add_instance
 from FL import fl, Font, Rect
 import FL
 
-include 'includes/string.pxi'
 include 'includes/thread.pxi'
 include 'includes/path.pxi'
-include 'includes/io.pxi'
 include 'includes/dict.pxi'
 include 'includes/attribute_dict.pxi'
 include 'includes/ordered_set.pxi'
@@ -50,6 +49,9 @@ def write_ufo(options):
 		glifs(ufo)
 		plists(ufo)
 		features(ufo)
+
+		if ufo.opts.ufoz:
+			ufo.archive.write()
 
 		if ufo.opts.afdko_parts or ufo.opts.psautohint_cmd:
 			fdk(ufo)
@@ -90,20 +92,20 @@ def parse_options(options):
 	ufo.opts = opts = option_dict()
 	opts.update(options)
 
-	dirname, basename = split_path(py_unicode(master.file_name))
+	dirname, basename = split_path(cp1252_unicode_str(master.file_name))
 	if not basename.endswith('.vfb'):
 		filename, ext = os.path.splitext(basename)
 		basename = f'{filename}.vfb'
-		master.Save(py_bytes(unique_path(basename, temp=1)))
+		master.Save(cp1252_bytes_str(unique_path(basename, temp=1)))
 
 	ufo.master.filename = basename
 	ufo.master.dirname = os.path.normpath(dirname)
-	ufo.master.family_name = py_unicode(master.family_name)
+	ufo.master.family_name = cp1252_unicode_str(master.family_name)
 	ufo.master.version_major = master.version_major
 	ufo.master.version_minor = master.version_minor
 	ufo.master.version = f'{master.version_major}.{master.version_minor:>03}'
-	ufo.master.axes_names = [py_unicode(axis[0]) for axis in master.axis]
-	ufo.master.axes_names_short = [py_unicode(axis[1]) for axis in master.axis]
+	ufo.master.axes_names = [cp1252_unicode_str(axis[0]) for axis in master.axis]
+	ufo.master.axes_names_short = [cp1252_unicode_str(axis[1]) for axis in master.axis]
 	ufo.master.upm = master.upm
 	ufo.master.font_style = master.font_style
 	fea.copy_opentype(ufo, master)
@@ -220,11 +222,11 @@ def unique_list(user_list, ordered=0):
 	return list(set(user_list))
 
 def encode_string_list(string_list):
-	return {py_bytes(string) if isinstance(string, unicode) else string
+	return {cp1252_bytes_str(string) if isinstance(string, unicode) else string
 		for string in unique_string_list(string_list)}
 
 def decode_string_list(string_list):
-	return {py_unicode(string) if isinstance(string, bytes) else string
+	return {cp1252_unicode_str(string) if isinstance(string, bytes) else string
 		for string in unique_string_list(string_list)}
 
 def parse_code_points(code_point_list):
@@ -301,7 +303,7 @@ def add_master_copy(ufo):
 		ufo.paths.vfb = unique_path(ufo.paths.vfb, temp=1)
 
 	if ufo.opts.vfb_save or not ufo.opts.vfb_close:
-		ufo.paths.vfbs.append(file_str(ufo.paths.vfb))
+		ufo.paths.vfbs.append(file_bytes_str(ufo.paths.vfb))
 
 
 def build_paths(ufo, master=0):
@@ -338,11 +340,10 @@ def build_paths(ufo, master=0):
 		for path in check_paths:
 			if os.path.exists(path):
 				if not ufo.opts.force_overwrite:
-					raise OSError(
+					raise IOError(
 						b"%s already exists.\n"
 						b"Please remove directory/file or set 'force_overwrite' to True" % path
 						)
-				remove_path(path, 1)
 			if 'masters' in path:
 				dirname = os.path.dirname(path)
 				if not os.path.isdir(dirname):
@@ -423,7 +424,7 @@ def set_designspace_values(ufo, master):
 	set_master_values(ufo, master, designspace=1)
 	ufo.designspace.instances = zip(values, names, attributes)
 	filename = ufo.master.filename.replace('.vfb', '.designspace')
-	ufo.paths.designspace = file_str(os.path.join(ufo.paths.out, filename))
+	ufo.paths.designspace = file_bytes_str(os.path.join(ufo.paths.out, filename))
 
 
 def set_designspace_glyphs_omit(ufo, master):
@@ -437,11 +438,11 @@ def set_designspace_glyphs_omit(ufo, master):
 	glyphs_omit = set()
 	for i, glyph in enumerate(master.glyphs):
 		if glyph.name in glyphs_omit_names:
-			glyphs_omit.add(py_unicode(glyph.name))
+			glyphs_omit.add(cp1252_unicode_str(glyph.name))
 		if b'.' in glyph.name:
 			for suffix in glyphs_omit_suffixes:
 				if glyph.name.endswith(suffix):
-					glyphs_omit.add(py_unicode(glyph.name))
+					glyphs_omit.add(cp1252_unicode_str(glyph.name))
 					break
 
 	ufo.designspace.glyphs_omit = list(sorted(glyphs_omit))
@@ -493,7 +494,7 @@ def show_default_optimize_code_points():
 		for i in range(0, len(code_points), 8)]
 	code_points = '\n'.join(f'\t{" ".join(line)}' for line in code_points)
 
-	print(b'OPTIMIZE_CODE_POINTS = {\n%s\n\t}' % py_bytes(code_points))
+	print(b'OPTIMIZE_CODE_POINTS = {\n%s\n\t}' % cp1252_bytes_str(code_points))
 
 
 def check_instance_lists(options, master):
