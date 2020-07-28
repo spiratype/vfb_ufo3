@@ -116,7 +116,7 @@ class zip_file {
 	void write_end_of_central_directory_record(uint64_t central_dir_offset) {
 		zip_header header = {};
 		ZIP_LE32(header,  ZIP_ECDR_SIGNATURE);                                      // 4 end of central dir signature (0x06054b50)
-	                                                                              // 2 number of this disk
+		                                                                            // 2 number of this disk
 		                                                                            // 2 number of the disk with the start of the central directory
 		ZIP_LE16(header + ZIP_ECDR_TOTAL_ENTRIES_DISK, this->zinfo_list.size());    // 2 total number of entries in the central directory on this disk
 		ZIP_LE16(header + ZIP_ECDR_TOTAL_ENTRIES, this->zinfo_list.size());         // 2 total number of entries in the central directory
