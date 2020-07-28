@@ -4,10 +4,13 @@
 # cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
-# distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
+# distutils: language=c++
+# distutils: extra_compile_args=[-O3, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
-include 'includes/cp1252.pxi'
+
+from io cimport cpp_file, write_file
+from string cimport cp1252_bytes_str, cp1252_unicode_str, file_bytes_str
 
 import os
 import time
@@ -18,12 +21,10 @@ from .user import print, read_file
 
 include 'includes/thread.pxi'
 include 'includes/path.pxi'
-include 'includes/io.pxi'
-include 'includes/groups.pxi'
 include 'includes/flc.pxi'
-include 'includes/plist.pxi'
+include 'includes/groups.pxi'
 include 'includes/ordered_dict.pxi'
-include 'includes/string.pxi'
+include 'includes/plist.pxi'
 
 def groups(ufo):
 	start = time.clock()
@@ -113,12 +114,8 @@ def rename_groups(ufo):
 			for i, key_glyph in items(no_kerning):
 				name, glyphs = font_groups[i]
 				lc_name = name.lower()
-				first = (
-					PREFIX_1 in lc_name or 'mmk_l' in lc_name or lc_name.endswith('_l')
-					)
-				second = (
-					PREFIX_2 in lc_name or 'mmk_r' in lc_name or lc_name.endswith('_r')
-					)
+				first = PREFIX_1 in lc_name or 'mmk_l' in lc_name or lc_name.endswith('_l')
+				second = PREFIX_2 in lc_name or 'mmk_r' in lc_name or lc_name.endswith('_r')
 				if not first and not second:
 					first, second = font.GetClassLeft(i), font.GetClassRight(i)
 				if first:
@@ -135,11 +132,11 @@ def rename_groups(ufo):
 
 def groups_from_kern_feature(font):
 
-	font_groups = {i: py_unicode(group).split(': ')
+	font_groups = {i: cp1252_unicode_str(group).split(': ')
 		for i, group in enumerate(font.classes)}
 
 	firsts, seconds = set(), set()
-	kern_feature = py_unicode(font.MakeKernFeature().value).replace('enum ', '')
+	kern_feature = cp1252_unicode_str(font.MakeKernFeature().value).replace('enum ', '')
 	kern_feature = [line.split()[1:3]
 		for line in kern_feature.splitlines()
 		if '@' in line]
@@ -230,7 +227,7 @@ def update_groups(ufo):
 		key_glyph = ufo.kern.key_glyph_from_group[name]
 		font_classes.append(f'_{name}: {insert_key_glyph(glyphs, key_glyph)}')
 
-	font.classes = py_bytes('\n'.join(font_classes)).splitlines()
+	font.classes = cp1252_bytes_str('\n'.join(font_classes)).splitlines()
 	for i, group in enumerate(font.classes):
 		if ufo.opts.groups_ignore_no_kerning:
 			if i in ufo.groups.no_kerning:
@@ -246,21 +243,21 @@ def write_flc(ufo):
 
 	if ufo.opts.groups_export_flc_path:
 		filename = os.path.basename(ufo.opts.groups_export_flc_path)
-		flc_export_path = file_str(ufo.opts.groups_export_flc_path)
+		flc_export_path = file_bytes_str(ufo.opts.groups_export_flc_path)
 	else:
 		version = ufo.master.version.replace('.', '_')
 		if ufo.master.font_style in (1, 33):
 			filename = f'{ufo.master.family_name}_Italic_{version}.flc'
 		else:
 			filename = f'{ufo.master.family_name}_{version}.flc'
-		flc_export_path = file_str(os.path.join(ufo.paths.out, filename))
+		flc_export_path = file_bytes_str(os.path.join(ufo.paths.out, filename))
 
 	if os.path.isfile(flc_export_path):
 		if ufo.opts.force_overwrite:
 			remove_path(flc_export_path, force=1)
 		else:
 			raise RuntimeError(b'%s already exists.\n'
-				b'Please rename or move existing class file' % py_bytes(flc_export_path))
+				b'Please rename or move existing class file' % flc_export_path)
 
 	print(f' Writing {filename}..')
 
@@ -283,5 +280,5 @@ def write_flc(ufo):
 			flc_end_marker,
 			]
 
-	flc_file = file_str('\n'.join(flc_file))
-	write_file(flc_export_path, flc_file)
+	flc_file = file_bytes_str('\n'.join(flc_file))
+	write_file(cpp_file(flc_export_path, flc_file))

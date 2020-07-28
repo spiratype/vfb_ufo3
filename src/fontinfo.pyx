@@ -7,7 +7,8 @@
 # distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
-include 'includes/cp1252.pxi'
+
+from string cimport cp1252_bytes_str, cp1252_unicode_str
 
 import datetime
 import math
@@ -16,9 +17,9 @@ import unicodedata
 
 from .user import print
 
-include 'includes/nameid.pxi'
 include 'includes/dict.pxi'
 include 'includes/fontinfo.pxi'
+include 'includes/nameid.pxi'
 include 'includes/ordered_dict.pxi'
 
 def fontinfo(ufo, font, user_attributes):
@@ -149,7 +150,7 @@ def _fontinfo(ufo, font, user_attributes):
 
 			elif isinstance(mapping[key], tuple):
 				if key in STRING_ATTRS:
-					new_value = py_bytes(value)
+					new_value = cp1252_bytes_str(value)
 					if len(new_value) != len(value):
 						new_value = ascii_bytes(value)
 					setattr(*mapping[key], new_value)
@@ -190,7 +191,7 @@ def _fontinfo(ufo, font, user_attributes):
 				value = [int(val) if int(val) == val else val for val in value]
 
 			if isinstance(value, bytes):
-				value = py_unicode(value)
+				value = cp1252_unicode_str(value)
 
 			ufo.instance.fontinfo[key] = value
 

@@ -4,17 +4,15 @@
 # cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
-# distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
+# distutils: language=c++
+# distutils: extra_compile_args=[-O3, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
-include 'includes/cp1252.pxi'
 
-cdef extern from '<math.h>' nogil:
-	double nearbyint(double x)
-
-cdef extern from '<fenv.h>' nogil:
-	const int FE_TONEAREST
-	int fesetround(int)
+from libc.math cimport nearbyint
+from io cimport cpp_file, write_file
+from string cimport cp1252_bytes_str, cp1252_unicode_str, file_bytes_str
+from fenv cimport set_nearest
 
 cdef double SCALE = 1.0
 
@@ -24,11 +22,8 @@ from FL import fl, Feature, TrueTypeTable
 
 from . import kern, mark, user
 
-include 'includes/thread.pxi'
-include 'includes/io.pxi'
 include 'includes/fea.pxi'
 include 'includes/opentype.pxi'
-include 'includes/string.pxi'
 include 'includes/ordered_dict.pxi'
 
 def copy_opentype(ufo, font):
@@ -47,6 +42,8 @@ def features(ufo):
 		ufo.instance_times.features = time.clock() - start
 
 def _features(ufo):
+
+	cdef bytes fea_file_bytes_str
 
 	kern_file = ufo.opts.kern_feature_file_path
 
@@ -78,12 +75,11 @@ def _features(ufo):
 	feature_file = features + tables
 
 	if feature_file:
-		feature_file = file_str('\n\n'.join(feature_file) + '\n')
+		fea_file_bytes_str = file_bytes_str('\n\n'.join(feature_file) + '\n')
 		if ufo.opts.ufoz:
-			ufo.archive[ufo.paths.instance.features] = feature_file
+			ufo.archive[ufo.paths.instance.features] = fea_file_bytes_str
 		else:
-			write_file(ufo.paths.instance.features, feature_file)
-
+			write_file(cpp_file(ufo.paths.instance.features, fea_file_bytes_str))
 
 def _copy_opentype(ufo, master):
 
@@ -92,15 +88,15 @@ def _copy_opentype(ufo, master):
 		ufo.master.ot_features = features = ordered_dict()
 		if ufo.opts.kern_feature_passthrough:
 			for feature in master.features:
-				features[py_unicode(feature.tag)] = py_unicode(feature.value.strip())
+				features[cp1252_unicode_str(feature.tag)] = cp1252_unicode_str(feature.value.strip())
 		else:
 			for feature in master.features:
 				if feature.tag != b'kern':
-					features[py_unicode(feature.tag)] = py_unicode(feature.value.strip())
+					features[cp1252_unicode_str(feature.tag)] = cp1252_unicode_str(feature.value.strip())
 
 	# copy opentype prefix
 	if master.ot_classes:
-		ot_prefix = py_unicode(master.ot_classes.strip())
+		ot_prefix = cp1252_unicode_str(master.ot_classes.strip())
 		if ot_prefix:
 			ufo.master.ot_prefix = '\n'.join(ot_prefix.splitlines())
 
@@ -109,11 +105,11 @@ def _load_opentype(ufo, font, master=0):
 
 	if master:
 		if ufo.master.ot_prefix:
-			font.ot_classes = py_bytes(ufo.master.ot_prefix)
+			font.ot_classes = cp1252_bytes_str(ufo.master.ot_prefix)
 		if ufo.master.ot_features:
 			font.features.clean()
 			for tag, value in items(ufo.master.ot_features):
-				font.features.append(Feature(py_bytes(tag), py_bytes(value)))
+				font.features.append(Feature(cp1252_bytes_str(tag), cp1252_bytes_str(value)))
 		return
 
 	master_copy = fl[ufo.master_copy.ifont]
@@ -134,7 +130,7 @@ def _tables(ufo, font):
 		global SCALE
 		SCALE = ufo.scale
 
-	fesetround(FE_TONEAREST)
+	set_nearest()
 
 	tables = {}
 
@@ -207,4 +203,4 @@ def _tables(ufo, font):
 	if ufo.opts.vfb_save:
 		font.truetypetables.clean()
 		for tag, table in items(ufo.instance.tables):
-			font.truetypetables.append(TrueTypeTable(py_bytes(tag), py_bytes(table)))
+			font.truetypetables.append(TrueTypeTable(cp1252_bytes_str(tag), cp1252_bytes_str(table)))

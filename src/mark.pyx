@@ -7,14 +7,10 @@
 # distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
 from __future__ import division, unicode_literals
 include 'includes/future.pxi'
-include 'includes/cp1252.pxi'
 
-cdef extern from 'math.h' nogil:
-	double nearbyint(double x)
-
-cdef extern from 'fenv.h' nogil:
-	const int FE_TONEAREST
-	int fesetround(int)
+from libc.math cimport nearbyint
+from fenv cimport set_nearest
+from string cimport cp1252_unicode_str
 
 cdef double SCALE = 1.0
 
@@ -38,13 +34,13 @@ def _mark_feature(ufo):
 		SCALE = ufo.scale
 
 	font = fl[ufo.instance.ifont]
-	fesetround(FE_TONEAREST)
+	set_nearest()
 
 	mark_classes = set()
 	bases = defaultdict(list)
 	for i, glyph in enumerate(font.glyphs):
 		if glyph.anchors and i not in ufo.glyph_sets.omit:
-			glyph_name = py_unicode(glyph.name)
+			glyph_name = cp1252_unicode_str(glyph.name)
 			for anchor in glyph.anchors:
 				if anchor.name:
 					if anchor.name.startswith(b'_'):
@@ -75,8 +71,8 @@ def int_anchor_coords(x, y):
 
 def mark_class(parent, anchor):
 	x, y = int_anchor_coords(anchor.x, anchor.y)
-	return f'\tmarkClass {parent} <anchor {x} {y}> @{py_unicode(anchor.name[1:])};'
+	return f'\tmarkClass {parent} <anchor {x} {y}> @{cp1252_unicode_str(anchor.name[1:])};'
 
 def mark_base(base, anchor):
 	x, y = int_anchor_coords(anchor.x, anchor.y)
-	return f'\tpos base {base} <anchor {x} {y}> mark @{py_unicode(anchor.name)};'
+	return f'\tpos base {base} <anchor {x} {y}> mark @{cp1252_unicode_str(anchor.name)};'

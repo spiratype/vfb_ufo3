@@ -7,7 +7,8 @@
 # distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
 from __future__ import division, unicode_literals
 include 'includes/future.pxi'
-include 'includes/cp1252.pxi'
+
+from string cimport cp1252_unicode_str
 
 import time
 
@@ -63,13 +64,13 @@ def _instance_kerning(font, scale):
 
 	def kern_pair(pair):
 		if scale is not None:
-			return py_unicode(font[pair.key].name), int(pair.value * scale)
-		return py_unicode(font[pair.key].name), pair.value
+			return cp1252_unicode_str(font[pair.key].name), int(pair.value * scale)
+		return cp1252_unicode_str(font[pair.key].name), pair.value
 
 	kerning = {}
 	for glyph in font.glyphs:
 		if glyph.kerning:
-			glyph_name = py_unicode(glyph.name)
+			glyph_name = cp1252_unicode_str(glyph.name)
 			kerning[glyph_name] = [kern_pair(pair) for pair in glyph.kerning]
 
 	return kerning

@@ -4,15 +4,15 @@
 # cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
-# distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
+# distutils: extra_compile_args=[-Os, -fno-strict-aliasing]
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
-include 'includes/cp1252.pxi'
+
+from string cimport cp1252_unicode_str
 
 import gc
 import os
 import time
-import zipfile
 
 from FL import fl
 
@@ -41,8 +41,6 @@ def finish(ufo, instance=0):
 
 	if instance:
 
-		if ufo.opts.ufoz and ufo.archive:
-			write_zip(ufo.paths.instance.ufoz, ufo.archive, ufo.opts.ufoz_compress)
 		if ufo.opts.vfb_save or not ufo.opts.vfb_close:
 			fl[ufo.instance.ifont].Save(ufo.paths.instance.vfb)
 
@@ -150,19 +148,6 @@ def reset(ufo, instance=0):
 
 	gc.collect()
 	del gc.garbage[:]
-
-
-def write_zip(path, archive, compress=0):
-
-	try:
-		with zipfile.ZipFile(path, 'w', compression=compress*8) as z:
-			for path, contents in items(archive):
-				z.writestr(path, contents)
-	except IOError as e:
-		if e.errno == 13:
-			raise IOError(b'%s is open.\nPlease close the file.' % os.path.basename(path))
-		raise IOError(b'%s already exists.\nPlease rename or delete the existing'
-			b" file, or set 'force_overwrite' to True" % os.path.basename(path))
 
 # ------------
 #  time tools

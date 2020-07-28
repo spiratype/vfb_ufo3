@@ -6,15 +6,18 @@
 # cython: auto_pickle=False
 # distutils: language=c++
 # distutils: extra_compile_args=[-O3, -fopenmp, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
-# distutils: extra_link_args=[-fopenmp]
+# distutils: extra_link_args=[-fopenmp, -lz]
 from __future__ import division, unicode_literals
 include 'includes/future.pxi'
-include 'includes/cp1252.pxi'
+
+cimport cython
 
 from libcpp cimport bool as bint
+from libcpp.unordered_map cimport unordered_map
 from libcpp.string cimport string
-from libcpp.vector cimport vector
 
+from archive cimport write_archive
+from fenv cimport set_nearest
 from glif cimport (
 	cpp_anchor, cpp_component, cpp_contour_point, cpp_glif,
 	cpp_contour, cpp_contours, cpp_anchors, cpp_components, cpp_glifs,
@@ -22,10 +25,9 @@ from glif cimport (
 	add_anchor, add_component, add_contour_point, add_glif,
 	build_glif, write_glif_files
 	)
+from string cimport cp1252_utf8_bytes_str
 
-cdef extern from 'fenv.h' nogil:
-	const int FE_TONEAREST
-	void fesetround(int)
+include 'includes/archive.pxi'
 
 import time
 
@@ -83,16 +85,19 @@ def _glifs(ufo):
 		cpp_component_lib component_lib
 		cpp_contour_lib contour_lib
 		cpp_completed_contour_lib completed_contour_lib
-		vector[int] unicodes
+		vector[long] unicodes
 		cpp_anchors anchors
 		cpp_components components
-		bytes instance_glifs_path = ufo.paths.instance.glyphs.encode('utf_8')
+		bytes instance_glifs_path = ufo.paths.instance.glyphs
+		bytes instance_ufoz_path = ufo.paths.instance.ufoz
 		bytes name = b''
-		int code_point = 0
+		long code_point = 0
 		int mark = 0
 		bint omit = 0
+		bint ufoz = ufo.opts.ufoz
+		bint ufoz_compress = ufo.opts.ufoz_compress
 
-	fesetround(FE_TONEAREST)
+	set_nearest()
 
 	anchor_lib.reserve(n)
 	component_lib.reserve(n)
@@ -136,7 +141,7 @@ def _glifs(ufo):
 		add_glif(
 			glifs,
 			name,
-			b'%s\\%s' % (instance_glifs_path, glif_name),
+			b'%s/%s' % (instance_glifs_path, glif_name),
 			unicodes,
 			mark,
 			glyph.width * SCALE,
@@ -156,20 +161,22 @@ def _glifs(ufo):
 		if glyph.nodes:
 			contour_lib[i] = glif_contours(glyph.nodes)
 
-	if ufo.opts.ufoz:
+	if ufoz:
+		ufo.archive = c_archive(instance_ufoz_path, ufoz_compress)
+		ufo.archive.reserve(glifs.size())
 		for glif in glifs:
 			ufo.archive[glif.path] = build_glif(glif, anchor_lib, component_lib, contour_lib, completed_contour_lib, 1)
 	else:
 		write_glif_files(glifs, anchor_lib, component_lib, contour_lib, completed_contour_lib)
 
+
 cdef cpp_anchors glif_anchors(glyph_anchors):
 
-	cdef:
-		cpp_anchors anchors
+	cdef cpp_anchors anchors
 
 	anchors.reserve(len(glyph_anchors))
 	for anchor in glyph_anchors:
-		add_anchor(anchors, cp1252_utf8_bytes(anchor.name), anchor.x * SCALE, anchor.y * SCALE)
+		add_anchor(anchors, cp1252_utf8_bytes_str(anchor.name), anchor.x * SCALE, anchor.y * SCALE)
 	return anchors
 
 cdef cpp_components glif_components(glyph_components, font):
@@ -183,7 +190,7 @@ cdef cpp_components glif_components(glyph_components, font):
 	for component in glyph_components:
 		offset_x, offset_y = component.delta.x * SCALE, component.delta.y * SCALE
 		scale, i = component.scale, component.index
-		base = cp1252_utf8_bytes(font[i].name)
+		base = cp1252_utf8_bytes_str(font[i].name)
 		add_component(components, base, i, offset_x, offset_y, scale.x, scale.y)
 	return components
 

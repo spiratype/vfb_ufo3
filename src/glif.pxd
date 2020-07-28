@@ -1,10 +1,11 @@
+# glif.pxd
 
 from libcpp cimport bool as bint
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 from libcpp.unordered_map cimport unordered_map
 
-cdef extern from 'includes/cpp/glif.hpp' nogil:
+cdef extern from 'includes/cpp/glif.cpp' nogil:
 	cppclass cpp_anchor
 	cppclass cpp_component
 
@@ -34,7 +35,7 @@ cdef extern from 'includes/cpp/glif.hpp' nogil:
 	void add_component(cpp_components, string, size_t, float, float, float, float)
 	void add_contour_point(cpp_contour, float, float, int, int)
 	void add_contour_point(cpp_contour, float, float, int)
-	void add_glif(cpp_glifs, string, string, vector[int], int, float, size_t, size_t, size_t, size_t, bint, bint, bint)
+	void add_glif(cpp_glifs, string, string, vector[long], int, float, size_t, size_t, size_t, size_t, bint, bint, bint)
 
 	string build_glif(cpp_glif, cpp_anchor_lib, cpp_component_lib, cpp_contour_lib, cpp_completed_contour_lib, bint)
 	void write_glif_files(cpp_glifs, cpp_anchor_lib, cpp_component_lib, cpp_contour_lib, cpp_completed_contour_lib)

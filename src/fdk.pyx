@@ -4,10 +4,13 @@
 # cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
-# distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
+# distutils: language=c++
+# distutils: extra_compile_args=[-O3, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
-include 'includes/cp1252.pxi'
+
+from io cimport cpp_file, write_file
+from string cimport cp1252_bytes_str, cp1252_unicode_str, file_bytes_str
 
 import os
 import time
@@ -15,9 +18,7 @@ import time
 from FL import fl
 
 include 'includes/thread.pxi'
-include 'includes/io.pxi'
 include 'includes/path.pxi'
-include 'includes/string.pxi'
 
 def fdk(ufo):
 	start = time.clock()
@@ -63,26 +64,26 @@ def glyph_order_db(ufo, font):
 	if not ufo.paths.afdko.goadb:
 		text = []
 		for glyph_name, glyph_uni_name in ufo.afdko.GOADB:
-			if font.FindGlyph(py_bytes(glyph_name)) not in ufo.glyph_sets.omit:
+			if font.FindGlyph(cp1252_bytes_str(glyph_name)) not in ufo.glyph_sets.omit:
 				if glyph_uni_name is None:
 					text.append(f'{glyph_name} {glyph_name}')
 				else:
 					text.append(f'{glyph_name} {glyph_name} {glyph_uni_name}')
-		write_file(ufo.paths.instance.goadb, file_str('\n'.join(text)))
+		write_file(cpp_file(ufo.paths.instance.goadb, file_bytes_str('\n'.join(text))))
 	else:
 		copy_file(ufo.paths.afdko.goadb, ufo.instance_paths.afdko.goadb)
 
 
 def font_menu_name_db(ufo, font):
 
-	text = file_str(
+	text = file_bytes_str(
 		f'[{font.font_name.replace(" ", "")}]\n'
 		f'f={font.family_name}\n'
 		f's={font.pref_style_name}\n'
 		f'l={font.family_name} {font.pref_style_name}\n'
 		)
 
-	write_file(ufo.paths.instance.fontnamedb, text)
+	write_file(cpp_file(ufo.paths.instance.fontnamedb, text))
 
 
 def makeotf_command(ufo, batch=0):
@@ -252,6 +253,6 @@ def write_bat(command, command_path, batch=0):
 
 	if batch:
 		command = '\n'.join(command)
-	command = file_str(f'echo on\n{command}\npause')
+	command = file_bytes_str(f'echo on\n{command}\npause')
 
-	write_file(command_path, command)
+	write_file(cpp_file(command_path, command))
