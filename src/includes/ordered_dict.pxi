@@ -2,8 +2,7 @@
 
 cimport cython
 
-cdef extern from 'Python.h':
-	int PyDict_SetItem(object, object, object) except -1
+from cpython.dict cimport PyDict_SetItem
 
 @cython.final
 cdef class ordered_dict(dict):

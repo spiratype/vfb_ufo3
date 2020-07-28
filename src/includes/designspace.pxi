@@ -95,4 +95,7 @@ cdef class Designspace:
 		self.instances = []
 
 	def write(self):
-		write_file(self.path, self.text)
+		write_file(cpp_file(self.path, self.text))
+
+	def __reduce__(self):
+		return self.__class__

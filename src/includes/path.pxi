@@ -16,7 +16,7 @@ def split_path(path, split_ext=0):
 	return dirname, filename
 
 def unique_id():
-	return py_unicode(uuid.uuid4().hex)
+	return cp1252_unicode_str(uuid.uuid4().hex)
 
 def unique_path(path, temp=0):
 	if isinstance(path, bytes):
@@ -41,9 +41,8 @@ def remove_path(path, force=0):
 			except IOError as e:
 				if e.errno == 13:
 					raise IOError(b'%s is open.\nPlease close the file.' % os.path.basename(path))
-		else:
-			move(path, temp_path)
-			remove(temp_path)
+		move(path, temp_path)
+		remove(temp_path)
 
 def move(src_path, dest_path):
 	try:

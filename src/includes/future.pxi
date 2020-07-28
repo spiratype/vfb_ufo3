@@ -5,10 +5,10 @@ str = unicode
 chr = unichr
 
 def items(dictionary):
-	return ((key, dictionary[key]) for key in dictionary)
+	return dictionary.iteritems()
 
 def values(dictionary):
-	return (dictionary[key] for key in dictionary)
+	return dictionary.itervalues()
 
 def keys(dictionary):
-	return (key for key in dictionary)
+	return dictionary.iterkeys()

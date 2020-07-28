@@ -93,12 +93,11 @@ INSTANCE_OPTIONS = {
 @cython.final
 cdef class option_dict(dict):
 
-	cdef:
-		dict value_types
+	cdef dict value_types
 
 	def __cinit__(self):
 		self.value_types = {}
-		self.default()
+		self.set_default()
 
 	def update(self, options):
 		try:
@@ -111,7 +110,7 @@ cdef class option_dict(dict):
 		except KeyError as e:
 			raise KeyError(b"'%s' is an invalid option" % e.message)
 
-	def default(self):
+	def set_default(self):
 		for key, value in DEFAULT_OPTIONS:
 			if isinstance(value, int) or key == 'layer' or key == 'kern_min_value':
 				value_type = 'int'
@@ -156,7 +155,7 @@ def check_option(value_type, key, value):
 		if not isinstance(value, basestring):
 			raise ValueError(b"'%s' must be a byte- or unicode-string value." % key)
 		if isinstance(value, bytes):
-			value = py_unicode(value)
+			value = cp1252_unicode_str(value)
 		if key in PATH_OPTIONS and not os.path.isabs(value):
 			return None
 		if key in FILE_OPTIONS and not os.path.isfile(value) and key != 'groups_export_flc_path':

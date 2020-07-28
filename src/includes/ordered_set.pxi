@@ -2,8 +2,7 @@
 
 cimport cython
 
-cdef extern from 'Python.h':
-	int PySet_Add(object, object) except -1
+from cpython.set cimport PySet_Add
 
 @cython.final
 cdef class ordered_set(set):

@@ -1,9 +1,7 @@
 # FONTINFO
 
+from cpython.dict cimport PyDict_SetItem
 cimport cython
-
-cdef extern from 'Python.h':
-	int PyDict_SetItem(object, object, object) except -1
 
 @cython.final
 cdef class fontinfo_dict(dict):
@@ -66,7 +64,7 @@ FL_WIDTHS = {
 	'Ultra-expanded': 9,
 	}
 
-REV_FL_WIDTHS = {value: py_bytes(key)  for key, value in items(WIDTHS)}
+REV_FL_WIDTHS = {value: cp1252_bytes_str(key)  for key, value in items(WIDTHS)}
 
 WEIGHTS = {
 	'UltraLight': 100,

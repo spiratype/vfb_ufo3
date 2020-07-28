@@ -145,11 +145,11 @@ INVALID_NAMES = {
 	'con', 'prn', 'aux', 'nul', 'clock$', 'a:-z:',
 	}
 
-BYTES_INVALID_NAMES = {py_bytes(name) for name in INVALID_NAMES}
+BYTES_INVALID_NAMES = {cp1252_bytes_str(name) for name in INVALID_NAMES}
 
 class GlyphNameError(Exception):
 	def __init__(self, name):
-		message = py_bytes(
+		message = cp1252_bytes_str(
 			f"'{name}' contains at least 1 invalid character.\n"
 			f"Glyph should be renamed or 'fdk_release' set to False\n"
 			f"Valid Type 1 spec glyph name character set:\n"
@@ -159,10 +159,10 @@ class GlyphNameError(Exception):
 
 class GlyphUnicodeError(Exception):
 	def __init__(self, message):
-		super(GlyphUnicodeError, self).__init__(py_bytes(message))
+		super(GlyphUnicodeError, self).__init__(cp1252_bytes_str(message))
 
 def GlyphNameWarning(name):
-	message = py_bytes(
+	message = cp1252_bytes_str(
 		f"  GlyphNameWarning: '{name}' contains at least 1 non-ASCII character.\n"
 		f'  Valid production glyph name character set:\n'
 		f'  A-Z, a-z, 0-9, and [_ . - + * : ~ ^ !]'
@@ -196,7 +196,7 @@ def glifname(bytes_glyph_name, release_mode, omit):
 		if release_mode:
 			raise GlyphNameError(bytes_glyph_name)
 		GlyphNameWarning(bytes_glyph_name)
-		glyph_name = py_unicode(bytes_glyph_name)
+		glyph_name = cp1252_unicode_str(bytes_glyph_name)
 
 	if re.match(REGEX_EARLY_MATCH, glyph_name):
 		return f'{glyph_name[:250]}.glif'
