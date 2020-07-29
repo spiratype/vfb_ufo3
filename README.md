@@ -474,6 +474,9 @@ Jameson R Spires
 Source files are covered under the [MIT License](https://opensource.org/licenses/MIT).
 
 #### Version history
+* version 0.7.1  
+changes to `.ufoz` C++ code  
+
 * version 0.7.0  
 additional C++ conversion for `.ufoz` file creation utilizing [zlib](https://zlib.net) compression  
 small changes and corrections  

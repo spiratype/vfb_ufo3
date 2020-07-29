@@ -12,7 +12,7 @@ from . import core
 
 show_default_optimize_code_points = core.show_default_optimize_code_points
 
-__version__ = '0.7.0'
+__version__ = '0.7.1'
 __doc__ = """
 VFB2UFO3
 DESCRIPTION
@@ -659,6 +659,9 @@ License
 Source files are covered under the MIT License.
 
 Version history
+version 0.7.1
+changes to `.ufoz` C++ code
+
 version 0.7.0
 additional C++ conversion for `.ufoz` file creation utilizing zlib compression
 small changes and corrections

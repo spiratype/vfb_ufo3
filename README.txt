@@ -643,6 +643,9 @@ License
 Source files are covered under the MIT License.
 
 Version history
+version 0.7.1
+changes to .ufoz C++ code
+
 version 0.7.0
 additional C++ conversion for .ufoz file creation utilizing zlib compression
 small changes and corrections
