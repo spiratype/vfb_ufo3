@@ -91,6 +91,7 @@ def _glifs(ufo):
 		bytes instance_glifs_path = ufo.paths.instance.glyphs
 		bytes instance_ufoz_path = ufo.paths.instance.ufoz
 		bytes name = b''
+		bytes sep = b'/' if ufo.opts.ufoz else b'\\'
 		long code_point = 0
 		int mark = 0
 		bint omit = 0
@@ -141,7 +142,7 @@ def _glifs(ufo):
 		add_glif(
 			glifs,
 			name,
-			b'%s/%s' % (instance_glifs_path, glif_name),
+			b'%s%s%s' % (instance_glifs_path, sep, glif_name),
 			unicodes,
 			mark,
 			glyph.width * SCALE,
