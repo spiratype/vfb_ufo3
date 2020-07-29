@@ -103,5 +103,3 @@ void write_archive(std::string &filename, std::unordered_map<std::string, std::s
 		archive.write_str(arc_name, file);
 	archive.close();
 	}
-
-int main() {}
