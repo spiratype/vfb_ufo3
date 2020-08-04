@@ -8,9 +8,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-
 #include <omp.h>
-#include <zip.h>
 
 #include "string.cpp"
 #include "mark.cpp"

@@ -1,6 +1,7 @@
 // file.cpp
 
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -21,8 +22,16 @@ void add_file(cpp_files &files, const std::string &path, const std::string &data
 	files.emplace_back(path, data);
 	}
 
-void write_file(const auto &file) {
-	std::ofstream f(file.path);
-	f << file.data;
+void write_file(const std::string &path, const std::string &data) {
+	std::ofstream f(path);
+	f << data;
 	f.close();
+	}
+
+std::string read_file(const std::string &path) {
+	std::ifstream f(path, std::ios::binary);
+	std::stringstream data;
+	data << f.rdbuf();
+	f.close();
+	return data.str();
 	}
