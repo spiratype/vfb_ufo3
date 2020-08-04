@@ -8,7 +8,9 @@
 from __future__ import division, unicode_literals
 include 'includes/future.pxi'
 
-from string cimport cp1252_unicode_str
+cimport cython
+
+from cpython.dict cimport PyDict_SetItem
 
 import time
 
@@ -64,13 +66,13 @@ def _instance_kerning(font, scale):
 
 	def kern_pair(pair):
 		if scale is not None:
-			return cp1252_unicode_str(font[pair.key].name), int(pair.value * scale)
-		return cp1252_unicode_str(font[pair.key].name), pair.value
+			return font[pair.key].name.decode('cp1252'), int(pair.value * scale)
+		return font[pair.key].name.decode('cp1252'), pair.value
 
 	kerning = {}
 	for glyph in font.glyphs:
 		if glyph.kerning:
-			glyph_name = cp1252_unicode_str(glyph.name)
+			glyph_name = glyph.name.decode('cp1252')
 			kerning[glyph_name] = [kern_pair(pair) for pair in glyph.kerning]
 
 	return kerning

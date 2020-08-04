@@ -4,28 +4,36 @@
 # cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
-# distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
+# cython: c_string_type=unicode
+# cython: c_string_encoding=utf_8
+# distutils: language=c++
+# distutils: extra_compile_args=[-O3, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
+# distutils: extra_link_args=[-lbcrypt]
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 
-from string cimport (
-	cp1252_bytes_str, cp1252_utf8_bytes_str, cp1252_unicode_str, file_bytes_str,
-	float_str, hex_code_point, uni_name
-	)
+from libc.math cimport nearbyint
+from libcpp.string cimport string
 
 from collections import defaultdict
 import os
+import shutil
+import stat
 import time
+import uuid
 
 import FL
 from FL import fl, Font, NameRecord, Rect
 
-from . import fea, kern, user
+from . import fea, kern
 from .fontinfo import fontinfo
-from .user import print, load_encoding, read_file
+from .user import load_encoding
 
+include 'includes/string.pxi'
 include 'includes/thread.pxi'
 include 'includes/path.pxi'
+include 'includes/unique.pxi'
+include 'includes/file.pxi'
 include 'includes/codepoints.pxi'
 include 'includes/defaults.pxi'
 include 'includes/glifname.pxi'
@@ -59,14 +67,13 @@ def _process_master_copy(ufo, master_copy):
 	for i, glyph in enumerate(master_copy.glyphs):
 
 		if glyph.kerning:
-			ufo.kern.firsts.add(cp1252_unicode_str(glyph.name))
+			ufo.kern.firsts.add(glyph.name.decode('cp1252'))
 			for kerning_pair in glyph.kerning:
-				ufo.kern.seconds.add(cp1252_unicode_str(master_copy[kerning_pair.key].name))
+				ufo.kern.seconds.add(master_copy[kerning_pair.key].name.decode('cp1252'))
 
-		if glyph.anchors:
-			for anchor in glyph.anchors:
-				if anchor.name:
-					anchors.add(anchor.name)
+		for anchor in glyph.anchors:
+			if anchor.name:
+				anchors.add(anchor.name)
 
 		for component in glyph.components:
 			ufo.glyph_sets.bases.add(component.index)
@@ -110,7 +117,7 @@ def _process_master_copy(ufo, master_copy):
 def master_instance(ufo, name, attributes, path):
 
 	ufo.instance_times.total = time.clock()
-	print('\nBuilding UFO ..\n')
+	print(b'\nBuilding UFO ..\n')
 
 	instance = fl[ufo.master_copy.ifont]
 	ufo.instance.ifont = ufo.master_copy.ifont
@@ -140,14 +147,12 @@ def _add_instance(ufo, index, value, name, attributes, path):
 	if ufo.start:
 		ufo.start = 0
 		if len(ufo.instance_values) > 1:
-			print('\nBuilding instance UFOs..\n')
+			print(b'\nBuilding instance UFOs..\n')
 		else:
-			print('\nBuilding instance UFO..\n')
+			print(b'\nBuilding instance UFO..\n')
+
 	if index + 1 == len(ufo.instance_values):
 		ufo.last = 1
-
-	if ufo.opts.ufoz:
-		ufo.archive = {}
 
 	ufo.instance_times.total = time.clock()
 	master_copy = fl[ufo.master_copy.ifont]
@@ -159,8 +164,8 @@ def _add_instance(ufo, index, value, name, attributes, path):
 
 	instance = fl[ufo.instance.ifont]
 	instance.modified = 0
-	instance.full_name = cp1252_bytes_str(f'{ufo.master.family_name} {name}')
-	instance.family_name = cp1252_bytes_str(ufo.master.family_name)
+	instance.full_name = f'{ufo.master.family_name} {name}'.encode('cp1252', 'ignore')
+	instance.family_name = ufo.master.family_name.encode('cp1252', 'ignore')
 
 	ufo.instance.index = index
 
@@ -184,31 +189,35 @@ def _add_instance(ufo, index, value, name, attributes, path):
 def build_instance_paths(ufo, attributes, path):
 
 	ufo.paths.instance.ufoz = path.replace('.ufo', '.ufoz')
-	bare_filename = os.path.basename(path).replace('.ufo', '')
+	ufo.paths.instance.vfb = path.replace('.ufo', '.vfb')
+	bare_filename = os_path_basename(path).replace('.ufo', '')
 
 	if not ufo.opts.vfb_close:
-		ufo.paths.instance.vfb = unique_path(ufo.paths.instance.vfb, temp=1)
-	else:
-		ufo.paths.instance.vfb = path.replace('.ufo', '.vfb')
+		if os_path_exists(ufo.paths.instance.vfb):
+			ufo.paths.instance.vfb = next_path(ufo.paths.instance.vfb)
 
 	if ufo.opts.vfb_save or not ufo.opts.vfb_close:
-		ufo.paths.vfbs.append(file_bytes_str(ufo.paths.instance.vfb))
+		ufo.paths.vfbs.append(ufo.paths.instance.vfb)
 
 	if ufo.opts.ufoz:
-		ufo.paths.instance.ufo = ufo_path = os.path.basename(path)
+		ufo.paths.instance.ufo = ufo_path = os_path_basename(path)
+		if ufo.opts.force_overwrite and os_path_isfile(ufo.paths.instance.ufoz):
+			remove_path(ufo.paths.instance.ufoz, force=1)
 	else:
 		ufo.paths.instance.ufo = ufo_path = path
+		if ufo.opts.force_overwrite and os_path_isdir(ufo.paths.instance.ufo):
+			remove_path(ufo.paths.instance.ufo, force=1)
 
-	ufo.paths.instance.glyphs = glyphs = os.path.join(ufo_path, 'glyphs')
-	ufo.paths.instance.features = os.path.join(ufo_path, 'features.fea')
+	ufo.paths.instance.glyphs = glyphs = os_path_join(ufo_path, 'glyphs')
+	ufo.paths.instance.features = os_path_join(ufo_path, 'features.fea')
 	for plist, _ in UFO_PATHS_INSTANCE_PLISTS:
 		if plist == 'glyphs_contents':
-			ufo.paths.instance[plist] = os.path.join(glyphs, 'contents.plist')
+			ufo.paths.instance[plist] = os_path_join(glyphs, 'contents.plist')
 		else:
-			ufo.paths.instance[plist] = os.path.join(ufo_path, f'{plist}.plist')
+			ufo.paths.instance[plist] = os_path_join(ufo_path, f'{plist}.plist')
 
 	if not ufo.opts.ufoz:
-		make_dir(glyphs)
+		os_makedirs(glyphs)
 
 	if ufo.opts.afdko_parts:
 		exts = {
@@ -217,25 +226,25 @@ def build_instance_paths(ufo, attributes, path):
 			'makeotf_cmd': '_makeotf.bat',
 			}
 		postscript_name = attributes.get('postscriptFontName', bare_filename)
-		ufo.paths.instance.otf = os.path.join(ufo.paths.out, f'{postscript_name}.otf')
+		ufo.paths.instance.otf = os_path_join(ufo.paths.out, f'{postscript_name}.otf')
 		for file, _ in UFO_PATHS_INSTANCE_AFDKO:
-			path = os.path.join(ufo.paths.out, f'{bare_filename}{exts[file]}')
-			ufo.paths.instance[file] = file_bytes_str(path)
-		if os.path.isfile(ufo.paths.GOADB):
+			path = os_path_join(ufo.paths.out, f'{bare_filename}{exts[file]}')
+			ufo.paths.instance[file] = path
+		if os_path_isfile(ufo.paths.GOADB):
 			ufo.paths.afdko.goadb = ufo.paths.GOADB
 
 	if ufo.opts.psautohint_cmd:
-		path = os.path.join(ufo.paths.out, f'{bare_filename}_psautohint.bat')
-		ufo.paths.instance.psautohint_cmd = file_bytes_str(path)
+		path = os_path_join(ufo.paths.out, f'{bare_filename}_psautohint.bat')
+		ufo.paths.instance.psautohint_cmd = path
 
 	for key, path in items(ufo.paths.instance):
 		if path is not None:
-			ufo.paths.instance[key] = file_bytes_str(path)
+			ufo.paths.instance[key] = path
 
 
 def _build_goadb(ufo, font):
 
-	if os.path.isfile(ufo.paths.GOADB):
+	if os_path_isfile(ufo.paths.GOADB):
 		ufo.afdko.GOADB = [line.split()
 			for line in read_file(ufo.paths.GOADB).splitlines()]
 	else:
@@ -247,8 +256,8 @@ def goadb_from_encoding(ufo, font):
 	def font_glyph_code_point(glyph_name):
 		glyph = font[font.FindGlyph(glyph_name)]
 		if glyph.unicode:
-			return [cp1252_unicode_str(glyph_name), uni_name(glyph.unicode)]
-		return [cp1252_unicode_str(glyph_name), None]
+			return [glyph_name.decode('cp1252'), uni_name(glyph.unicode)]
+		return [glyph_name.decode('cp1252'), None]
 
 	first_256 = []
 	first_256_names = []
@@ -259,7 +268,7 @@ def goadb_from_encoding(ufo, font):
 		first_256 = MACOS_ROMAN
 
 	if first_256:
-		first_256_names = [cp1252_unicode_str(font[font.FindGlyph(code_point)].name)
+		first_256_names = [font[font.FindGlyph(code_point)].name.decode('cp1252')
 			for code_point in first_256 if font.has_key(code_point)]
 	elif font.has_key(b'.notdef'):
 		first_256_names = ['.notdef']
@@ -272,7 +281,7 @@ def goadb_from_encoding(ufo, font):
 
 def glyph_order(ufo, font):
 
-	encoding = cp1252_bytes_str(read_file(ufo.paths.encoding)).splitlines()
+	encoding = read_file(ufo.paths.encoding).encode('cp1252', 'ignore').splitlines()
 	encoding = [line.split()[0] for line in encoding[1:] if line]
 	ufo.glyph_order = [glyph for glyph in encoding
 		if font.has_key(glyph) and font.FindGlyph(glyph) not in ufo.glyph_sets.omit]
@@ -281,21 +290,21 @@ def glyph_order(ufo, font):
 def _font_names(ufo, font):
 
 	# Font full name
-	font.full_name = cp1252_bytes_str(f'{font.family_name} {font.style_name}')
+	font.full_name = f'{font.family_name} {font.style_name}'.encode('cp1252')
 	# PS font name
-	font.font_name = cp1252_bytes_str(f'{font.family_name}-{font.style_name).replace(" ", "")[:31]}')
+	font.font_name = f'{font.family_name}-{font.style_name).replace(" ", "")[:31]}'.encode('cp1252')
 	# Menu name
 	font.menu_name = font.family_name
 	# FOND name
 	font.apple_name = font.full_name
 	# TrueType Unique ID
 	if font.source:
-		font.tt_u_id = cp1252_bytes_str(f'{font.source}: {font.full_name}: {font.year}')
+		font.tt_u_id = f'{font.source}: {font.full_name}: {font.year}'.encode('cp1252')
 	else:
-		font.tt_u_id = cp1252_bytes_str(f'{font.full_name}: {font.year}')
+		font.tt_u_id = f'{font.full_name}: {font.year}'.encode('cp1252')
 	# Font style name
 	if font.font_style in {1, 33}:
-		font.style_name = cp1252_bytes_str(f'{font.weight} Italic')
+		font.style_name = f'{font.weight} Italic'.encode('cp1252')
 	else:
 		font.style_name = font.weight
 	# OpenType family name
@@ -315,7 +324,7 @@ def name_records(ufo, font):
 		for platform_id in {1, 3}}
 
 	name_records = [
-		NameRecord(nid, pid, ENC_IDS[pid], LANG_IDS[pid], cp1252_bytes_str(name))
+		NameRecord(nid, pid, ENC_IDS[pid], LANG_IDS[pid], name.encode('cp1252'))
 		for pid, names in sorted(items(name_records))
 		for nid, name in names]
 
@@ -332,9 +341,9 @@ def ms_mac_names(ufo, font, platform_id):
 	if not font.pref_style_name:
 		font.pref_style_name = font.style_name
 
-	font.tt_version = cp1252_bytes_str(f'Version {ufo.master.version}')
+	font.tt_version = b'Version %s' % ufo.master.version
 
-	names = (
+	names = [
 		font.copyright, # 0
 		font.family_name, # 1
 		font.style_name, # 2
@@ -353,7 +362,7 @@ def ms_mac_names(ufo, font, platform_id):
 		'', # 15
 		font.pref_family_name, # 16
 		font.pref_style_name, # 17
-		)
+		]
 
 	# mac_name # 18
 	# sample_text # 19
@@ -364,7 +373,7 @@ def ms_mac_names(ufo, font, platform_id):
 	elif platform_id == 3:
 		names[4] = font.font_name
 
-	return [(nid, nameid_str(cp1252_unicode_str(name), platform_id, 1))
+	return [(nid, nameid_str(name.decode('cp1252'), platform_id, 1))
 		for nid, name in enumerate(names) if name]
 
 
@@ -377,15 +386,13 @@ def _check_glyph_unicodes(font):
 			if code_point not in code_points:
 				code_points.add(code_point)
 			else:
-				glyph_name = cp1252_unicode_str(glyph.name)
+				glyph_name = glyph.name.decode('cp1252')
 				unicode_errors[code_point].append(glyph_name)
 
 	message = []
 	if unicode_errors:
 		for code_point, glyph_names in sorted(items(unicode_errors)):
-			message.append(
-				f"'{hex_code_point(code_point)}' is mapped to more than one glyph:"
-				)
+			message.append(f"'{hex_code_point(code_point)}' is mapped to more than one glyph:")
 			for glyph_name in glyph_names:
 				message.append(f'  {glyph_name}')
 
@@ -419,20 +426,20 @@ def component_lib(ufo, font):
 			)
 		if optimize:
 			ufo.glyph_sets.optimized.add(i)
-			names.append(cp1252_unicode_str(glyph.name))
+			names.append(glyph.name.decode('cp1252'))
 			continue
 		if glyph.name in ufo.opts.glyphs_optimize_names:
 			glyph_index = font.FindGlyph(glyph.name)
 			if glyph_index > -1:
 				glyph = font[glyph_index]
 				ufo.glyph_sets.optimized.add(glyph_index)
-				names.append(cp1252_unicode_str(glyph.name))
+				names.append(glyph.name.decode('cp1252'))
 
 	# check for small cap variants of glyphs found in codepoint glyph set
 	for name in names:
 		if not name.endswith(('.sc', '.smcp', '.c2sc')):
 			for sc_name in [f'{name}.sc', f'{name}.smcp', f'{name}.c2sc']:
-				glyph_index = font.FindGlyph(cp1252_bytes_str(sc_name))
+				glyph_index = font.FindGlyph(sc_name.encode('cp1252'))
 				if glyph_index > -1:
 					glyph = font[glyph_index]
 					if glyph.components:
@@ -444,4 +451,4 @@ def Glif(glyph, release, omit):
 	glif_name = GLIFNAMES.get(glyph_name)
 	if glif_name is None:
 		glif_name = glifname(glyph_name, release, omit)
-	return cp1252_utf8_bytes_str(glyph_name), glif_name, glyph.mark, list(glyph.unicodes), omit
+	return glyph_name.decode('cp1252').encode('utf_8'), glif_name, glyph.mark, list(glyph.unicodes), omit

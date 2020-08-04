@@ -4,18 +4,30 @@
 # cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
-# distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
+# cython: c_string_type=unicode
+# cython: c_string_encoding=utf_8
+# distutils: language=c++
+# distutils: extra_compile_args=[-O3, -Wno-register, -fno-strict-aliasing, -std=c++17]
+# distutils: extra_link_args=[-lbcrypt]
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 
-from string cimport cp1252_unicode_str, cp1252_bytes_str, file_bytes_str
+cimport cython
+
+from cpython.dict cimport PyDict_SetItem
+from cpython.set cimport PySet_Add
+
+from libcpp cimport bool as bint
+from libcpp.string cimport string
 
 import linecache
 import os
-import sys
+import shutil
+import stat
 import time
+import uuid
 
-from . import fea, user, vfb
+from . import fea, vfb
 from .designspace import designspace
 from .fdk import fdk
 from .fea import features
@@ -23,14 +35,15 @@ from .glif import glifs
 from .groups import groups
 from .plist import plists
 from .tools import finish
-from .user import print
 from .vfb import add_instance
+from .user import load_encoding, save_encoding
 
 from FL import fl, Font, Rect
 import FL
 
 include 'includes/thread.pxi'
 include 'includes/path.pxi'
+include 'includes/unique.pxi'
 include 'includes/dict.pxi'
 include 'includes/attribute_dict.pxi'
 include 'includes/ordered_set.pxi'
@@ -73,8 +86,7 @@ def parse_options(options):
 	fl.output = b''
 
 	if not len(fl):
-		print('No open fonts')
-		sys.exit()
+		raise UserWarning(b'No open fonts')
 
 	start = time.clock()
 	ufo = attribute_dict(UFO_BASE)
@@ -82,9 +94,9 @@ def parse_options(options):
 	ufo.last = 0
 	ufo.instance.completed = 0
 	ufo.total_times.start = start
-	ufo.paths.encoding = unique_path('__temp__.enc')
+	ufo.paths.encoding = unique_path(b'__temp__.enc', 1)
 
-	print('Processing user options..\n')
+	print(b'Processing user options..\n')
 	ufo.master.ifont = fl.ifont
 	master = fl[fl.ifont]
 
@@ -92,26 +104,27 @@ def parse_options(options):
 	ufo.opts = opts = option_dict()
 	opts.update(options)
 
-	dirname, basename = split_path(cp1252_unicode_str(master.file_name))
+	dirname, basename = os_path_split(master.file_name)
 	if not basename.endswith('.vfb'):
-		filename, ext = os.path.splitext(basename)
+		filename, ext = os_path_splitext(basename)
 		basename = f'{filename}.vfb'
-		master.Save(cp1252_bytes_str(unique_path(basename, temp=1)))
+		save_path = unique_path(basename, 1)
+		master.Save(save_path.encode('cp1252'))
 
 	ufo.master.filename = basename
-	ufo.master.dirname = os.path.normpath(dirname)
-	ufo.master.family_name = cp1252_unicode_str(master.family_name)
+	ufo.master.dirname = os_path_normpath(dirname)
+	ufo.master.family_name = master.family_name.decode('cp1252')
 	ufo.master.version_major = master.version_major
 	ufo.master.version_minor = master.version_minor
 	ufo.master.version = f'{master.version_major}.{master.version_minor:>03}'
-	ufo.master.axes_names = [cp1252_unicode_str(axis[0]) for axis in master.axis]
-	ufo.master.axes_names_short = [cp1252_unicode_str(axis[1]) for axis in master.axis]
+	ufo.master.axes_names = [axis[0].decode('ascii') for axis in master.axis]
+	ufo.master.axes_names_short = [axis[1].decode('ascii') for axis in master.axis]
 	ufo.master.upm = master.upm
 	ufo.master.font_style = master.font_style
 	fea.copy_opentype(ufo, master)
-	user.save_encoding(ufo, master)
+	save_encoding(ufo, master)
 
-	ufo.paths.out = opts.output_path if opts.output_path else user.DESKTOP
+	ufo.paths.out = opts.output_path if opts.output_path else DESKTOP
 
 	if opts.scale_to_upm != master.upm or opts.scale_auto:
 		if opts.scale_to_upm >= 1000:
@@ -160,15 +173,18 @@ def parse_options(options):
 			check_user_file(opts.groups_flc_path, 'flc')
 		ufo.paths.flc = opts.groups_flc_path
 
+	if opts.groups_export_flc_path:
+		if os_path_isfile(opts.groups_export_flc_path) and not opts.force_overwrite:
+			raise RuntimeError(b'%s already exists.\nPlease rename or move existing '
+				b".flc file or set 'force_overwrite to True." % opts.groups_export_flc_path)
+
 	if opts.groups_plist_path:
-		if 'groups.plist' == os.path.basename(opts.groups_plist_path):
+		if os_path_basename(opts.groups_plist_path).endswith('groups.plist'):
 			ufo.paths.groups_plist = opts.groups_plist_path
 
 	if opts.afdko_parts:
 		if opts.designspace_export:
-			raise RuntimeError(
-				"'designspace_export' not currently supported for use with 'afdko_parts'"
-				)
+			raise RuntimeError(b"'designspace_export' not currently supported for use with 'afdko_parts'.")
 		if opts.afdko_makeotf_args:
 			opts.afdko_makeotf_args = unique_string_list(opts.afdko_makeotf_args)
 		if opts.afdko_makeotf_sans:
@@ -178,13 +194,11 @@ def parse_options(options):
 		if opts.afdko_makeotf_GOADB_path:
 			ufo.paths.GOADB = opts.afdko_makeotf_GOADB_path
 		else:
-			ufo.paths.GOADB = os.path.join(TEMP, 'GOADB')
+			ufo.paths.GOADB = os_path_join(TEMP, 'GOADB')
 
 	if opts.psautohint_cmd or opts.psautohint_batch_cmd:
 		if opts.designspace_export:
-			raise RuntimeError(
-				"'designspace_export' not currently supported for use with 'psautohint_cmd'"
-				)
+			raise RuntimeError(b"'designspace_export' not currently supported for use with 'psautohint_cmd'.")
 		if opts.psautohint_glyphs_list:
 			glyph_list = opts.psautohint_glyphs_list
 			opts.psautohint_glyphs_list = unique_string_list(glyph_list)
@@ -222,12 +236,10 @@ def unique_list(user_list, ordered=0):
 	return list(set(user_list))
 
 def encode_string_list(string_list):
-	return {cp1252_bytes_str(string) if isinstance(string, unicode) else string
-		for string in unique_string_list(string_list)}
+	return {encoded(string) for string in unique_string_list(string_list)}
 
 def decode_string_list(string_list):
-	return {cp1252_unicode_str(string) if isinstance(string, bytes) else string
-		for string in unique_string_list(string_list)}
+	return {decoded(string) for string in unique_string_list(string_list)}
 
 def parse_code_points(code_point_list):
 
@@ -247,8 +259,8 @@ def parse_code_points(code_point_list):
 			elif isinstance(code_point, basestring):
 				code_points.add(int(code_point, 16))
 		except ValueError as e:
-			error = b"'%s' could not be converted to an integer.\n%s" % (code_point, e.message)
-			raise ValueError(error)
+			raise ValueError(b"'%s' could not be converted to an integer.\n%s"
+				 % (code_point, e.message))
 
 	return code_points
 
@@ -259,7 +271,7 @@ def add_master_copy(ufo):
 	'''
 
 	def font_repr(font):
-		filename = os.path.basename(font.file_name)
+		filename = os_path_basename(font.file_name)
 		fullname = font.full_name
 		if font.axis:
 			axes = len(font.axis)
@@ -271,7 +283,7 @@ def add_master_copy(ufo):
 	if ufo.opts.report:
 		print(f'Processing {font_repr(master)}..\n')
 
-	print(' Processing master copy..')
+	print(b' Processing master copy..')
 
 	master_copy = Font(master)
 	fl.Add(master_copy)
@@ -283,12 +295,12 @@ def add_master_copy(ufo):
 	master_copy.modified = 0
 
 	fea.load_opentype(ufo, master_copy, master=1)
-	user.load_encoding(ufo, master_copy)
+	load_encoding(ufo, master_copy)
 
 	if ufo.opts.afdko_makeotf_release:
 		vfb.check_glyph_unicodes(master_copy)
 
-	master_copy.full_name = b'%s - master' % ufo.master.family_name
+	master_copy.full_name = f'{ufo.master.family_name} - master'.encode('cp1252')
 
 	vfb.process_master_copy(ufo, master_copy)
 
@@ -298,12 +310,12 @@ def add_master_copy(ufo):
 		vfb.build_goadb(ufo, master_copy)
 
 	filename = f'{ufo.master.family_name}_master.vfb'
-	ufo.paths.vfb = os.path.join(ufo.paths.out, filename)
+	ufo.paths.vfb = os_path_join(ufo.paths.out, filename)
 	if not ufo.opts.vfb_save:
-		ufo.paths.vfb = unique_path(ufo.paths.vfb, temp=1)
+		ufo.paths.vfb = unique_path(ufo.paths.vfb, 1)
 
 	if ufo.opts.vfb_save or not ufo.opts.vfb_close:
-		ufo.paths.vfbs.append(file_bytes_str(ufo.paths.vfb))
+		ufo.paths.vfbs.append(ufo.paths.vfb)
 
 
 def build_paths(ufo, master=0):
@@ -319,35 +331,33 @@ def build_paths(ufo, master=0):
 		base_filename = ufo.master.family_name
 
 	for name in ufo.instance_names:
-		filename = f'{base_filename}-{name}' if name else f'{base_filename}'
+		filename = f'{base_filename}-{name}' if name else base_filename
 		filename = filename.replace(' ', '')
 		ufo_filename = f'{filename}.ufo'
 		ufoz_filename = f'{filename}.ufoz'
 		vfb_filename = f'{filename}.vfb'
 
 		if ufo.opts.designspace_export:
-			ufo_path = os.path.join(ufo.paths.out, 'masters', ufo_filename)
-			ufoz_path = os.path.join(ufo.paths.out, 'masters', ufoz_filename)
+			ufo_path = os_path_join(ufo.paths.out, 'masters', ufo_filename)
+			ufoz_path = os_path_join(ufo.paths.out, 'masters', ufoz_filename)
 		else:
-			ufo_path = os.path.join(ufo.paths.out, ufo_filename)
-			ufoz_path = os.path.join(ufo.paths.out, ufoz_filename)
+			ufo_path = os_path_join(ufo.paths.out, ufo_filename)
+			ufoz_path = os_path_join(ufo.paths.out, ufoz_filename)
 
 		check_paths = [ufoz_path] if ufo.opts.ufoz else [ufo_path]
 
 		if ufo.opts.vfb_save:
-			check_paths.append(os.path.join(ufo.paths.out, vfb_filename))
+			check_paths.append(os_path_join(ufo.paths.out, vfb_filename))
 
 		for path in check_paths:
-			if os.path.exists(path):
+			if os_path_exists(path):
 				if not ufo.opts.force_overwrite:
-					raise IOError(
-						b"%s already exists.\n"
-						b"Please remove directory/file or set 'force_overwrite' to True" % path
-						)
+					raise IOError(b"%s already exists.\n"
+						b"Please remove directory/file or set 'force_overwrite' to True" % path)
 			if 'masters' in path:
-				dirname = os.path.dirname(path)
-				if not os.path.isdir(dirname):
-					make_dir(dirname)
+				dirname = os_path_dirname(path)
+				if not os_path_isdir(dirname):
+					os_makedirs(dirname)
 
 		paths.append(ufo_path)
 
@@ -424,7 +434,7 @@ def set_designspace_values(ufo, master):
 	set_master_values(ufo, master, designspace=1)
 	ufo.designspace.instances = zip(values, names, attributes)
 	filename = ufo.master.filename.replace('.vfb', '.designspace')
-	ufo.paths.designspace = file_bytes_str(os.path.join(ufo.paths.out, filename))
+	ufo.paths.designspace = os_path_join(ufo.paths.out, filename)
 
 
 def set_designspace_glyphs_omit(ufo, master):
@@ -438,11 +448,11 @@ def set_designspace_glyphs_omit(ufo, master):
 	glyphs_omit = set()
 	for i, glyph in enumerate(master.glyphs):
 		if glyph.name in glyphs_omit_names:
-			glyphs_omit.add(cp1252_unicode_str(glyph.name))
+			glyphs_omit.add(glyph.name.decode('cp1252'))
 		if b'.' in glyph.name:
 			for suffix in glyphs_omit_suffixes:
 				if glyph.name.endswith(suffix):
-					glyphs_omit.add(cp1252_unicode_str(glyph.name))
+					glyphs_omit.add(glyph.name.decode('cp1252'))
 					break
 
 	ufo.designspace.glyphs_omit = list(sorted(glyphs_omit))
@@ -494,7 +504,7 @@ def show_default_optimize_code_points():
 		for i in range(0, len(code_points), 8)]
 	code_points = '\n'.join(f'\t{" ".join(line)}' for line in code_points)
 
-	print(b'OPTIMIZE_CODE_POINTS = {\n%s\n\t}' % cp1252_bytes_str(code_points))
+	print(f'OPTIMIZE_CODE_POINTS = \n{code_points}n\t')
 
 
 def check_instance_lists(options, master):
@@ -526,10 +536,10 @@ def check_instance_values(options, master):
 
 	min_len = len(master.axis)
 	len_error_msg = (
-		b"Values from a list of 'instance_values' must be "
-		b'lists or tuples equal in length to the # of source font axes.\n'
-		b'<Font %s> has %d axe(s)' % (master.family_name, min_len)
-		)
+		f"Values from a list of 'instance_values' must be "
+		f'lists or tuples equal in length to the # of source font axes.\n'
+		f'<Font {master.family_name}> has {min_len} axe(s)'
+		).encode('cp1252')
 
 	# check instance options
 	user_instance_options = [options[option]

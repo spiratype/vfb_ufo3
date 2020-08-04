@@ -4,24 +4,33 @@
 # cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
+# cython: c_string_type=unicode
+# cython: c_string_encoding=utf_8
 # distutils: language=c++
 # distutils: extra_compile_args=[-O3, -fopenmp, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
 # distutils: extra_link_args=[-fopenmp]
-from __future__ import division, unicode_literals, print_function
+from __future__ import division, unicode_literals
 include 'includes/future.pxi'
 
-from plist cimport cpp_files, add_file
-from string cimport cp1252_unicode_str, file_bytes_str
+cimport cython
+
+from libcpp cimport bool as bint
+from libcpp.string cimport string
+from libcpp.vector cimport vector
+
+from cpython.dict cimport PyDict_SetItem
 
 import os
+import shutil
+import stat
 import time
 
 from FL import fl
 
-from .user import print
-
 include 'includes/thread.pxi'
 include 'includes/path.pxi'
+include 'includes/files.pxi'
+include 'includes/plist.pxi'
 include 'includes/ordered_dict.pxi'
 include 'includes/xml.pxi'
 
@@ -32,16 +41,17 @@ def plists(ufo):
 
 def _plists(ufo):
 
-	instance = fl[ufo.instance.ifont]
-
 	cdef cpp_files files
+
+	if not ufo.opts.ufoz:
+		files.reserve(7)
 
 	metainfo(ufo, files)
 	fontinfo(ufo, files)
 	groups(ufo, files)
-	kerning(ufo, instance, files)
-	lib(ufo, instance, files)
-	glyphs_contents(ufo, instance, files)
+	kerning(ufo, files)
+	lib(ufo, files)
+	glyphs_contents(ufo, files)
 	layercontents(ufo, files)
 
 	if not ufo.opts.ufoz:
@@ -49,8 +59,6 @@ def _plists(ufo):
 
 
 cdef metainfo(ufo, cpp_files &files):
-
-	cdef string plist
 
 	if ufo.plists.metainfo:
 		copy_file(ufo.plists.metainfo, ufo.paths.instance.metainfo)
@@ -71,8 +79,6 @@ cdef metainfo(ufo, cpp_files &files):
 
 cdef fontinfo(ufo, cpp_files &files):
 
-	cdef string plist
-
 	plist = plist_doc(ufo.instance.fontinfo)
 
 	if ufo.opts.ufoz:
@@ -82,8 +88,6 @@ cdef fontinfo(ufo, cpp_files &files):
 
 
 cdef groups(ufo, cpp_files &files):
-
-	cdef string plist
 
 	if ufo.groups.all and ufo.plists.groups:
 		copy_file(ufo.plists.groups, ufo.paths.instance.groups)
@@ -98,9 +102,7 @@ cdef groups(ufo, cpp_files &files):
 		ufo.plists.groups = ufo.paths.instance.groups
 
 
-cdef kerning(ufo, font, cpp_files &files):
-
-	cdef string plist
+cdef kerning(ufo, cpp_files &files):
 
 	if ufo.instance.kerning:
 		plist = plist_doc(ufo.instance.kerning)
@@ -110,9 +112,7 @@ cdef kerning(ufo, font, cpp_files &files):
 			add_file(files, ufo.paths.instance.kerning, plist)
 
 
-cdef lib(ufo, font, cpp_files &files):
-
-	cdef string plist
+cdef lib(ufo, cpp_files &files):
 
 	if ufo.plists.lib:
 		copy_file(ufo.plists.lib, ufo.paths.instance.lib)
@@ -133,9 +133,7 @@ cdef lib(ufo, font, cpp_files &files):
 		ufo.plists.lib = ufo.paths.instance.lib
 
 
-cdef glyphs_contents(ufo, font, cpp_files &files):
-
-	cdef string plist
+cdef glyphs_contents(ufo, cpp_files &files):
 
 	if ufo.plists.glyphs_contents:
 		copy_file(ufo.plists.glyphs_contents, ufo.paths.instance.glyphs_contents)
@@ -146,7 +144,7 @@ cdef glyphs_contents(ufo, font, cpp_files &files):
 	glyph_contents = ordered_dict()
 	for i, glyph in enumerate(master_copy.glyphs):
 		if i not in ufo.glyph_sets.omit:
-			glyph_contents[cp1252_unicode_str(glyph.name)] = ufo.glifs[i][1]
+			glyph_contents[glyph.name.decode('cp1252')] = ufo.glifs[i][1]
 
 	plist = plist_doc(glyph_contents)
 
@@ -158,8 +156,6 @@ cdef glyphs_contents(ufo, font, cpp_files &files):
 
 
 cdef layercontents(ufo, cpp_files &files):
-
-	cdef string plist
 
 	if ufo.plists.layercontents:
 		copy_file(ufo.plists.layercontents, ufo.paths.instance.layercontents)

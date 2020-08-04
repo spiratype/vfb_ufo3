@@ -4,6 +4,7 @@
 # cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
+# cython: c_string_type=unicode, c_string_encoding=utf_8
 # distutils: language=c++
 # distutils: extra_compile_args=[-O3, -fopenmp, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
 # distutils: extra_link_args=[-fopenmp, -lz]
@@ -11,22 +12,14 @@ from __future__ import division, unicode_literals
 include 'includes/future.pxi'
 
 cimport cython
+cimport fenv
 
 from libcpp cimport bool as bint
-from libcpp.unordered_map cimport unordered_map
 from libcpp.string cimport string
+from libcpp.vector cimport vector
+from libcpp.unordered_map cimport unordered_map
 
-from archive cimport write_archive
-from fenv cimport set_nearest
-from glif cimport (
-	cpp_anchor, cpp_component, cpp_contour_point, cpp_glif,
-	cpp_contour, cpp_contours, cpp_anchors, cpp_components, cpp_glifs,
-	cpp_anchor_lib, cpp_contour_lib, cpp_completed_contour_lib,
-	add_anchor, add_component, add_contour_point, add_glif,
-	build_glif, write_glif_files
-	)
-from string cimport cp1252_utf8_bytes_str
-
+include 'includes/glif.pxi'
 include 'includes/archive.pxi'
 
 import time
@@ -88,17 +81,17 @@ def _glifs(ufo):
 		vector[long] unicodes
 		cpp_anchors anchors
 		cpp_components components
-		bytes instance_glifs_path = ufo.paths.instance.glyphs
-		bytes instance_ufoz_path = ufo.paths.instance.ufoz
+		bytes instance_glifs_path = ufo.paths.instance.glyphs.encode('utf_8')
+		bytes instance_ufoz_path = ufo.paths.instance.ufoz.encode('utf_8')
 		bytes name = b''
-		bytes sep = b'/' if ufo.opts.ufoz else b'\\'
+		bytes path_sep = b'/' if ufo.opts.ufoz else b'\\'
 		long code_point = 0
 		int mark = 0
 		bint omit = 0
 		bint ufoz = ufo.opts.ufoz
 		bint ufoz_compress = ufo.opts.ufoz_compress
 
-	set_nearest()
+	fenv.set_nearest()
 
 	anchor_lib.reserve(n)
 	component_lib.reserve(n)
@@ -142,7 +135,7 @@ def _glifs(ufo):
 		add_glif(
 			glifs,
 			name,
-			b'%s%s%s' % (instance_glifs_path, sep, glif_name),
+			b'%s%s%s' % (instance_glifs_path, path_sep, glif_name),
 			unicodes,
 			mark,
 			glyph.width * SCALE,
@@ -177,7 +170,7 @@ cdef cpp_anchors glif_anchors(glyph_anchors):
 
 	anchors.reserve(len(glyph_anchors))
 	for anchor in glyph_anchors:
-		add_anchor(anchors, cp1252_utf8_bytes_str(anchor.name), anchor.x * SCALE, anchor.y * SCALE)
+		add_anchor(anchors, anchor.name.decode('cp1252'), anchor.x * SCALE, anchor.y * SCALE)
 	return anchors
 
 cdef cpp_components glif_components(glyph_components, font):
@@ -185,13 +178,12 @@ cdef cpp_components glif_components(glyph_components, font):
 	cdef:
 		cpp_components components
 		size_t i = 0
-		bytes base = b''
 
 	components.reserve(len(glyph_components))
 	for component in glyph_components:
 		offset_x, offset_y = component.delta.x * SCALE, component.delta.y * SCALE
 		scale, i = component.scale, component.index
-		base = cp1252_utf8_bytes_str(font[i].name)
+		base = font[i].name.decode('cp1252')
 		add_component(components, base, i, offset_x, offset_y, scale.x, scale.y)
 	return components
 

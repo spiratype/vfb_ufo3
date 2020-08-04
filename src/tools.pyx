@@ -4,19 +4,23 @@
 # cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
-# distutils: extra_compile_args=[-Os, -fno-strict-aliasing]
+# cython: c_string_type=unicode
+# cython: c_string_encoding=utf_8
+# distutils: language=c++
+# distutils: extra_compile_args=[-O3, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 
-from string cimport cp1252_unicode_str
+from libcpp cimport bool as bint
+from libcpp.string cimport string
 
 import gc
 import os
+import shutil
+import stat
 import time
 
 from FL import fl
-
-from .user import print
 
 include 'includes/thread.pxi'
 include 'includes/path.pxi'
@@ -27,22 +31,20 @@ include 'includes/defaults.pxi'
 # ----------------
 
 def report_times(times, ufoz=0):
-
-	report_times = (
+	return (
 		f'  {time_str(times.glifs)} (glifs)\n'
 		f'  {time_str(times.features)} (features)\n'
 		f'  {time_str(times.kern)} (kern)\n'
 		f'  {time_str(times.plists)} (plists)\n'
 		f'  {time_str(times.fontinfo)} (fontinfo)'
 		)
-	return report_times
 
 def finish(ufo, instance=0):
 
 	if instance:
 
 		if ufo.opts.vfb_save or not ufo.opts.vfb_close:
-			fl[ufo.instance.ifont].Save(ufo.paths.instance.vfb)
+			fl[ufo.instance.ifont].Save(ufo.paths.instance.vfb.encode('cp1252'))
 
 		fl.Close(ufo.instance.ifont)
 
@@ -52,10 +54,12 @@ def finish(ufo, instance=0):
 			ufo_path = ufo.paths.instance.ufoz
 		else:
 			ufo_path = ufo.instance_paths[ufo.instance.completed]
-		filename = os.path.basename(ufo_path)
+
+		filename = os_path_basename(ufo_path)
 		if 'masters' in ufo_path:
-			filename = os.path.join('masters', filename)
+			filename = os_path_join('masters', filename)
 		ufo.instance.completed += 1
+
 		if not ufo.opts.report_verbose:
 			print(f' {filename} completed {total_time}')
 			return
@@ -73,10 +77,10 @@ def finish(ufo, instance=0):
 		reset(ufo, instance=1)
 		return
 
-	remove_path(ufo.paths.encoding)
+	remove_file(ufo.paths.encoding)
 
 	if ufo.opts.vfb_save or not ufo.opts.vfb_close:
-		fl[ufo.master_copy.ifont].Save(ufo.paths.vfb)
+		fl[ufo.master_copy.ifont].Save(ufo.paths.vfb.encode('cp1252'))
 	fl.Close(ufo.master_copy.ifont)
 
 	total_time = time_str(time.clock() - ufo.total_times.start)
@@ -84,6 +88,7 @@ def finish(ufo, instance=0):
 		message = f'\n{ufo.instance.completed} UFOs completed ({total_time})'
 	else:
 		message = f'\n1 UFO completed ({total_time})'
+
 	if not ufo.opts.report_verbose:
 		print(message)
 		open_vfbs(ufo)
@@ -115,8 +120,8 @@ def finish(ufo, instance=0):
 
 def open_vfbs(ufo):
 	for path in ufo.paths.vfbs:
-		if os.path.isfile(path):
-			fl.Open(path)
+		if os_path_isfile(path):
+			fl.Open(path.encode('cp1252'))
 
 
 def reset(ufo, instance=0):
@@ -157,7 +162,6 @@ def time_str(duration, precision=1, simple_output=False):
 
 	'''
 	time string from time.clock() double
-
 	>>> time_str(4.505)
 	4.5 sec
 	'''
@@ -171,13 +175,13 @@ def time_str(duration, precision=1, simple_output=False):
 			return hours, minutes, seconds
 		return f'{hours} hr {minutes} min {seconds} sec'
 
-	def minutes_time(minutes, seconds, duration):
+	def minutes_time(minutes, seconds):
 
 		if simple_output :
 			return minutes, seconds
 		return f'{minutes} min {seconds} sec'
 
-	def seconds_time(seconds, duration):
+	def seconds_time(seconds):
 
 		str_seconds = f'{seconds}'
 		if '.0000' in str_seconds:
@@ -186,14 +190,14 @@ def time_str(duration, precision=1, simple_output=False):
 			return seconds
 		return f'{seconds} sec'
 
-	def milliseconds_time(milliseconds, duration):
+	def milliseconds_time(milliseconds):
 
 		milliseconds = int(round(milliseconds))
 		if simple_output:
 			return int(round(milliseconds))
 		return f'{milliseconds} msec'
 
-	def microseconds_time(microseconds, duration):
+	def microseconds_time(microseconds):
 
 		microseconds = int(round(microseconds))
 		if simple_output:
@@ -211,10 +215,10 @@ def time_str(duration, precision=1, simple_output=False):
 	if 1 > duration >= 1e-9:
 		milliseconds = duration * 1e3
 		if 999 > milliseconds >= 1:
-			return milliseconds_time(milliseconds, duration)
+			return milliseconds_time(milliseconds)
 		microseconds = duration * 1e6
 		if 999 > microseconds >= 1:
-			return microseconds_time(microseconds, duration)
+			return microseconds_time(microseconds)
 		nanoseconds = duration * 1e9
 		if 999 > nanoseconds >= 1:
 			return nanoseconds_time(nanoseconds, duration)
@@ -222,9 +226,9 @@ def time_str(duration, precision=1, simple_output=False):
 	if 3600 > duration >= 1:
 			minutes, seconds = duration // 60, duration % 60
 			if 59 > minutes >= 1:
-				return minutes_time(minutes, round(seconds, precision), duration)
+				return minutes_time(minutes, round(seconds, precision))
 			seconds = round(duration, precision)
-			return seconds_time(seconds, duration)
+			return seconds_time(seconds)
 
 	if duration >= 3600:
 		hours, minutes = duration // 3600, duration % 3600

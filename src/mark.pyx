@@ -8,19 +8,16 @@
 from __future__ import division, unicode_literals
 include 'includes/future.pxi'
 
+cimport fenv
+
 from libc.math cimport nearbyint
-from fenv cimport set_nearest
-from string cimport cp1252_unicode_str
 
 cdef double SCALE = 1.0
 
 from collections import defaultdict
-import os
 import time
 
 from FL import fl
-
-from . import user
 
 include 'includes/fea.pxi'
 
@@ -34,13 +31,13 @@ def _mark_feature(ufo):
 		SCALE = ufo.scale
 
 	font = fl[ufo.instance.ifont]
-	set_nearest()
+	fenv.set_nearest()
 
 	mark_classes = set()
 	bases = defaultdict(list)
 	for i, glyph in enumerate(font.glyphs):
 		if glyph.anchors and i not in ufo.glyph_sets.omit:
-			glyph_name = cp1252_unicode_str(glyph.name)
+			glyph_name = glyph.name.decode('cp1252')
 			for anchor in glyph.anchors:
 				if anchor.name:
 					if anchor.name.startswith(b'_'):
@@ -71,8 +68,8 @@ def int_anchor_coords(x, y):
 
 def mark_class(parent, anchor):
 	x, y = int_anchor_coords(anchor.x, anchor.y)
-	return f'\tmarkClass {parent} <anchor {x} {y}> @{cp1252_unicode_str(anchor.name[1:])};'
+	return f'\tmarkClass {parent} <anchor {x} {y}> @{anchor.name[1:].decode("cp1252")};'
 
 def mark_base(base, anchor):
 	x, y = int_anchor_coords(anchor.x, anchor.y)
-	return f'\tpos base {base} <anchor {x} {y}> mark @{cp1252_unicode_str(anchor.name)};'
+	return f'\tpos base {base} <anchor {x} {y}> mark @{anchor.name.decode("cp1252")};'

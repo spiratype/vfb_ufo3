@@ -8,14 +8,14 @@
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 
-from string cimport cp1252_bytes_str, cp1252_unicode_str
+cimport cython
+
+from cpython.dict cimport PyDict_SetItem
 
 import datetime
 import math
 import time
 import unicodedata
-
-from .user import print
 
 include 'includes/dict.pxi'
 include 'includes/fontinfo.pxi'
@@ -150,9 +150,9 @@ def _fontinfo(ufo, font, user_attributes):
 
 			elif isinstance(mapping[key], tuple):
 				if key in STRING_ATTRS:
-					new_value = cp1252_bytes_str(value)
+					new_value = value.encode('cp1252', 'ignore')
 					if len(new_value) != len(value):
-						new_value = ascii_bytes(value)
+						new_value = value.encode('ascii')
 					setattr(*mapping[key], new_value)
 				elif key in CONFIGURABLE_ATTRS:
 					setattr(*mapping[key], value)
@@ -191,7 +191,7 @@ def _fontinfo(ufo, font, user_attributes):
 				value = [int(val) if int(val) == val else val for val in value]
 
 			if isinstance(value, bytes):
-				value = cp1252_unicode_str(value)
+				value = value.decode('cp1252')
 
 			ufo.instance.fontinfo[key] = value
 
@@ -217,93 +217,99 @@ def _check_attributes(user_attributes):
 	for attr, value in items(user_attributes):
 
 		if attr not in CONFIGURABLE_ATTRS:
-			print(f"'{attr}' is not a configurable attribute")
+			print(b"'%s' is not a configurable attribute." % attr)
 			continue
 
 		if attr in STRING_ATTRS:
 			if not isinstance(value, unicode):
-				raise ValueError(f"'{value}' is not a valid value for UFO attribute '{attr}'\n"
-					f"'{attr}' must be a string value not a {type(value)} value")
+				raise ValueError(b"'%s' is not a valid value for UFO attribute '%s'\n"
+					b"'%s' must be a string value not a {type(value)} value."
+						% (value, attr, attr, type(value)))
 
 			if attr == 'styleMapStyleName':
 				value = value.lower()
 				if value not in REV_FL_STYLES:
-					raise ValueError(f"'{value}' is not a valid value for UFO attribute '{attr}'\n"
-						f"'{attr}' must be either 'regular', 'italic', 'bold', or 'bold italic'")
+					raise ValueError(b"'%s' is not a valid value for UFO attribute '%s'\n"
+						b"'%s' must be either 'regular', 'italic', 'bold', or 'bold italic'."
+						% (value, attr, attr))
 
 		elif attr in INT_ATTRS:
 			if not isinstance(value, int):
-				raise ValueError(f"'{value}' is not a valid value for UFO attribute '{attr}'\n"
-					f"'{attr}' must be an integer value")
+				raise ValueError(b"'%s' is not a valid value for UFO attribute '%s'\n"
+					b"'%s' must be an integer value." % (value, attr, attr))
 
 			if attr == 'postscriptWindowsCharacterSet':
 				if value < 1 or value > 20:
-					raise ValueError(f"'{value}' is not a valid value for UFO attribute '{attr}'\n"
-						f"'{attr}' must be an integer between 1 and 20")
+					raise ValueError(b"'%s' is not a valid value for UFO attribute '%s'\n"
+						b"'%s' must be an integer between 1 and 20." % (value, attr, attr))
 
 			elif attr == 'openTypeOS2WidthClass':
 				if value < 1 or value > 9:
-					raise ValueError(f"'{value}' is not a valid value for UFO attribute '{attr}'\n"
-						f"'{attr}' must be an integer between 1 and 9")
+					raise ValueError(b"'%s' is not a valid value for UFO attribute '%s'\n"
+						b"'%s' must be an integer between 1 and 9." % (value, attr, attr))
 
 		elif attr in FLOAT_ATTRS:
 			if not isinstance(value, float):
-				raise ValueError(f"'{value}' is not a valid value for UFO attribute '{attr}'\n"
-					f"'{attr}' must be a float value")
+				raise ValueError(b"'%s' is not a valid value for UFO attribute '%s'\n"
+					b"'%s' must be a float value." % (value, attr, attr))
 
 		elif attr in INT_FLOAT_ATTRS:
 			if not isinstance(value, (int, float)):
-				raise ValueError(f"'{value}' is not a valid value for UFO attribute '{attr}'\n"
-					f"'{attr}' must be an integer or float value")
+				raise ValueError(b"'%s' is not a valid value for UFO attribute '%s'\n"
+					b"'%s' must be an integer or float value." % (value, attr, attr))
 
 		elif attr in BOOL_ATTRS:
 			if not isinstance(value, (int, bool)):
 				try:
 					_ = bool(value)
 				except ValueError:
-					raise ValueError(f"'{value}' is not a valid value for UFO attribute '{attr}'\n"
-						f"'{attr}' must be a boolean value or convertible to a boolean value")
+					raise ValueError(b"'%s' is not a valid value for UFO attribute '%s'.\n"
+						b"'%s' must be a boolean value or convertible to a boolean value."
+						% (value, attr, attr))
 
 		elif attr in INT_LIST_ATTRS:
 			if not isinstance(value, list):
-				raise ValueError(f"'{value}' is not a valid value for UFO attribute '{attr}'\n"
-					f"'{attr}' must be a list")
+				raise ValueError(b"'%s' is not a valid value for UFO attribute '%s'\n"
+					b"'%s' must be a list." % (value, attr, attr))
 			for item in value:
 				if not isinstance(item, int):
-					raise ValueError(f"'{value}' contains an valid value ('{item}') for UFO "
-						f"attribute '{attr}'\n'{attr}' items must be integers")
+					raise ValueError(b"'%s' contains an valid value ('%s') for UFO "
+						b"attribute '%s'\n'%s' items must be integers."
+						% (value, item, attr, attr))
 
 			if attr == 'openTypeOS2Panose':
 				if len(value) != 10:
-					raise ValueError(f"'{attr}' must be a list of 10 integers")
+					raise ValueError(b"'%s' must be a list of 10 integers." % attr)
 
 			elif attr == 'openTypeOS2FamilyClass':
 				if len(value) != 2:
-					raise ValueError(f"'{attr}' must be a list of 2 integers")
+					raise ValueError(b"'%s' must be a list of 2 integers." % attr)
 				for item in value:
 					if item > 0 or item < 14:
-						raise ValueError(f"'{attr}' integers for must be values between 0 and 14")
+						raise ValueError(b"'%s' integers for openTypeOS2FamilyClass must be"
+							b" values between 0 and 14." % attr)
 
 			elif attr == 'openTypeOS2CodePageRanges':
 				for item in value:
 					if item not in CODE_PAGES:
-						raise ValueError(f"'{attr}' requires codepages from the ulCodePageRange1-2"
-							f" OS/2 specification")
+						raise ValueError(b"'%s' requires codepages from the ulCodePageRange1-2"
+							b" OS/2 specification." % attr)
 
 			elif attr == 'openTypeOS2UnicodeRanges':
 				for item in value:
 					if item not in range(123):
-						raise ValueError(f"'{attr}' requires codepages from the ulCodePageRange1-4"
-							f" OS/2 specification")
+						raise ValueError(b"'%s' requires codepages from the ulCodePageRange1-4"
+							b" OS/2 specification." % attr)
 
 		elif attr in INT_FLOAT_LIST_ATTRS:
 			if not isinstance(value, list):
-				raise ValueError(f"'{value}' is not a valid value for UFO attribute '{attr}'\n"
-				f"'{attr}' must be a list")
+				raise ValueError(b"'%s' is not a valid value for UFO attribute '%s'\n"
+				b"'%s' must be a list." % (value, attr, attr))
 			for item in value:
 				if not isinstance(item, (int, float)):
-					raise ValueError(f"'{value}' contains an invalid value ('{item}') for UFO"
-						f" attribute '{attr}'.\n'{attr}' items must be integers or floats")
+					raise ValueError(b"'%s' contains an invalid value ('%s') for UFO"
+						b" attribute '%s'.\n'%s' items must be integers or floats."
+						% (value, item, attr, attr))
 
 	return user_attributes
 
@@ -338,7 +344,8 @@ def _font_style(font_style):
 			return 64
 
 	n = int(font_style)
-	i, j = n % 2, int(math.log(n) / math.log(2))
+	i = n % 2
+	j = math.log(n) / math.log(2)
 
 	if i and j:
 		return [0, j]
@@ -354,11 +361,11 @@ def _os2_family_class(os2_family_class):
 def _guideline(position, angle, scale, horizontal=0):
 
 	if angle and scale:
-		return {GUIDELINE_AXES[horizontal]: position*scale, 'angle': angle}
+		return {GUIDELINE_AXES[horizontal]: position * scale, 'angle': angle}
 	if angle:
 		return {GUIDELINE_AXES[horizontal]: position, 'angle': angle}
 	if scale:
-		return {GUIDELINE_AXES[horizontal]: position*scale}
+		return {GUIDELINE_AXES[horizontal]: position * scale}
 	return {GUIDELINE_AXES[horizontal]: position}
 
 

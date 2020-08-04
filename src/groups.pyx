@@ -4,23 +4,34 @@
 # cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
+# cython: c_string_type=unicode
+# cython: c_string_encoding=utf_8
 # distutils: language=c++
 # distutils: extra_compile_args=[-O3, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
+# distutils: extra_link_args=[-lbcrypt]
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 
-from io cimport cpp_file, write_file
-from string cimport cp1252_bytes_str, cp1252_unicode_str, file_bytes_str
+cimport cython
+
+from cpython.dict cimport PyDict_SetItem
+
+from libcpp cimport bool as bint
+from libcpp.string cimport string
+from libcpp.vector cimport vector
 
 import os
+import shutil
+import stat
 import time
+import uuid
 
 from FL import fl
 
-from .user import print, read_file
-
 include 'includes/thread.pxi'
 include 'includes/path.pxi'
+include 'includes/unique.pxi'
+include 'includes/file.pxi'
 include 'includes/flc.pxi'
 include 'includes/groups.pxi'
 include 'includes/ordered_dict.pxi'
@@ -76,7 +87,7 @@ def finish_groups(ufo):
 
 def rename_groups(ufo):
 
-	print(f' Processing font groups..')
+	print(b' Processing font groups..')
 
 	font = fl[ufo.master_copy.ifont]
 
@@ -132,11 +143,11 @@ def rename_groups(ufo):
 
 def groups_from_kern_feature(font):
 
-	font_groups = {i: cp1252_unicode_str(group).split(': ')
+	font_groups = {i: group.decode('cp1252').split(': ')
 		for i, group in enumerate(font.classes)}
 
 	firsts, seconds = set(), set()
-	kern_feature = cp1252_unicode_str(font.MakeKernFeature().value).replace('enum ', '')
+	kern_feature = font.MakeKernFeature().value.decode('cp1252').replace('enum ', '')
 	kern_feature = [line.split()[1:3]
 		for line in kern_feature.splitlines()
 		if '@' in line]
@@ -151,10 +162,10 @@ def groups_from_kern_feature(font):
 
 def import_flc(ufo):
 
-	print(f' Importing groups from {os.path.basename(ufo.paths.flc)}..')
+	print(f' Importing groups from {os_path_basename(ufo.paths.flc)}..')
 
 	font = fl[ufo.master_copy.ifont]
-	flc_file = read_file(ufo.paths.flc)
+	flc_file = read_file(ufo.paths.flc).decode('cp1252')
 	flc_groups = parse_flc(flc_file)
 
 	for name, (flag, glyphs) in items(flc_groups):
@@ -183,10 +194,10 @@ def import_flc(ufo):
 
 def import_groups_plist(ufo):
 
-	print(f' Importing groups from {os.path.basename(ufo.paths.groups_plist)}..')
+	print(f' Importing groups from {os_path_basename(ufo.paths.groups_plist)}..')
 
 	font = fl[ufo.master_copy.ifont]
-	plist = read_file(ufo.paths.groups_plist)
+	plist = read_file(ufo.paths.groups_plist).decode('utf_8')
 
 	if '@MMK' in plist:
 		for (ver1, ver2) in (('@MMK_L_', PREFIX_1), ('@MMK_R_', PREFIX_2)):
@@ -227,8 +238,11 @@ def update_groups(ufo):
 		key_glyph = ufo.kern.key_glyph_from_group[name]
 		font_classes.append(f'_{name}: {insert_key_glyph(glyphs, key_glyph)}')
 
-	font.classes = cp1252_bytes_str('\n'.join(font_classes)).splitlines()
+	output = fl.output
+	font.classes = '\n'.join(font_classes).encode('cp1252').splitlines()
+	fl.BeginProgress(b'Updating groups for master.vfb...', len(font_classes))
 	for i, group in enumerate(font.classes):
+		fl.TickProgress(i+1)
 		if ufo.opts.groups_ignore_no_kerning:
 			if i in ufo.groups.no_kerning:
 				continue
@@ -237,22 +251,23 @@ def update_groups(ufo):
 				font.SetClassFlags(i, 1, 0)
 			elif b'.kern2.' in group:
 				font.SetClassFlags(i, 0, 1)
+	fl.EndProgress()
 
 
 def write_flc(ufo):
 
 	if ufo.opts.groups_export_flc_path:
-		filename = os.path.basename(ufo.opts.groups_export_flc_path)
-		flc_export_path = file_bytes_str(ufo.opts.groups_export_flc_path)
+		filename = os_path_basename(ufo.opts.groups_export_flc_path)
+		flc_export_path = ufo.opts.groups_export_flc_path
 	else:
 		version = ufo.master.version.replace('.', '_')
 		if ufo.master.font_style in (1, 33):
 			filename = f'{ufo.master.family_name}_Italic_{version}.flc'
 		else:
 			filename = f'{ufo.master.family_name}_{version}.flc'
-		flc_export_path = file_bytes_str(os.path.join(ufo.paths.out, filename))
+		flc_export_path = os_path_join(ufo.paths.out, filename)
 
-	if os.path.isfile(flc_export_path):
+	if os_path_isfile(flc_export_path):
 		if ufo.opts.force_overwrite:
 			remove_path(flc_export_path, force=1)
 		else:
@@ -280,5 +295,5 @@ def write_flc(ufo):
 			flc_end_marker,
 			]
 
-	flc_file = file_bytes_str('\n'.join(flc_file))
-	write_file(cpp_file(flc_export_path, flc_file))
+	flc_file = '\n'.join(flc_file)
+	write_file(flc_export_path, flc_file)

@@ -4,21 +4,26 @@
 # cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
+# cython: c_string_type=unicode
+# cython: c_string_encoding=utf_8
 # distutils: language=c++
 # distutils: extra_compile_args=[-O3, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 
-from io cimport cpp_file, write_file
-from string cimport cp1252_bytes_str, cp1252_unicode_str, file_bytes_str
+from libcpp cimport bool as bint
+from libcpp.string cimport string
 
 import os
+import shutil
+import stat
 import time
 
 from FL import fl
 
 include 'includes/thread.pxi'
 include 'includes/path.pxi'
+include 'includes/file.pxi'
 
 def fdk(ufo):
 	start = time.clock()
@@ -40,7 +45,7 @@ def _parts(ufo):
 	glyph_order_db(ufo, instance)
 
 	if ufo.opts.afdko_makeotf_batch_cmd or ufo.opts.afdko_makeotf_cmd:
-		batch = bool(ufo.opts.afdko_makeotf_batch_cmd and len(ufo.instance_values) > 1)
+		batch = ufo.opts.afdko_makeotf_batch_cmd and len(ufo.instance_values) > 1
 		makeotf_command(ufo, batch=batch)
 
 
@@ -64,26 +69,26 @@ def glyph_order_db(ufo, font):
 	if not ufo.paths.afdko.goadb:
 		text = []
 		for glyph_name, glyph_uni_name in ufo.afdko.GOADB:
-			if font.FindGlyph(cp1252_bytes_str(glyph_name)) not in ufo.glyph_sets.omit:
+			if font.FindGlyph(glyph_name.encode('cp1252')) not in ufo.glyph_sets.omit:
 				if glyph_uni_name is None:
 					text.append(f'{glyph_name} {glyph_name}')
 				else:
 					text.append(f'{glyph_name} {glyph_name} {glyph_uni_name}')
-		write_file(cpp_file(ufo.paths.instance.goadb, file_bytes_str('\n'.join(text))))
+		write_file(ufo.paths.instance.goadb, '\n'.join(text))
 	else:
 		copy_file(ufo.paths.afdko.goadb, ufo.instance_paths.afdko.goadb)
 
 
 def font_menu_name_db(ufo, font):
 
-	text = file_bytes_str(
+	text = (
 		f'[{font.font_name.replace(" ", "")}]\n'
 		f'f={font.family_name}\n'
 		f's={font.pref_style_name}\n'
 		f'l={font.family_name} {font.pref_style_name}\n'
 		)
 
-	write_file(cpp_file(ufo.paths.instance.fontnamedb, text))
+	write_file(ufo.paths.instance.fontnamedb, text)
 
 
 def makeotf_command(ufo, batch=0):
@@ -168,11 +173,11 @@ def makeotf_command(ufo, batch=0):
 				args.append(arg)
 
 	command = ' '.join((
-		f'makeotf -f "{os.path.basename(ufo.paths.instance.ufo)}"',
-		f'-gf "{os.path.basename(ufo.paths.instance.goadb)}"',
-		f'-mf "{os.path.basename(ufo.paths.instance.fontnamedb)}"',
+		f'makeotf -f "{os_path_basename(ufo.paths.instance.ufo)}"',
+		f'-gf "{os_path_basename(ufo.paths.instance.goadb)}"',
+		f'-mf "{os_path_basename(ufo.paths.instance.fontnamedb)}"',
 		*args,
-		f'-skco -osv 4 -o "{os.path.basename(ufo.paths.instance.otf)}"',
+		f'-skco -osv 4 -o "{os_path_basename(ufo.paths.instance.otf)}"',
 		))
 
 	if batch:
@@ -237,7 +242,7 @@ def psautohint_command(ufo, batch=0):
 	command = ' '.join((
 		'psautohint',
 		*args,
-		f'"{os.path.basename(ufo.paths.instance.ufo)}"',
+		f'"{os_path_basename(ufo.paths.instance.ufo)}"',
 		))
 
 	if batch:
@@ -253,6 +258,6 @@ def write_bat(command, command_path, batch=0):
 
 	if batch:
 		command = '\n'.join(command)
-	command = file_bytes_str(f'echo on\n{command}\npause')
+	command = f'echo on\n{command}\npause'
 
-	write_file(cpp_file(command_path, command))
+	write_file(command_path, command)

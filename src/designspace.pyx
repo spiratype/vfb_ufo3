@@ -4,19 +4,29 @@
 # cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
+# cython: c_string_type=unicode
+# cython: c_string_encoding=utf_8
 # distutils: language=c++
 # distutils: extra_compile_args=[-O3, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 
-from io cimport cpp_file, write_file
-from string cimport cp1252_bytes_str, cp1252_unicode_str, file_bytes_str, number_str
 cimport cython
+from libc.math cimport nearbyint
+
+from libcpp cimport bool as bint
+from libcpp.string cimport string
 
 import os
+import shutil
+import stat
 
 from FL import fl
 
+include 'includes/thread.pxi'
+include 'includes/path.pxi'
+include 'includes/string.pxi'
+include 'includes/file.pxi'
 include 'includes/designspace.pxi'
 include 'includes/dict.pxi'
 include 'includes/xml.pxi'
@@ -29,7 +39,7 @@ def _designspace(ufo):
 	if not ufo.designspace.default:
 		ufo.designspace.default = [0] * len(ufo.master.axes_names)
 
-	designspace = Designspace(ufo)
+	designspace = c_designspace(ufo)
 
 	designspace_axes(ufo, designspace)
 	designspace_sources(ufo, designspace)
@@ -64,17 +74,14 @@ def source_names(path, familyname, stylename):
 	names['familyname'] = familyname
 	names['stylename'] = stylename
 	names['name'] = f'{familyname} {stylename}'
-	names['filename'] = f'masters/{os.path.basename(path)}'
+	names['filename'] = f'masters/{os_path_basename(path)}'
 	return names
 
 def designspace_instances(ufo, designspace):
 
 	for values, names, attributes in ufo.designspace.instances:
 		family_name = ufo.master.family_name
-		if isinstance(names, (list, tuple)):
-			style_name = ' '.join(names)
-		else:
-			style_name = names
+		style_name = ' '.join(names) if isinstance(names, (list, tuple)) else names
 		names = instance_names(attributes, ufo.master.family_name, style_name)
 		dimensions = zip(ufo.master.axes_names, values)
 		dimensions = [dspace_dimension(*dimension) for dimension in dimensions]
@@ -99,9 +106,9 @@ def build(designspace):
 	if designspace.instances:
 		doc += dspace_instances(designspace.instances)
 
-	designspace.text = file_bytes_str('\n'.join((
+	designspace.text = '\n'.join((
 		"<?xml version='1.0' encoding='UTF-8'?>",
 		"<designspace format='3'>",
 		*doc,
 		"</designspace>\n",
-		)))
+		))
