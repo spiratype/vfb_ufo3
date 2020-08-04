@@ -64,8 +64,8 @@ written in C++ and Cython. The submodules are compiled into .pyd extension
 modules. To recompile the submodules, the PyPi cython package and a compiler
 for Cython to utilize during extension module compilation will be required.
 
-The glif.pyd and plist.pyd extension modules require several DLLs included
-in the release .zip archive, FontLab installer, and PyPi package.
+The some extension modules compiled from C++ require several DLLs included in
+the release .zip archive, FontLab installer, and PyPi package.
 
 OPTIONAL
   cython
@@ -606,7 +606,7 @@ vfb2ufo3.write_ufo(
 	)
 
 
-Test (~3200 glyphs @ 10,000 UPM -> 1,000 UPM), ≈1.5 sec
+Test (~3200 glyphs @ 10,000 UPM -> 1,000 UPM), <1.5 sec
 
 
 flc_path = <path to .flc file>
@@ -643,6 +643,12 @@ License
 Source files are covered under the MIT License.
 
 Version history
+version 0.7.2
+reorganization of .pxi includes
+removal of .pxd Cython declaration files
+incorporated automatic string encoding from Python to C/C++
+more explicit Python string encoding/decoding
+
 version 0.7.1
 changes to .ufoz C++ code
 
