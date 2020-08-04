@@ -1,4 +1,4 @@
-# DESIGNSPACE
+# designspace.pxi
 
 AXIS_TAGS = {
 	'Italic': 'ital',
@@ -23,6 +23,27 @@ INSTANCE_ATTRS = (
 	'stylemapfamilyname',
 	'stylemapstylename',
 	)
+
+@cython.final
+cdef class c_designspace:
+
+	cdef public:
+		string path, text
+		list rules, axes, sources, instances
+
+	def __cinit__(self, parent):
+		self.path = parent.paths.designspace
+		self.rules = [dspace_rule(glyph, glyph=1)
+			for glyph in parent.designspace.glyphs_omit]
+		self.axes = []
+		self.sources = []
+		self.instances = []
+
+	def write(self):
+		write_file(self.path, self.text)
+
+	def __reduce__(self):
+		return self.__class__
 
 def dspace_location(dimensions):
 	return ['\t\t\t<location>', *dimensions, '\t\t\t</location>']
@@ -75,27 +96,3 @@ def dspace_instance(location, names, rules):
 	attrs = elem_attrs([[name, names[name]] for name in INSTANCE_ATTRS])
 	instance = rules + location
 	return [f'\t\t<instance {attrs}>', *instance, '\t\t</instance>']
-
-@cython.final
-cdef class Designspace:
-
-	cdef readonly:
-		bytes path
-
-	cdef public:
-		bytes text
-		list rules, axes, sources, instances
-
-	def __cinit__(self, parent):
-		self.path = parent.paths.designspace
-		self.rules = [dspace_rule(glyph, glyph=1)
-			for glyph in parent.designspace.glyphs_omit]
-		self.axes = []
-		self.sources = []
-		self.instances = []
-
-	def write(self):
-		write_file(cpp_file(self.path, self.text))
-
-	def __reduce__(self):
-		return self.__class__

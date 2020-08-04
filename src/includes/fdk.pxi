@@ -1,4 +1,4 @@
-# FDK
+# fdk.pxi
 
 MAKEOTF_ARGS = {
 	'afdko_makeotf_release': '-r',

@@ -1,18 +1,21 @@
 # archive.pxi
 
+cdef extern from 'includes/cpp/archive.cpp' nogil:
+	void write_archive(string, unordered_map[string, string], bint)
+
 @cython.final
 cdef class c_archive:
 
 	cdef:
-		unordered_map[string, string] files
 		string filename
 		bint compress
+		unordered_map[string, string] files
 
-	def __cinit__(self, bytes filename, bint compress):
+	def __cinit__(self, string &filename, bint compress):
 		self.filename = filename
 		self.compress = compress
 
-	def __setitem__(self, bytes arc_name, string text):
+	def __setitem__(self, string &arc_name, string &text):
 		self.files[arc_name] = text
 
 	def __reduce__(self):

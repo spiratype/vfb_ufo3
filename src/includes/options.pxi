@@ -1,4 +1,4 @@
-# OPTIONS
+# options.pxi
 
 DEFAULT_OPTIONS = (
 	('output_path', None),
@@ -71,7 +71,6 @@ DEFAULT_OPTIONS = (
 	)
 
 FILE_OPTIONS = {
-	'features_file_path',
 	'kern_feature_file_path',
 	'groups_flc_path',
 	'groups_plist_path',
@@ -155,12 +154,12 @@ def check_option(value_type, key, value):
 		if not isinstance(value, basestring):
 			raise ValueError(b"'%s' must be a byte- or unicode-string value." % key)
 		if isinstance(value, bytes):
-			value = cp1252_unicode_str(value)
-		if key in PATH_OPTIONS and not os.path.isabs(value):
+			value = value.decode('cp1252')
+		if key in PATH_OPTIONS and not os_path_isabs(value):
 			return None
-		if key in FILE_OPTIONS and not os.path.isfile(value) and key != 'groups_export_flc_path':
+		if key in FILE_OPTIONS and not os_path_isfile(value) and key != 'groups_export_flc_path':
 			return None
-		return os.path.realpath(os.path.normpath(value))
+		return os_path_normpath(value)
 
 	if value_type == 'int':
 		if isinstance(value, float):

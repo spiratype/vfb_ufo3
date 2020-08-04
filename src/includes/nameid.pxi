@@ -1,4 +1,4 @@
-# NAMEID
+# nameid.pxi
 
 import unicodedata
 

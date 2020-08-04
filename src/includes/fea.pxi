@@ -1,4 +1,4 @@
-# FEATURES
+# features.pxi
 
 OMIT_NIDS = {1, 2, 3, 4, 6}
 

@@ -1,4 +1,4 @@
-# FLC
+# flc.pxi
 
 FLC_HEADER =               '%%FONTLAB CLASSES'
 FLC_GROUP_MARKER =         '%%CLASS'

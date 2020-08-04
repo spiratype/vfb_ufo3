@@ -1,11 +1,4 @@
-# XML
-
-def py_str(bytes_string):
-	try:
-		return bytes_string.decode('cp1252')
-	except UnicodeError:
-		return bytes_string.decode('cp1252', 'ignore')
-
+# xml.pxi
 
 def elem_attrs(attrs):
 
@@ -44,14 +37,14 @@ def plist_doc(plist):
 	if isinstance(plist, list):
 		plist = list_elem(plist)
 
-	return file_bytes_str(
+	return (
 		"<?xml version='1.0' encoding='UTF-8'?>\n"
 		"<!DOCTYPE plist PUBLIC '-//Apple Computer//DTD PLIST 1.0//EN'\n"
 		"\t'http://www.apple.com/DTDs/PropertyList-1.0.dtd'>\n"
 		"<plist version='1.0'>\n"
 		f"{plist}"
 		"</plist>\n"
-		)
+		).encode('utf_8')
 
 def dict_elem(elems, indents=0):
 
@@ -212,19 +205,19 @@ def element(value, indents=0):
 	'''
 
 	if isinstance(value, bool):
-		return empty_elem(unicode(value).lower(), indents)
+		return empty_elem(str(value).lower(), indents)
 
 	elif isinstance(value, bytes):
-		return text_elem('string', py_str(value), indents)
+		return text_elem('string', value.decode('cp1252'), indents)
 
 	elif isinstance(value, unicode):
 		return text_elem('string', value, indents)
 
 	elif isinstance(value, int):
-		return text_elem('integer', unicode(value), indents)
+		return text_elem('integer', str(value), indents)
 
 	elif isinstance(value, float):
-		return text_elem('real', unicode(value), indents)
+		return text_elem('real', str(value), indents)
 
 	elif isinstance(value, dict):
 		return dict_elem(value, indents)

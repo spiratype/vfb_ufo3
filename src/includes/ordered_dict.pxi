@@ -1,8 +1,4 @@
-# ORDERED_DICT
-
-cimport cython
-
-from cpython.dict cimport PyDict_SetItem
+# ordered_dict.pxi
 
 @cython.final
 cdef class ordered_dict(dict):
@@ -20,8 +16,8 @@ cdef class ordered_dict(dict):
 	def __bool__(self):
 		return bool(self.mapping)
 
-	def items(self):
-		return ((key, self[key]) for key in self.mapping)
-
 	def __reduce__(self):
 		return self.__class__
+
+	def items(self):
+		return ((key, self[key]) for key in self.mapping)

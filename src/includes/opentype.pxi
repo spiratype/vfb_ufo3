@@ -1,4 +1,4 @@
-# OPENTYPE
+# opentype.pxi
 
 LANGUAGES = {
 	'ABA': 'Abaza',

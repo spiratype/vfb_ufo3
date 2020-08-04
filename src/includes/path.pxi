@@ -1,77 +1,97 @@
-# PATH
+# path.pxi
 
-import uuid
-import shutil
-import tempfile
+cdef extern from 'includes/cpp/path.cpp' nogil:
+	string os_path_normpath(string)
 
-TEMP = tempfile.gettempdir()
+DESKTOP = f'{os.environ["USERPROFILE"]}\\Desktop'
+TEMP = os.environ['TMP']
 
-def split_path(path, split_ext=0):
-	if isinstance(path, bytes):
-		path = path.decode('utf_8')
-	dirname, filename = os.path.split(path)
+os_sep = '\\'
+
+def os_path_join(*paths):
+	return os_sep.join(paths)
+
+def os_path_basename(path):
+	return path[path.rfind(os_sep)+1:]
+
+def os_path_dirname(path):
+	return path[:path.rfind(os_sep)]
+
+def os_path_split(path, split_ext=0):
+	i = path.rfind(os_sep)
+	dirname, filename = path[:i], path[i+1:]
 	if split_ext and '.' in filename:
-		filename, ext = os.path.splitext(filename)
+		filename, ext = os_path_splitext(filename)
 		return dirname, filename, ext
 	return dirname, filename
 
-def unique_id():
-	return cp1252_unicode_str(uuid.uuid4().hex)
+def os_path_splitdrive(path):
+	path = os_path_normpath(path)
+	if ':' not in path:
+		return '', path
+	i = path.find(':') + 1
+	return path[:i], path[i:]
 
-def unique_path(path, temp=0):
-	if isinstance(path, bytes):
-		path = path.decode('utf_8')
-	if os.sep in path:
-		dirname, basename, ext = split_path(path, split_ext=1)
-		if temp:
-			return os.path.join(TEMP, f'{basename}_{unique_id()}.{ext}').encode('utf_8')
-		return os.path.join(dirname, f'{basename}_{unique_id()}.{ext}').encode('utf_8')
-	if '.' in path:
-		basename, ext = os.path.splitext(path)
-		return os.path.join(TEMP, f'{basename}_{unique_id()}.{ext}').encode('utf_8')
-	return os.path.join(TEMP, f'{path}_{unique_id()}').encode('utf_8')
+def os_path_splitext(path):
+	i = path.rfind('.')
+	return path[i:], path[:i]
 
-def remove_path(path, force=0):
-	if os.path.exists(path):
-		temp_path = unique_path(path, temp=1)
-		if force:
-			try:
-				move(path, temp_path)
-				remove(temp_path)
-			except IOError as e:
-				if e.errno == 13:
-					raise IOError(b'%s is open.\nPlease close the file.' % os.path.basename(path))
-		move(path, temp_path)
-		remove(temp_path)
-
-def move(src_path, dest_path):
+def os_path_exists(path):
 	try:
-		os.rename(src_path, dest_path)
-	except OSError:
-		pass
+		os.stat(path)
+	except (OSError, ValueError):
+		return 0
+	return 1
 
-def make_dir(path):
+def os_path_isdir(path):
+	try:
+		st = os.stat(path)
+	except (OSError, ValueError):
+		return 0
+	return stat.S_ISDIR(st.st_mode)
+
+def os_path_isfile(path):
+	try:
+		st = os.stat(path)
+	except (OSError, ValueError):
+		return 0
+	return stat.S_ISREG(st.st_mode)
+
+def os_path_isabs(path):
+	if path.replace('/', os_sep).startswith('\\\\?\\'):
+		return True
+	path = os_path_splitdrive(path)[1]
+	return len(path) > 0 and path[0] in '\\/'
+
+def os_makedirs(path):
 	try:
 		os.makedirs(path)
 	except OSError:
 		pass
 
-def remove(path):
-	if os.path.isfile(path):
-		return remove_file(path)
-	return remove_tree(path)
+def os_remove(path):
+	if os_path_isdir(path):
+		remove_tree(path)
+	else:
+		remove_file(path)
 
-def unlink(file):
-	try:
-		os.remove(file)
-	except OSError:
-		pass
+def next_path(path):
+	if not os_path_exists(path):
+		return path
+	i = 1
+	dirname, basename, ext = os_path_split(path, split_ext=1)
+	while 1:
+		path = os_path_join(dirname, f'{basename} ({i}).{ext}')
+		if not os_path_exists(path):
+			break
+		i += 1
+	return path
 
 def copy_file(src_path, dest_path):
 	start_new_thread(shutil.copyfile, src_path, dest_path)
 
-def remove_file(file):
-	start_new_thread(unlink, file)
+def remove_file(path):
+	start_new_thread(os.remove, path)
 
-def remove_tree(tree):
-	start_new_thread(shutil.rmtree, tree, ignore_errors=1)
+def remove_tree(path):
+	start_new_thread(shutil.rmtree, path, ignore_errors=1)

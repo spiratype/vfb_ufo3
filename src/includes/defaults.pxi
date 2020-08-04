@@ -1,4 +1,4 @@
-# DEFAULTS
+# defaults.pxi
 
 UFO_GLYPH_SETS = (
 	('omit', None),

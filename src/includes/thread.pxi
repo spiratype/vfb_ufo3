@@ -1,4 +1,4 @@
-# THREAD
+# thread.pxi
 
 import threading
 

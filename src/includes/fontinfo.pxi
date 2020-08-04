@@ -1,7 +1,4 @@
-# FONTINFO
-
-from cpython.dict cimport PyDict_SetItem
-cimport cython
+# fontinfo.pxi
 
 @cython.final
 cdef class fontinfo_dict(dict):
@@ -10,6 +7,9 @@ cdef class fontinfo_dict(dict):
 		for key in FONTINFO_ATTRS:
 			PyDict_SetItem(self, key, None)
 
+	def __reduce__(self):
+		return self.__class__
+
 	def update(self, other):
 		for key, value in items(other):
 			if key in self:
@@ -17,9 +17,6 @@ cdef class fontinfo_dict(dict):
 
 	def items(self):
 		return ((key, self[key]) for key in FONTINFO_ATTRS)
-
-	def __reduce__(self):
-		return self.__class__
 
 # GLYPH SETS
 
@@ -64,7 +61,7 @@ FL_WIDTHS = {
 	'Ultra-expanded': 9,
 	}
 
-REV_FL_WIDTHS = {value: cp1252_bytes_str(key)  for key, value in items(WIDTHS)}
+REV_FL_WIDTHS = {value: key.encode('cp1252')  for key, value in items(WIDTHS)}
 
 WEIGHTS = {
 	'UltraLight': 100,

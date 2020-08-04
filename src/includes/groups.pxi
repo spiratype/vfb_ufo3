@@ -1,4 +1,4 @@
-# GROUPS
+# groups.pxi
 
 PREFIX_1 = 'public.kern1.'
 PREFIX_2 = 'public.kern2.'

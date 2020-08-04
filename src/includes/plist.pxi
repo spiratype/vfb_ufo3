@@ -1,4 +1,4 @@
-# PLIST
+# plist.pxi
 
 def parse_plist(plist):
 

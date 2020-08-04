@@ -1,4 +1,4 @@
-# ATTRIBUTE_DICT
+# attribute_dict.pxi
 
 cimport cython
 
@@ -17,6 +17,9 @@ cdef class attribute_dict(dict):
 	def __getattr__(self, key):
 		return self[key]
 
+	def __reduce__(self):
+		return self.__class__
+
 	def update(self, args):
 		for key, value in args:
 			PyDict_SetItem(self, key, value)
@@ -27,6 +30,3 @@ cdef class attribute_dict(dict):
 
 	def keys(self):
 		return (key for key in self)
-
-	def __reduce__(self):
-		return self.__class__
