@@ -12,7 +12,7 @@ from . import core
 
 show_default_optimize_code_points = core.show_default_optimize_code_points
 
-__version__ = '0.7.2'
+__version__ = '0.7.3'
 __doc__ = """
 VFB2UFO3
 DESCRIPTION
@@ -394,7 +394,8 @@ Mark feature options
 A `mark` feature can be generated on export by setting `mark_feature_generate`
 to `True`. A list of anchor names to omit (`mark_anchors_omit`) or a list of
 anchor names to include (`mark_anchors_include`) can be supplied to fine-tune
-the `mark` feature output.
+the `mark` feature output. For both anchor name lists, the corresponding
+`_<anchor name>` anchor will be added to their respective list.
 
 Group options
 Providing a FontLab-class file (`.flc`) or `groups.plist` speeds up UFO
@@ -659,6 +660,10 @@ License
 Source files are covered under the MIT License.
 
 Version history
+version 0.7.3
+corrections to `mark` feature generation
+reverted to use of `"` from `'` in XML files for compatibility with makeOTF
+
 version 0.7.2
 reorganization of `.pxi` includes
 removal of `.pxd` Cython declaration files

@@ -279,7 +279,7 @@ An external feature file with a `kern` feature can be imported to the font featu
 By default, a new `kern` feature is generated for each instance. Setting `kern_feature_generate` to `False` will turn this off. The `kern` feature generation will add subtables and a lookup as necessary. This is not particularly elegant, and so far, no checks are made to guarantee a working `kern` feature. Any remaining subtable overflows may be due to glyph(s) being in more than one kern group of the same side; however overflows can also be caused by issues from one or more `GPOS` features located earlier in the feature list.
 
 #### Mark feature options
-A `mark` feature can be generated on export by setting `mark_feature_generate` to `True`. A list of anchor names to omit (`mark_anchors_omit`) or a list of anchor names to include (`mark_anchors_include`) can be supplied to fine-tune the `mark` feature output.
+A `mark` feature can be generated on export by setting `mark_feature_generate` to `True`. A list of anchor names to omit (`mark_anchors_omit`) or a list of anchor names to include (`mark_anchors_include`) can be supplied to fine-tune the `mark` feature output. For both anchor name lists, the corresponding `_<anchor name>` anchor will be added to their respective list.
 
 #### Group options
 Providing a FontLab-class file (`.flc`) or `groups.plist` speeds up UFO creation time significantly when the group names are not named using first and second group identifiers (see `groups_flc_path` and `groups_plist_path` options). Group names in the `.flc` file do not have match any specific formatting (e.g. `MMK_R_<key glyph>`, `public.kern2.<key glyph>`).
@@ -474,6 +474,10 @@ Jameson R Spires
 Source files are covered under the [MIT License](https://opensource.org/licenses/MIT).
 
 #### Version history
+* version 0.7.3  
+corrections to `mark` feature generation  
+reverted to use of `"` from `'` in XML files for compatibility with makeOTF  
+
 * version 0.7.2  
 reorganization of `.pxi` includes  
 removal of `.pxd` Cython declaration files  
