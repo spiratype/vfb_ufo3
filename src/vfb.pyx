@@ -19,7 +19,9 @@ from collections import defaultdict
 import os
 import shutil
 import stat
+import threading
 import time
+import unicodedata
 import uuid
 
 import FL
@@ -89,9 +91,19 @@ def _process_master_copy(ufo, master_copy):
 
 	if anchors and ufo.opts.mark_feature_generate:
 		if ufo.opts.mark_anchors_omit:
-			anchors ^= ufo.opts.mark_anchors_omit
+			omit_anchors = set()
+			for anchor in ufo.opts.mark_anchors_omit:
+				omit_anchors.add(anchor)
+				if not anchor.startswith(b'_'):
+					omit_anchors.add(b'_%s' % anchor)
+			anchors ^= omit_anchors
 		elif ufo.opts.mark_anchors_include:
-			anchors &= ufo.opts.mark_anchors_include
+			include_anchors = set()
+			for anchor in ufo.opts.mark_anchors_include:
+				include_anchors.add(anchor)
+				if not anchor.startswith(b'_'):
+					include_anchors.add(b'_%s' % anchor)
+			anchors &= include_anchors
 		for anchor in anchors:
 			if anchor.startswith(b'_'):
 				ufo.mark_classes.add(anchor[1:])

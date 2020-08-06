@@ -36,7 +36,9 @@ def _mark_feature(ufo):
 	mark_classes = set()
 	bases = defaultdict(list)
 	for i, glyph in enumerate(font.glyphs):
-		if glyph.anchors and i not in ufo.glyph_sets.omit:
+		if i in ufo.glyph_sets.omit:
+			continue
+		if glyph.anchors:
 			glyph_name = glyph.name.decode('cp1252')
 			for anchor in glyph.anchors:
 				if anchor.name:
@@ -59,9 +61,10 @@ def _mark_feature(ufo):
 		for i, bases in enumerate(mark_bases, start=1)]
 	mark_classes = '\n'.join(sorted(mark_classes))
 
-	lookups = '\n'.join(f'\tlookup mark{i};' for i in range(1, len(mark_bases)))
+	lookups = '\n'.join(f'\tlookup mark{i};' for i in range(1, len(mark_bases)+1))
 
-	return fea_feature('mark', [mark_classes, *mark_lookups, lookups])
+	feature = [mark_classes, *mark_lookups, lookups]
+	return fea_feature('mark', feature) if mark_bases else ''
 
 def int_anchor_coords(x, y):
 	return int(nearbyint(x * SCALE)), int(nearbyint(y * SCALE))

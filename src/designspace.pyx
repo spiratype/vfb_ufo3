@@ -14,12 +14,12 @@ include 'includes/future.pxi'
 cimport cython
 from libc.math cimport nearbyint
 
-from libcpp cimport bool as bint
 from libcpp.string cimport string
 
 import os
 import shutil
 import stat
+import threading
 
 from FL import fl
 
@@ -107,8 +107,8 @@ def build(designspace):
 		doc += dspace_instances(designspace.instances)
 
 	designspace.text = '\n'.join((
-		"<?xml version='1.0' encoding='UTF-8'?>",
-		"<designspace format='3'>",
+		'<?xml version="1.0" encoding="UTF-8"?>',
+		'<designspace format="3">',
 		*doc,
-		"</designspace>\n",
+		'</designspace>\n',
 		))
