@@ -14,7 +14,7 @@ std::string number_str(const double n) {
 	}
 
 std::string attr(const std::string name, const std::string value) {
-	return fmt::format("{}='{}' ", name, value);
+	return fmt::format("{}=\"{}\" ", name, value);
 	}
 
 std::string attrs_str(const std::vector<std::string> attrs) {

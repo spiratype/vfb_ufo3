@@ -169,7 +169,7 @@ class cpp_glif {
 	public:
 	std::string name;
 	std::string path;
-	std::vector<long> unicodes;
+	std::vector<long> code_points;
 	int mark;
 	float width;
 	size_t index;
@@ -183,7 +183,7 @@ class cpp_glif {
 	cpp_glif(
 		std::string &name,
 		std::string &path,
-		std::vector<long> &unicodes,
+		std::vector<long> &code_points,
 		int mark,
 		float width,
 		size_t index,
@@ -196,7 +196,7 @@ class cpp_glif {
 		) {
 		this->name = name;
 		this->path = path;
-		this->unicodes = unicodes;
+		this->code_points = code_points;
 		if (mark >= 255)
 			mark = 254;
 		this->mark = mark;
@@ -210,7 +210,7 @@ class cpp_glif {
 		this->base = base;
 		}
 	size_t len() const {
-		return (this->unicodes.size() + this->anchors_count + this->components_count + this->points_count);
+		return (this->code_points.size() + this->anchors_count + this->components_count + this->points_count);
 		}
 	};
 
@@ -231,8 +231,8 @@ std::string contours_repr(const auto &contours) {
 
 std::string unicode_repr(const long &code_point) {
 	if (code_point <= 0xffff)
-		return fmt::format("\t<unicode hex='{:04X}'/>\n", code_point);
-	return fmt::format("\t<unicode hex='{:05X}'/>\n", code_point);
+		return fmt::format("\t<unicode hex=\"{:04X}\"/>\n", code_point);
+	return fmt::format("\t<unicode hex=\"{:05X}\"/>\n", code_point);
 	}
 
 static const cpp_point NO_SCALE = cpp_point(0.0, 0.0);
@@ -283,13 +283,13 @@ std::string build_glif(const auto &glif, auto &anchor_lib, auto &component_lib, 
 	text.reserve(glif.len() * 120);
 
 	text += fmt::format(
-		"<?xml version='1.0' encoding='UTF-8'?>\n"
-		"<glyph name='{}' format='2'>\n"
-		"\t<advance width='{}'/>\n",
+		"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+		"<glyph name=\"{}\" format=\"2\">\n"
+		"\t<advance width=\"{}\"/>\n",
 		glif.name, number_str(glif.width));
 
-	if (!glif.unicodes.empty())
-		for (const auto &code_point : glif.unicodes)
+	if (!glif.code_points.empty())
+		for (const auto &code_point : glif.code_points)
 			text += unicode_repr(code_point);
 
 	if (glif.anchors_count)
@@ -346,8 +346,8 @@ void add_contour_point(auto &contour, float x, float y, int type, int alignment=
 	contour.emplace_back(x, y, type, alignment);
 	}
 
-void add_glif(auto &glifs, auto &name, auto &path, auto &unicodes, int mark, float width, size_t index, size_t points_count, size_t anchors_count, size_t components_count, bool optimize, bool omit, bool base) {
-	glifs.emplace_back(name, path, unicodes, mark, width, index, points_count, anchors_count, components_count, optimize, omit, base);
+void add_glif(auto &glifs, auto &name, auto &path, auto &code_points, int mark, float width, size_t index, size_t points_count, size_t anchors_count, size_t components_count, bool optimize, bool omit, bool base) {
+	glifs.emplace_back(name, path, code_points, mark, width, index, points_count, anchors_count, components_count, optimize, omit, base);
 	}
 
 void write_glif_files(const auto &glifs, auto &anchor_lib, auto &component_lib, auto &contour_lib, auto &completed_contour_lib) {

@@ -4,7 +4,7 @@
 
 static const std::string zip_deflate_str(const std::string &data) {
 	z_stream stream;
-	char out[data.size() + 1024];
+	u_char out[data.size() + 1024];
 
 	stream.opaque = Z_NULL;
 	stream.zalloc = Z_NULL;
