@@ -17,13 +17,13 @@ cimport cython
 from cpython.dict cimport PyDict_SetItem
 from cpython.set cimport PySet_Add
 
-from libcpp cimport bool as bint
 from libcpp.string cimport string
 
 import linecache
 import os
 import shutil
 import stat
+import threading
 import time
 import uuid
 
@@ -35,11 +35,10 @@ from .glif import glifs
 from .groups import groups
 from .plist import plists
 from .tools import finish
-from .vfb import add_instance
 from .user import load_encoding, save_encoding
+from .vfb import add_instance
 
 from FL import fl, Font, Rect
-import FL
 
 include 'includes/thread.pxi'
 include 'includes/path.pxi'
@@ -94,7 +93,7 @@ def parse_options(options):
 	ufo.last = 0
 	ufo.instance.completed = 0
 	ufo.total_times.start = start
-	ufo.paths.encoding = unique_path(b'__temp__.enc', 1)
+	ufo.paths.encoding = unique_path('__temp__.enc', 1)
 
 	print(b'Processing user options..\n')
 	ufo.master.ifont = fl.ifont

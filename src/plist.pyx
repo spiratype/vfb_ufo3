@@ -14,7 +14,6 @@ include 'includes/future.pxi'
 
 cimport cython
 
-from libcpp cimport bool as bint
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 
@@ -23,6 +22,7 @@ from cpython.dict cimport PyDict_SetItem
 import os
 import shutil
 import stat
+import threading
 import time
 
 from FL import fl

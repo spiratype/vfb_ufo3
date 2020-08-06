@@ -16,13 +16,13 @@ cimport cython
 
 from cpython.dict cimport PyDict_SetItem
 
-from libcpp cimport bool as bint
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 
 import os
 import shutil
 import stat
+import threading
 import time
 import uuid
 

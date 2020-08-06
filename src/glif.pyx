@@ -14,7 +14,6 @@ include 'includes/future.pxi'
 cimport cython
 cimport fenv
 
-from libcpp cimport bool as bint
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 from libcpp.unordered_map cimport unordered_map
@@ -62,13 +61,14 @@ def _glifs(ufo):
 	optimize = ufo.opts.glyphs_optimize
 	decompose = ufo.opts.glyphs_decompose
 	remove_overlaps = ufo.opts.glyphs_remove_overlaps
-	code_points = ufo.code_points.optimize
+	optimize_code_points = ufo.code_points.optimize
 	bases = ufo.glyph_sets.bases
 	optimized_glyphs = ufo.glyph_sets.optimized
 	omit_glyphs = ufo.glyph_sets.omit
 
 	cdef:
 		object font = fl[ufo.instance.ifont]
+		size_t i = 0
 		size_t n = len(font.glyphs)
 		cpp_glif glif
 		cpp_glifs glifs
@@ -78,9 +78,7 @@ def _glifs(ufo):
 		cpp_component_lib component_lib
 		cpp_contour_lib contour_lib
 		cpp_completed_contour_lib completed_contour_lib
-		vector[long] unicodes
-		cpp_anchors anchors
-		cpp_components components
+		vector[long] code_points
 		bytes instance_glifs_path = ufo.paths.instance.glyphs.encode('utf_8')
 		bytes instance_ufoz_path = ufo.paths.instance.ufoz.encode('utf_8')
 		bytes name = b''
@@ -98,13 +96,13 @@ def _glifs(ufo):
 	contour_lib.reserve(n)
 	completed_contour_lib.reserve(n)
 	glifs.reserve(n)
-	unicodes.reserve(20)
+	code_points.reserve(20)
 
 	if optimize and remove_overlaps:
 		for i, glyph in enumerate(font.glyphs):
 			if i in bases:
 				glyph.RemoveOverlap()
-			if glyph.unicode not in code_points and i not in optimized_glyphs:
+			if glyph.unicode not in optimize_code_points and i not in optimized_glyphs:
 				if glyph.components:
 					glyph.Decompose()
 				if i not in bases:
@@ -128,15 +126,15 @@ def _glifs(ufo):
 				glyph.RemoveOverlap()
 
 	for i, (name, glif_name, mark, glyph_code_points, omit) in items(ufo.glifs):
-		unicodes.clear()
+		code_points.clear()
 		for code_point in glyph_code_points:
-			unicodes.push_back(code_point)
+			code_points.push_back(code_point)
 		glyph = font[i]
 		add_glif(
 			glifs,
 			name,
 			b'%s%s%s' % (instance_glifs_path, path_sep, glif_name),
-			unicodes,
+			code_points,
 			mark,
 			glyph.width * SCALE,
 			i,
@@ -225,11 +223,11 @@ cdef cpp_contours glif_contours(glyph_nodes):
 			continue
 
 		if cubic:
-			add_contour_point(contour, node.x * SCALE, node.y * SCALE, 3)
+			add_contour_point(contour, node.x * SCALE, node.y * SCALE, 3, node.alignment)
 			continue
 
 		if off:
-			add_contour_point(contour, node.x * SCALE, node.y * SCALE, 2, node.alignment)
+			add_contour_point(contour, node.x * SCALE, node.y * SCALE, 2)
 			off = 0
 		else:
 			add_contour_point(contour, node.x * SCALE, node.y * SCALE, 3)
