@@ -7,7 +7,7 @@ def elem_attrs(attrs):
 	name='top'
 	'''
 
-	return ' '.join(f"{key}='{val}'" for key, val in attrs if val is not None)
+	return ' '.join(f'{key}="{val}"' for key, val in attrs if val is not None)
 
 
 def xml_elems(elements, indents=0):
@@ -38,13 +38,13 @@ def plist_doc(plist):
 		plist = list_elem(plist)
 
 	return (
-		"<?xml version='1.0' encoding='UTF-8'?>\n"
-		"<!DOCTYPE plist PUBLIC '-//Apple Computer//DTD PLIST 1.0//EN'\n"
-		"\t'http://www.apple.com/DTDs/PropertyList-1.0.dtd'>\n"
-		"<plist version='1.0'>\n"
-		f"{plist}"
-		"</plist>\n"
-		).encode('utf_8')
+		'<?xml version="1.0" encoding="UTF-8"?>\n'
+		'<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN"\n'
+		'\t"http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
+		'<plist version="1.0">\n'
+		f'{plist}'
+		'</plist>\n'
+		)
 
 def dict_elem(elems, indents=0):
 

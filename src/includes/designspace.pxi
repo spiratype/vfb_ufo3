@@ -68,7 +68,7 @@ def dspace_axis(tag, default):
 	return [f'\t\t<axis {attrs}>', dspace_labelname(tag), '\t\t</axis>']
 
 def dspace_labelname(text):
-	return f"\t\t\t<labelname xml:lang='en'>{text}</labelname>"
+	return f'\t\t\t<labelname xml:lang="en">{text}</labelname>'
 
 def dspace_dimension(name, value):
 	attrs = elem_attrs((
@@ -78,11 +78,11 @@ def dspace_dimension(name, value):
 	return f'\t\t\t\t<dimension {attrs}/>'
 
 def dspace_copy(tag):
-	return f"\t\t\t<{tag} copy='1'/>"
+	return f'\t\t\t<{tag} copy="1"/>'
 
 def dspace_rule(name, glyph=0):
 	if glyph:
-		return f"\t\t\t<glyph mute='1' name='{name}'/>"
+		return f'\t\t\t<glyph mute="1" name="{name}"/>'
 
 def dspace_source(location, names, features=0, groups=0, info=0, lib=0):
 	attrs = elem_attrs([[name, names[name]] for name in SOURCE_ATTRS])

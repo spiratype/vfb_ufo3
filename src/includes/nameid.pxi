@@ -1,7 +1,5 @@
 # nameid.pxi
 
-import unicodedata
-
 ENC_IDS = {1: 0, 3: 1}
 LANG_IDS = {1: 0, 3: 0x0409}
 
@@ -10,8 +8,7 @@ def ascii_bytes(unicode_str):
 	return unicode_str.encode('ascii', 'ignore')
 
 def ascii_unicode(unicode_str):
-	unicode_str = unicodedata.normalize('NFKD', unicode_str)
-	return unicode_str.encode('ascii', 'ignore').decode('ascii')
+	return ascii_bytes(unicode_str).decode('ascii')
 
 def nameid_str(unicode_str, platform_id, fontlab):
 
