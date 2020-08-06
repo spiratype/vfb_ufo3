@@ -34,7 +34,7 @@ def os_path_splitdrive(path):
 
 def os_path_splitext(path):
 	i = path.rfind('.')
-	return path[i:], path[:i]
+	return path[:i], path[i+1:]
 
 def os_path_exists(path):
 	try:
