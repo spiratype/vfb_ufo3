@@ -44,7 +44,7 @@ def plist_doc(plist):
 		'<plist version="1.0">\n'
 		f'{plist}'
 		'</plist>\n'
-		)
+		).encode('utf_8')
 
 def dict_elem(elems, indents=0):
 

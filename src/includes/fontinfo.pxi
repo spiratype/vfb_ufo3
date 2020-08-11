@@ -199,6 +199,7 @@ STRING_ATTRS = {
 	'openTypeNamePreferredSubfamilyName',
 	'openTypeNameSampleText',
 	'openTypeNameUniqueID',
+	'openTypeNameVersion',
 	'openTypeOS2VendorID',
 	'postscriptDefaultCharacter',
 	'postscriptFontName',

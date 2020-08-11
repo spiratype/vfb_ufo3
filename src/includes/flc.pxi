@@ -28,21 +28,21 @@ def parse_flc(flc_file):
 	kern_group = 0
 
 	flc_file = flc_file.replace('@', '')
-	for line in flc_file.splitlines():
-		if line:
-			if '%%C' in line[:3]:
-				kern_group = 0
-				name = line.split()[1]
-			elif '%%G' in line[:3]:
-				glyphs = line[8:].strip()
-			elif '%%K' in line[:3]:
-				kern_group = 1
-				kerning_flag = line.split()[1]
-			elif '%%E' in line[:3]:
-				if kern_group:
-					parsed[name] = [kerning_flag, glyphs]
-				else:
-					parsed[name] = [None, glyphs]
+	flc_file = [line for line in flc_file.splitlines() if line]
+	for line in flc_file:
+		if line.startswith('%%C'):
+			kern_group = 0
+			name = line.split()[1]
+		if line.startswith('%%G'):
+			glyphs = line[8:].strip()
+		if line.startswith('%%K'):
+			kern_group = 1
+			kerning_flag = line.split()[1]
+		if line.startswith('%%E'):
+			if kern_group:
+				parsed[name] = [kerning_flag, glyphs]
+			else:
+				parsed[name] = [None, glyphs]
 
 	return parsed
 
