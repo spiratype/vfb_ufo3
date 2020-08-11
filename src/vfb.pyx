@@ -61,6 +61,7 @@ def _process_master_copy(ufo, master_copy):
 	ufo.glifs = {}
 	ufo.kern.firsts = set()
 	ufo.kern.seconds = set()
+	ufo.glyph_names = {}
 	ufo.glyph_sets.bases = set()
 	ufo.glyph_sets.omit = {-1}
 	anchors = set()
@@ -68,8 +69,10 @@ def _process_master_copy(ufo, master_copy):
 	ufo.mark_bases = set()
 	for i, glyph in enumerate(master_copy.glyphs):
 
+		ufo.glyph_names[i] = glyph_name = glyph.name.decode('cp1252')
+
 		if glyph.kerning:
-			ufo.kern.firsts.add(glyph.name.decode('cp1252'))
+			ufo.kern.firsts.add(glyph_name)
 			for kerning_pair in glyph.kerning:
 				ufo.kern.seconds.add(master_copy[kerning_pair.key].name.decode('cp1252'))
 
@@ -115,7 +118,7 @@ def _process_master_copy(ufo, master_copy):
 
 	for i, glyph in enumerate(master_copy.glyphs):
 		omit = i in ufo.glyph_sets.omit
-		ufo.glifs[i] = Glif(glyph, ufo.opts.afdko_makeotf_release, omit)
+		ufo.glifs[i] = Glif(ufo, i, glyph, ufo.opts.afdko_makeotf_release, omit)
 
 	if not ufo.opts.glyphs_decompose:
 		ufo.glyph_sets.omit = ufo.glyph_sets.omit - ufo.glyph_sets.bases
@@ -176,8 +179,8 @@ def _add_instance(ufo, index, value, name, attributes, path):
 
 	instance = fl[ufo.instance.ifont]
 	instance.modified = 0
-	instance.full_name = f'{ufo.master.family_name} {name}'.encode('cp1252', 'ignore')
-	instance.family_name = ufo.master.family_name.encode('cp1252', 'ignore')
+	instance.full_name = f'{ufo.master.family_name} {name}'.encode('cp1252')
+	instance.family_name = ufo.master.family_name.encode('cp1252')
 
 	ufo.instance.index = index
 
@@ -356,29 +359,28 @@ def ms_mac_names(ufo, font, platform_id):
 	font.tt_version = b'Version %s' % ufo.master.version
 
 	names = [
-		font.copyright, # 0
-		font.family_name, # 1
-		font.style_name, # 2
-		font.tt_u_id, # 3
-		font.full_name, # 4
-		font.tt_version, # 5
-		font.font_name, # 6
-		font.trademark, # 7
-		font.source, # 8
-		font.designer, # 9
-		font.notice, # 10
-		font.vendor_url, # 11
-		font.designer_url, # 12
-		font.license, # 13
-		font.license_url, # 14
-		'', # 15
+		font.copyright,        # 0
+		font.family_name,      # 1
+		font.style_name,       # 2
+		font.tt_u_id,          # 3
+		font.full_name,        # 4
+		font.tt_version,       # 5
+		font.font_name,        # 6
+		font.trademark,        # 7
+		font.source,           # 8
+		font.designer,         # 9
+		font.notice,           # 10
+		font.vendor_url,       # 11
+		font.designer_url,     # 12
+		font.license,          # 13
+		font.license_url,      # 14
+		'',                    # 15
 		font.pref_family_name, # 16
-		font.pref_style_name, # 17
+		font.pref_style_name,  # 17
+		# mac_name             # 18
+		# sample_text          # 19
+		# postscript cid name  # 20
 		]
-
-	# mac_name # 18
-	# sample_text # 19
-	# postscript cid name # 20
 
 	if platform_id == 1:
 		names.append(font.mac_compatible)
@@ -438,14 +440,14 @@ def component_lib(ufo, font):
 			)
 		if optimize:
 			ufo.glyph_sets.optimized.add(i)
-			names.append(glyph.name.decode('cp1252'))
+			names.append(ufo.glyph_names[i])
 			continue
 		if glyph.name in ufo.opts.glyphs_optimize_names:
 			glyph_index = font.FindGlyph(glyph.name)
 			if glyph_index > -1:
 				glyph = font[glyph_index]
 				ufo.glyph_sets.optimized.add(glyph_index)
-				names.append(glyph.name.decode('cp1252'))
+				names.append(ufo.glyph_names[i])
 
 	# check for small cap variants of glyphs found in codepoint glyph set
 	for name in names:
@@ -458,9 +460,9 @@ def component_lib(ufo, font):
 						ufo.glyph_sets.optimized.add(glyph_index)
 
 
-def Glif(glyph, release, omit):
+def Glif(ufo, i, glyph, release, omit):
 	glyph_name = glyph.name
 	glif_name = GLIFNAMES.get(glyph_name)
 	if glif_name is None:
 		glif_name = glifname(glyph_name, release, omit)
-	return glyph_name.decode('cp1252').encode('utf_8'), glif_name, glyph.mark, list(glyph.unicodes), omit
+	return ufo.glyph_names[i].encode('utf_8'), glif_name, glyph.mark, list(glyph.unicodes), omit

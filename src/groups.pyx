@@ -8,14 +8,11 @@
 # cython: c_string_encoding=utf_8
 # distutils: language=c++
 # distutils: extra_compile_args=[-O3, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
-# distutils: extra_link_args=[-lbcrypt]
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 
 cimport cython
-
 from cpython.dict cimport PyDict_SetItem
-
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 
@@ -242,7 +239,8 @@ def update_groups(ufo):
 	font.classes = '\n'.join(font_classes).encode('cp1252').splitlines()
 	fl.BeginProgress(b'Updating groups for master.vfb...', len(font_classes))
 	for i, group in enumerate(font.classes):
-		fl.TickProgress(i+1)
+		if not i % 4:
+			fl.TickProgress(i)
 		if ufo.opts.groups_ignore_no_kerning:
 			if i in ufo.groups.no_kerning:
 				continue
@@ -295,5 +293,4 @@ def write_flc(ufo):
 			flc_end_marker,
 			]
 
-	flc_file = '\n'.join(flc_file)
-	write_file(flc_export_path, flc_file)
+	write_file(flc_export_path, '\n'.join(flc_file))

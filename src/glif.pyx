@@ -4,7 +4,8 @@
 # cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
-# cython: c_string_type=unicode, c_string_encoding=utf_8
+# cython: c_string_type=unicode
+# cython: c_string_encoding=utf_8
 # distutils: language=c++
 # distutils: extra_compile_args=[-O3, -fopenmp, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
 # distutils: extra_link_args=[-fopenmp, -lz]
@@ -13,7 +14,6 @@ include 'includes/future.pxi'
 
 cimport cython
 cimport fenv
-
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 from libcpp.unordered_map cimport unordered_map
@@ -149,7 +149,7 @@ def _glifs(ufo):
 		if glyph.anchors:
 			anchor_lib[i] = glif_anchors(glyph.anchors)
 		if glyph.components:
-			component_lib[i] = glif_components(glyph.components, font)
+			component_lib[i] = glif_components(glyph.components, ufo, font)
 		if glyph.nodes:
 			contour_lib[i] = glif_contours(glyph.nodes)
 
@@ -171,7 +171,7 @@ cdef cpp_anchors glif_anchors(glyph_anchors):
 		add_anchor(anchors, anchor.name.decode('cp1252'), anchor.x * SCALE, anchor.y * SCALE)
 	return anchors
 
-cdef cpp_components glif_components(glyph_components, font):
+cdef cpp_components glif_components(glyph_components, ufo, font):
 
 	cdef:
 		cpp_components components
@@ -181,7 +181,7 @@ cdef cpp_components glif_components(glyph_components, font):
 	for component in glyph_components:
 		offset_x, offset_y = component.delta.x * SCALE, component.delta.y * SCALE
 		scale, i = component.scale, component.index
-		base = font[i].name.decode('cp1252')
+		base = ufo.glyph_names[i]
 		add_component(components, base, i, offset_x, offset_y, scale.x, scale.y)
 	return components
 

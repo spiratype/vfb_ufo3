@@ -9,8 +9,8 @@ from __future__ import division, unicode_literals
 include 'includes/future.pxi'
 
 cimport cython
-
 from cpython.dict cimport PyDict_SetItem
+from libc.stdlib cimport abs
 
 import time
 
@@ -38,16 +38,12 @@ cdef inline long pair_calc(int n_glyphs):
 	45
 	'''
 
-	cdef int n_pairs = n_glyphs
-
-	n_pairs *= n_glyphs - 1
-	n_pairs /= 2
-
+	cdef int n_pairs = (n_glyphs * (n_glyphs - 1)) / 2
 	return n_pairs
 
 def _kerning(ufo, font):
 
-	instance_kerning = _instance_kerning(font, ufo.scale)
+	instance_kerning = _instance_kerning(ufo, font, ufo.scale)
 
 	if instance_kerning:
 		ufo.instance.kerning = ordered_dict()
@@ -62,18 +58,17 @@ def _kerning(ufo, font):
 			ufo.instance.kerning[first] = kerns
 
 
-def _instance_kerning(font, scale):
+def _instance_kerning(ufo, font, scale):
 
 	def kern_pair(pair):
 		if scale is not None:
-			return font[pair.key].name.decode('cp1252'), int(pair.value * scale)
-		return font[pair.key].name.decode('cp1252'), pair.value
+			return ufo.glyph_names[pair.key], int(pair.value * scale)
+		return ufo.glyph_names[pair.key], pair.value
 
 	kerning = {}
-	for glyph in font.glyphs:
+	for i, glyph in enumerate(font.glyphs):
 		if glyph.kerning:
-			glyph_name = glyph.name.decode('cp1252')
-			kerning[glyph_name] = [kern_pair(pair) for pair in glyph.kerning]
+			kerning[ufo.glyph_names[i]] = [kern_pair(pair) for pair in glyph.kerning]
 
 	return kerning
 
@@ -86,6 +81,7 @@ def _kern_feature(ufo):
 		long STEP = 208_000 # step down for subsequent subtables
 		long new_kerns = 0
 		int MIN_VALUE = 0
+		int value = 0
 		int n_glyphs = 0
 		int kerns = 0
 		int subtables = 0
@@ -101,13 +97,13 @@ def _kern_feature(ufo):
 	first_enum_block, second_enum_block = [], []
 	for first, kerning_pairs in ufo.instance.kerning.items():
 		first_group = 0
-		second_group = 0
 		if kerns > CHECK_LIMIT:
 			check_next = 1
 		if 'public.kern' in first:
 			first_group = 1
 		for second, value in kerning_pairs.items():
-			if -MIN_VALUE < value > MIN_VALUE:
+			second_group = 0
+			if abs(value) < MIN_VALUE:
 				continue
 			if 'public.kern' in second:
 				second_group = 1
@@ -132,26 +128,21 @@ def _kern_feature(ufo):
 						continue
 				kerns += new_kerns
 				block.append(f'\tpos @{first} @{second} {value};')
-			elif first_group or second_group:
-				if first_group and second in ufo.kern.seconds_by_key_glyph:
-					first_enum_block.append(f'\tenum pos @{first} {second} {value};')
-				elif second_group and first in ufo.kern.firsts_by_key_glyph:
-					second_enum_block.append(f'\tenum pos {first} @{second} {value};')
-				else:
-					block.append(f'\tpos @{first} @{second} {value};')
+			elif first_group:
+				first_enum_block.append(f'\tenum pos @{first} {second} {value};')
+			elif second_group:
+				second_enum_block.append(f'\tenum pos {first} @{second} {value};')
 			else:
 				no_block.append(f'\tpos {first} {second} {value};')
 
 	feature += block
 
-	if len(no_block) > 500:
-		no_block.append('\tsubtable;')
+	if first_enum_block:
+		first_enum_block.append('\tsubtable;')
+	if second_enum_block:
+		second_enum_block.append('\tsubtable;')
 
-	enum_block = first_enum_block + second_enum_block
-	if len(enum_block) > 200:
-		enum_block.append('\tsubtable;')
-
-	feature = no_block + enum_block + feature
+	feature = no_block + first_enum_block + second_enum_block + feature
 
 	if subtables:
 		feature = fea_lookup('kern1', feature, kern=1)
