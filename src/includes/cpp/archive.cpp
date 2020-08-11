@@ -74,7 +74,7 @@ class zip_file {
 		this->write_end_of_central_directory_record(central_dir_offset);
 		}
 	void write_local_file_header(const zip_info &zinfo) {
-		auto local_file_header = zip_local_file_header(zinfo);
+		zip_local_file_header local_file_header(zinfo);
 		this->write((const char*)&local_file_header, ZIP_LFH_SIZE);
 		this->write(zinfo.arc_name.c_str(), zinfo.arc_name.size());
 		}
@@ -89,13 +89,13 @@ class zip_file {
 	void write_end_of_central_directory_record(u_int central_dir_offset) {
 		size_t num_entries = this->zinfo_list.size();
 		u_int central_dir_size = this->tellp() - central_dir_offset;
-		auto end_of_central_directory = zip_end_of_central_directory(num_entries, central_dir_size, central_dir_offset);
+		zip_end_of_central_directory end_of_central_directory(num_entries, central_dir_size, central_dir_offset);
 		this->write((const char*)&end_of_central_directory, ZIP_ECDR_SIZE);
 		}
 	};
 
 void write_archive(std::string &filename, std::unordered_map<std::string, std::string> &files, bool compress) {
-	zip_file archive = zip_file(filename, compress);
+	zip_file archive(filename, compress);
 	archive.reserve(files.size());
 	for (const auto &[arc_name, file] : files)
 		archive.write_str(arc_name, file);

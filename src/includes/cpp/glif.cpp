@@ -197,10 +197,8 @@ class cpp_glif {
 		this->name = name;
 		this->path = path;
 		this->code_points = code_points;
-		if (mark >= 255)
-			mark = 254;
-		this->mark = mark;
-		this->width = width;
+		this->mark = mark < 255 ? mark : 255;;
+		this->width = width > 0 ? width : 0;
 		this->index = index;
 		this->points_count = points_count;
 		this->anchors_count = anchors_count;

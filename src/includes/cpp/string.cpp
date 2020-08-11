@@ -6,9 +6,8 @@ std::string float_str(const double n, const int precision=1) {
 
 std::string number_str(const double n) {
 	const double k = std::nearbyint(n);
-	const double l = std::fabs(n - k);
 
-	if (l < 0.05)
+	if (std::fabs(n - k) < 0.05)
 		return std::to_string((long) k);
 	return float_str(n);
 	}
