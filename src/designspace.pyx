@@ -13,7 +13,6 @@ include 'includes/future.pxi'
 
 cimport cython
 from libc.math cimport nearbyint
-
 from libcpp.string cimport string
 
 import os

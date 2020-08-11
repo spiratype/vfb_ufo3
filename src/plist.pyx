@@ -13,11 +13,9 @@ from __future__ import division, unicode_literals
 include 'includes/future.pxi'
 
 cimport cython
-
+from cpython.dict cimport PyDict_SetItem
 from libcpp.string cimport string
 from libcpp.vector cimport vector
-
-from cpython.dict cimport PyDict_SetItem
 
 import os
 import shutil

@@ -29,7 +29,7 @@ def fdk(ufo):
 	start = time.clock()
 	if ufo.opts.afdko_parts:
 		_parts(ufo)
-	if ufo.opts.psautohint_cmd or ufo.opts.psautohint_cmd:
+	if ufo.opts.psautohint_cmd or ufo.opts.psautohint_batch_cmd:
 		batch = bool(ufo.opts.psautohint_batch_cmd and len(ufo.instance_values) > 1)
 		psautohint_command(ufo, batch=batch)
 	ufo.instance_times.afdko = time.clock() - start
@@ -231,7 +231,7 @@ def psautohint_command(ufo, batch=0):
 		args.append('-vv')
 	if ufo.opts.psautohint_glyphs_list:
 		args.append(f'-g {",".join(ufo.opts.psautohint_glyphs_list)}')
-	if ufo.opts.psautohint_glyphs_omit_list:
+	elif ufo.opts.psautohint_glyphs_omit_list:
 		args.append(f'-x {",".join(ufo.opts.psautohint_glyphs_omit_list)}')
 	if ufo.opts.psautohint_log:
 		log_path = ufo.paths.instance.psautohint_cmd.replace('.bat', '.log')
@@ -246,8 +246,6 @@ def psautohint_command(ufo, batch=0):
 		))
 
 	if batch:
-		if ufo.psautohint.cmd is None:
-			ufo.psautohint.cmd = []
 		ufo.psautohint.cmd.append(command)
 		if ufo.last:
 			write_bat(ufo.psautohint.cmd, ufo.paths.psautohint_cmd, batch=1)

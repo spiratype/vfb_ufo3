@@ -9,7 +9,6 @@ from __future__ import division, unicode_literals
 include 'includes/future.pxi'
 
 cimport fenv
-
 from libc.math cimport nearbyint
 
 cdef double SCALE = 1.0

@@ -13,7 +13,6 @@ include 'includes/future.pxi'
 
 cimport cython
 cimport fenv
-
 from cpython.dict cimport PyDict_SetItem
 from libc.math cimport nearbyint
 from libcpp.string cimport string
@@ -177,7 +176,7 @@ def _tables(ufo, font):
 		)
 
 	tables['head'] = (
-		('FontRevision', ufo.master.version),
+		('FontRevision', attributes[instance].get('openTypeNameVersion', ufo.master.version)),
 		)
 
 	tables['name'] = []

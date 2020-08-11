@@ -9,7 +9,6 @@ from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 
 cimport cython
-
 from cpython.dict cimport PyDict_SetItem
 
 import datetime

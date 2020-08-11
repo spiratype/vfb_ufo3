@@ -8,15 +8,12 @@
 # cython: c_string_encoding=utf_8
 # distutils: language=c++
 # distutils: extra_compile_args=[-O3, -Wno-register, -fno-strict-aliasing, -std=c++17]
-# distutils: extra_link_args=[-lbcrypt]
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 
 cimport cython
-
 from cpython.dict cimport PyDict_SetItem
 from cpython.set cimport PySet_Add
-
 from libcpp.string cimport string
 
 import linecache
@@ -104,8 +101,8 @@ def parse_options(options):
 	opts.update(options)
 
 	dirname, basename = os_path_split(master.file_name)
+	filename, ext = os_path_splitext(basename)
 	if not basename.endswith('.vfb'):
-		filename, ext = os_path_splitext(basename)
 		basename = f'{filename}.vfb'
 		save_path = unique_path(basename, 1)
 		master.Save(save_path.encode('cp1252'))
@@ -190,6 +187,7 @@ def parse_options(options):
 			opts.afdko_makeotf_serif = 0
 		if opts.afdko_makeotf_batch_cmd:
 			ufo.afdko.makeotf.cmd = []
+			ufo.paths.afdko.makeotf_cmd = os_path_join(ufo.paths.out, f'{filename}_makeOTF.bat')
 		if opts.afdko_makeotf_GOADB_path:
 			ufo.paths.GOADB = opts.afdko_makeotf_GOADB_path
 		else:
@@ -198,6 +196,9 @@ def parse_options(options):
 	if opts.psautohint_cmd or opts.psautohint_batch_cmd:
 		if opts.designspace_export:
 			raise RuntimeError(b"'designspace_export' not currently supported for use with 'psautohint_cmd'.")
+		if opts.psautohint_batch_cmd:
+			ufo.psautohint.cmd = []
+			ufo.paths.psautohint_cmd = os_path_join(ufo.paths.out, f'{filename}_psautohint.bat')
 		if opts.psautohint_glyphs_list:
 			glyph_list = opts.psautohint_glyphs_list
 			opts.psautohint_glyphs_list = unique_string_list(glyph_list)
@@ -351,8 +352,8 @@ def build_paths(ufo, master=0):
 		for path in check_paths:
 			if os_path_exists(path):
 				if not ufo.opts.force_overwrite:
-					raise IOError(b"%s already exists.\n"
-						b"Please remove directory/file or set 'force_overwrite' to True" % path)
+					raise IOError(b"%s already exists.\nPlease remove directory/file "
+						b"or set 'force_overwrite' to True" % path)
 			if 'masters' in path:
 				dirname = os_path_dirname(path)
 				if not os_path_isdir(dirname):

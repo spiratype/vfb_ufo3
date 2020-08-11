@@ -170,19 +170,16 @@ def time_str(duration, precision=1, simple_output=False):
 		return '0 sec'
 
 	def hours_time(hours, minutes, seconds):
-
 		if simple_output:
 			return hours, minutes, seconds
 		return f'{hours} hr {minutes} min {seconds} sec'
 
 	def minutes_time(minutes, seconds):
-
-		if simple_output :
+		if simple_output:
 			return minutes, seconds
 		return f'{minutes} min {seconds} sec'
 
 	def seconds_time(seconds):
-
 		str_seconds = f'{seconds}'
 		if '.0000' in str_seconds:
 			seconds = str_seconds[:str_seconds.find('.')] + '.000'
@@ -191,21 +188,18 @@ def time_str(duration, precision=1, simple_output=False):
 		return f'{seconds} sec'
 
 	def milliseconds_time(milliseconds):
-
 		milliseconds = int(round(milliseconds))
 		if simple_output:
 			return int(round(milliseconds))
 		return f'{milliseconds} msec'
 
 	def microseconds_time(microseconds):
-
 		microseconds = int(round(microseconds))
 		if simple_output:
 			return int(round(microseconds))
 		return f'{microseconds} µsec'
 
 	def nanoseconds_time(nanoseconds, duration):
-
 		nanoseconds = int(round(nanoseconds))
 		if simple_output:
 			return round(duration, 9)
@@ -232,5 +226,5 @@ def time_str(duration, precision=1, simple_output=False):
 
 	if duration >= 3600:
 		hours, minutes = duration // 3600, duration % 3600
-		seconds = round(duration % 3600, precision)
+		seconds = round(minutes, precision)
 		return hours_time(hours, minutes, seconds)
