@@ -644,6 +644,10 @@ License
 Source files are covered under the MIT License.
 
 Version history
+version 0.7.4
+corrections to makeOTF batch command creation
+corrections to kern feature generation
+
 version 0.7.3
 corrections to mark feature generation
 reverted to use of " from ' in XML files for compatibility with makeOTF

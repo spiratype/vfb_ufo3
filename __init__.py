@@ -12,7 +12,7 @@ from . import core
 
 show_default_optimize_code_points = core.show_default_optimize_code_points
 
-__version__ = '0.7.3'
+__version__ = '0.7.4'
 __doc__ = """
 VFB2UFO3
 DESCRIPTION
@@ -660,6 +660,10 @@ License
 Source files are covered under the MIT License.
 
 Version history
+version 0.7.4
+corrections to makeOTF batch command creation
+corrections to `kern` feature generation
+
 version 0.7.3
 corrections to `mark` feature generation
 reverted to use of `"` from `'` in XML files for compatibility with makeOTF
