@@ -21,7 +21,6 @@ static const std::vector<std::string> POINT_TYPES = {
 	"off"
 	};
 
-class cpp_point;
 class cpp_anchor;
 class cpp_contour_point;
 class cpp_component;
@@ -33,12 +32,12 @@ typedef std::vector<cpp_contour_point> cpp_contour;
 typedef std::vector<cpp_contour> cpp_contours;
 
 void write_file(const std::string &path, const std::string &text) {
-	std::ofstream f(path);
-	f << text;
-	f.close();
+	std::ofstream fs(path);
+	fs.write(text.c_str(), text.size());
+	fs.close();
 	}
 
-std::string items_repr(const auto &items, const int avg_len=80) {
+std::string items_repr(const auto &items, int avg_len=80) {
 	std::string repr;
 	repr.reserve(items.size() * avg_len);
 	for (const auto &item : items)
@@ -46,15 +45,17 @@ std::string items_repr(const auto &items, const int avg_len=80) {
 	return repr;
 	}
 
-class cpp_point {
-	public:
+struct cpp_point {
 	float x;
 	float y;
 	cpp_point() {}
-	cpp_point(float x, float y) {
-		this->x = x;
-		this->y = y;
-		}
+	cpp_point(
+		float x,
+		float y
+		) :
+		x(x),
+		y(y)
+		{}
 	bool operator==(const cpp_point other) const {
 		return (this->x == other.x and this->y == other.y);
 		}
@@ -70,11 +71,15 @@ class cpp_anchor {
 	float y;
 	public:
 	cpp_anchor() {}
-	cpp_anchor(std::string name, float x, float y) {
-		this->name = name;
-		this->x = x;
-		this->y = y;
-		}
+	cpp_anchor(
+		const std::string &name,
+		float x,
+		float y
+		) :
+		name(name),
+		x(x),
+		y(y)
+		{}
 	std::vector<std::string> attrs() const {
 		return {
 			attr("name", this->name),
@@ -95,12 +100,17 @@ class cpp_contour_point {
 	int alignment;
 	public:
 	cpp_contour_point() {}
-	cpp_contour_point(float x, float y, int type, int alignment) {
-		this->x = x;
-		this->y = y;
-		this->type = type;
-		this->alignment = alignment;
-		}
+	cpp_contour_point(
+		float x,
+		float y,
+		int type,
+		int alignment
+		) :
+		x(x),
+		y(y),
+		type(type),
+		alignment(alignment)
+		{}
 	void scale(cpp_point &scale) {
 		this->x *= scale.x;
 		this->y *= scale.y;
@@ -141,16 +151,23 @@ class cpp_component {
 	private:
 	std::string base;
 	public:
-	size_t index;
 	cpp_point offset;
 	cpp_point scale;
+	size_t index;
 	cpp_component() {}
-	cpp_component(std::string base, size_t index, float offset_x, float offset_y, float scale_x, float scale_y) {
-		this->base = base;
-		this->index = index;
-		this->offset = cpp_point(offset_x, offset_y);
-		this->scale = cpp_point(scale_x, scale_y);
-		}
+	cpp_component(
+		const std::string &base,
+		size_t index,
+		float offset_x,
+		float offset_y,
+		float scale_x,
+		float scale_y
+		) :
+		base(base),
+		index(index),
+		offset(offset_x, offset_y),
+		scale(scale_x, scale_y)
+		{}
 	std::vector<std::string> attrs() const {
 		return {
 			attr("base", this->base),
@@ -181,8 +198,8 @@ class cpp_glif {
 	bool base;
 	cpp_glif() {}
 	cpp_glif(
-		std::string &name,
-		std::string &path,
+		const std::string &name,
+		const std::string &path,
 		std::vector<long> &code_points,
 		int mark,
 		float width,
@@ -193,22 +210,27 @@ class cpp_glif {
 		bool optimize,
 		bool omit,
 		bool base
-		) {
-		this->name = name;
-		this->path = path;
-		this->code_points = code_points;
-		this->mark = mark < 255 ? mark : 255;;
-		this->width = width > 0 ? width : 0;
-		this->index = index;
-		this->points_count = points_count;
-		this->anchors_count = anchors_count;
-		this->components_count = components_count;
-		this->optimize = optimize;
-		this->omit = omit;
-		this->base = base;
-		}
+		) :
+		name(name),
+		path(path),
+		code_points(code_points),
+		mark(mark < 255 ? mark : 255),
+		width(width > 0 ? width : 0),
+		index(index),
+		points_count(points_count),
+		anchors_count(anchors_count),
+		components_count(components_count),
+		optimize(optimize),
+		omit(omit),
+		base(base)
+		{}
 	size_t len() const {
-		return (this->code_points.size() + this->anchors_count + this->components_count + this->points_count);
+		return (
+			this->code_points.size()
+			+ this->anchors_count
+			+ this->components_count
+			+ this->points_count
+			);
 		}
 	};
 
@@ -216,25 +238,29 @@ std::string contour_repr(const auto &contour) {
 	return fmt::format("\t\t<contour>\n{}\t\t</contour>\n", items_repr(contour));
 	}
 
-std::string contours_repr(const auto &contours) {
-	std::string repr;
-	int i = 0;
+size_t contours_len(const auto &contours) {
+	size_t i = 0;
 	for (const auto &contour : contours)
 		i += contour.size();
-	repr.reserve(i * 80);
+	return i;
+	}
+
+std::string contours_repr(const auto &contours) {
+	std::string repr;
+	repr.reserve(contours_len(contours) * 80);
 	for (const auto &contour : contours)
 		repr += contour_repr(contour);
 	return repr;
 	}
 
-std::string unicode_repr(const long &code_point) {
+std::string unicode_repr(long code_point) {
 	if (code_point <= 0xffff)
 		return fmt::format("\t<unicode hex=\"{:04X}\"/>\n", code_point);
 	return fmt::format("\t<unicode hex=\"{:05X}\"/>\n", code_point);
 	}
 
-static const cpp_point NO_SCALE = cpp_point(0.0, 0.0);
-static const cpp_point NO_OFFSET = cpp_point(0.0, 0.0);
+static const cpp_point NO_SCALE = {};
+static const cpp_point NO_OFFSET = {};
 
 typedef std::vector<cpp_glif> cpp_glifs;
 typedef std::unordered_map<size_t, cpp_anchors> cpp_anchor_lib;
@@ -245,7 +271,7 @@ typedef std::unordered_map<size_t, std::string> cpp_completed_contour_lib;
 std::string add_contours(auto &contour_lib, auto &completed_contour_lib, auto &component) {
 
 	std::string repr;
-	cpp_contours contours(contour_lib[component.index]);
+	cpp_contours contours;
 
 	if (component.offset == NO_OFFSET and component.scale == NO_SCALE) {
 		if (completed_contour_lib.find(component.index) == completed_contour_lib.end()) {
@@ -255,21 +281,23 @@ std::string add_contours(auto &contour_lib, auto &completed_contour_lib, auto &c
 		else
 			repr = completed_contour_lib[component.index];
 		}
-	else if (component.offset != NO_OFFSET and component.scale != NO_SCALE)
-		for (auto &contour : contours)
-			for (auto &point : contour)
-				point.scale_offset(component.scale, component.offset);
-	else if (component.offset != NO_OFFSET)
-		for (auto &contour : contours)
-			for (auto &point : contour)
-				point.offset(component.offset);
-	else
-		for (auto &contour : contours)
-			for (auto &point : contour)
-				point.scale(component.scale);
+	else {
+		contours = contour_lib[component.index];
+		if (component.offset != NO_OFFSET and component.scale != NO_SCALE)
+			for (auto &contour : contours)
+				for (auto &point : contour)
+					point.scale_offset(component.scale, component.offset);
+		else if (component.offset != NO_OFFSET)
+			for (auto &contour : contours)
+				for (auto &point : contour)
+					point.offset(component.offset);
+		else
+			for (auto &contour : contours)
+				for (auto &point : contour)
+					point.scale(component.scale);
 
-	if (repr.empty())
 		repr = contours_repr(contours);
+		}
 
 	return repr;
 	}
@@ -277,7 +305,6 @@ std::string add_contours(auto &contour_lib, auto &completed_contour_lib, auto &c
 std::string build_glif(const auto &glif, auto &anchor_lib, auto &component_lib, auto &contour_lib, auto &completed_contour_lib, bool ufoz=false) {
 
 	std::string text;
-	std::string mark;
 	text.reserve(glif.len() * 120);
 
 	text += fmt::format(
@@ -311,9 +338,6 @@ std::string build_glif(const auto &glif, auto &anchor_lib, auto &component_lib, 
 		text += "\t</outline>\n";
 
 	if (glif.mark > 0)
-		mark = MARK_COLORS[glif.mark];
-
-	if (!mark.empty())
 		text += fmt::format(
 			"\t<lib>\n"
 			"\t\t<dict>\n"
@@ -321,7 +345,7 @@ std::string build_glif(const auto &glif, auto &anchor_lib, auto &component_lib, 
 			"\t\t\t<string>{}</string>\n"
 			"\t\t</dict>\n"
 			"\t</lib>\n",
-			mark);
+			MARK_COLORS[glif.mark]);
 
 	text += "</glyph>\n";
 	text.shrink_to_fit();

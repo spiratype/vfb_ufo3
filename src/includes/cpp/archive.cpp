@@ -22,12 +22,12 @@ class zip_file {
 		this->close();
 		}
 	zip_file(const std::string &arc_path, bool compress=true) {
+		this->arc_path = arc_path;
 		this->compression_method = compress ? ZIP_DEFLATED : ZIP_STORED;
 		std::time_t time = std::time(nullptr);
 		std::tm* dt = std::localtime(&time);
 		this->date = ((dt->tm_year - 80) << 9) + ((dt->tm_mon + 1) << 5) + dt->tm_mday;
 		this->time = (dt->tm_hour << 11) + (dt->tm_min << 5) + ((int)(dt->tm_sec / 2));
-		this->arc_path = arc_path;
 		this->archive.open(this->arc_path, std::ios::binary);
 		}
 	void reserve(size_t n) {
@@ -44,22 +44,30 @@ class zip_file {
 		size_t uncompressed_size = data.size();
 		size_t compressed_size = data.size();
 		u_long crc = crc32_z(0, (const u_char*)data.c_str(), data.size());
-		u_long header_offset = this->tellp();
+		u_int header_offset = this->tellp();
 
 		if (this->compression_method) {
 			compressed = zip_compress_str(data, this->compression_method);
 			compressed_size = compressed.size();
 			}
 
-		zip_info zinfo = zip_info(arc_name, this->compression_method, this->time, this->date, uncompressed_size, compressed_size, crc, header_offset);
+		zip_info zinfo = this->zinfo_list.emplace_back(
+			arc_name,
+			this->compression_method,
+			this->time,
+			this->date,
+			uncompressed_size,
+			compressed_size,
+			crc,
+			header_offset
+			);
 		this->write_local_file_header(zinfo);
 
 		if (this->compression_method)
-			this->write(compressed.data(), compressed.size());
+			this->write(compressed.data(), compressed_size);
 		else
-			this->write(data.data(), data.size());
+			this->write(data.data(), uncompressed_size);
 
-		this->zinfo_list.push_back(zinfo);
 		}
 	private:
 	void write(const char* data, size_t size) {
@@ -101,3 +109,4 @@ void write_archive(std::string &filename, std::unordered_map<std::string, std::s
 		archive.write_str(arc_name, file);
 	archive.close();
 	}
+

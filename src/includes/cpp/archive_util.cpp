@@ -30,13 +30,13 @@ static const std::string zip_compress_str(const std::string &data, u_int compres
 
 struct zip_info {
 	std::string arc_name;
-	u_short compression_method;
-	u_short time;
-	u_short date;
 	u_int uncompressed_size;
 	u_int compressed_size;
 	u_int crc;
 	u_int header_offset;
+	u_short compression_method;
+	u_short time;
+	u_short date;
 	zip_info() {}
 	zip_info(
 		const std::string &arc_name,
