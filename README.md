@@ -48,7 +48,7 @@ Download and extract the latest release `.zip` file and move the extracted files
 ## Requirements
 This package has no Python dependencies outside of the standard library. It is written in C++ and Cython. The submodules are compiled into `.pyd` extension modules. To recompile the submodules, the PyPi `cython` package and a compiler for Cython to utilize during extension module compilation will be required.
 
-The some extension modules compiled from C++ require several DLLs included in the release `.zip` archive, FontLab installer, and PyPi package.
+Extension modules compiled from C++ require several DLLs from the GCC which are included in the release `.zip` archive, FontLab installer, and PyPi package.
 
 ### Optional
 * cython  
@@ -474,6 +474,9 @@ Jameson R Spires
 Source files are covered under the [MIT License](https://opensource.org/licenses/MIT).
 
 #### Version history
+* version 0.7.5  
+small changes/corrections  
+
 * version 0.7.4  
 corrections to makeOTF batch command creation  
 corrections to `kern` feature generation  
