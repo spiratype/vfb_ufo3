@@ -1,5 +1,5 @@
 # coding: utf-8
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, unicode_literals
 
 import gc
 import os
@@ -12,7 +12,7 @@ from . import core
 
 show_default_optimize_code_points = core.show_default_optimize_code_points
 
-__version__ = '0.7.4'
+__version__ = '0.7.5'
 __doc__ = """
 VFB2UFO3
 DESCRIPTION
@@ -80,8 +80,8 @@ written in C++ and Cython. The submodules are compiled into `.pyd` extension
 modules. To recompile the submodules, the PyPi `cython` package and a compiler
 for Cython to utilize during extension module compilation will be required.
 
-The some extension modules compiled from C++ require several DLLs included in
-the release `.zip` archive, FontLab installer, and PyPi package.
+Extension modules compiled from C++ require several DLLs from the GCC which are
+included in the release `.zip` archive, FontLab installer, and PyPi package.
 
 OPTIONAL
   cython
@@ -660,6 +660,9 @@ License
 Source files are covered under the MIT License.
 
 Version history
+version 0.7.5
+small changes/corrections
+
 version 0.7.4
 corrections to makeOTF batch command creation
 corrections to `kern` feature generation
