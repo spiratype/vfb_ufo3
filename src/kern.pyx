@@ -27,7 +27,7 @@ def kerning(ufo, font):
 def kern_feature(ufo):
 	return _kern_feature(ufo)
 
-cdef inline long pair_calc(int n_glyphs):
+cdef inline int pair_calc(int n_glyphs):
 
 	'''
 	find the number of possible pairs for a number of glyphs

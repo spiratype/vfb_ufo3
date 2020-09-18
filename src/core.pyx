@@ -103,8 +103,7 @@ def parse_options(options):
 	dirname, basename = os_path_split(master.file_name)
 	filename, ext = os_path_splitext(basename)
 	if not basename.endswith('.vfb'):
-		basename = f'{filename}.vfb'
-		save_path = unique_path(basename, 1)
+		save_path = unique_path(f'{filename}.vfb', 1)
 		master.Save(save_path.encode('cp1252'))
 
 	ufo.master.filename = basename
@@ -113,8 +112,8 @@ def parse_options(options):
 	ufo.master.version_major = master.version_major
 	ufo.master.version_minor = master.version_minor
 	ufo.master.version = f'{master.version_major}.{master.version_minor:>03}'
-	ufo.master.axes_names = [axis[0].decode('ascii') for axis in master.axis]
-	ufo.master.axes_names_short = [axis[1].decode('ascii') for axis in master.axis]
+	ufo.master.axes_names = [str(axis[0]) for axis in master.axis]
+	ufo.master.axes_names_short = [str(axis[1]) for axis in master.axis]
 	ufo.master.upm = master.upm
 	ufo.master.font_style = master.font_style
 	fea.copy_opentype(ufo, master)
@@ -395,6 +394,7 @@ def master_instances(font, layer=None):
 		return [values[layer]], [names[layer]], [attributes[layer]]
 	return values, names, attributes
 
+
 def check_designspace_default(ufo, master):
 
 	'''
@@ -590,6 +590,7 @@ def check_instance_values(options, master):
 
 	options['instance_values'] = user_instance_values[:]
 	return options
+
 
 def check_user_file(path, file_type):
 

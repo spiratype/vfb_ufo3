@@ -145,10 +145,10 @@ def groups_from_kern_feature(font):
 
 	firsts, seconds = set(), set()
 	kern_feature = font.MakeKernFeature().value.decode('cp1252').replace('enum ', '')
-	kern_feature = [line.split()[1:3]
+	kern_feature_groups = [line.split()[1:3]
 		for line in kern_feature.splitlines()
 		if '@' in line]
-	for first, second in kern_feature:
+	for first, second in kern_feature_groups:
 		if first.startswith('@'):
 			firsts.add(first[2:])
 		if second.startswith('@'):
@@ -235,7 +235,6 @@ def update_groups(ufo):
 		key_glyph = ufo.kern.key_glyph_from_group[name]
 		font_classes.append(f'_{name}: {insert_key_glyph(glyphs, key_glyph)}')
 
-	output = fl.output
 	font.classes = '\n'.join(font_classes).encode('cp1252').splitlines()
 	fl.BeginProgress(b'Updating groups for master.vfb...', len(font_classes))
 	for i, group in enumerate(font.classes):

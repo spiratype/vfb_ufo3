@@ -307,7 +307,7 @@ def _font_names(ufo, font):
 	# Font full name
 	font.full_name = f'{font.family_name} {font.style_name}'.encode('cp1252')
 	# PS font name
-	font.font_name = f'{font.family_name}-{font.style_name).replace(" ", "")[:31]}'.encode('cp1252')
+	font.font_name = f'{font.family_name}-{font.style_name}'.replace(' ', '')[:31].encode('cp1252')
 	# Menu name
 	font.menu_name = font.family_name
 	# FOND name
@@ -336,7 +336,7 @@ def _font_names(ufo, font):
 def name_records(ufo, font):
 
 	name_records = {platform_id: ms_mac_names(ufo, font, platform_id)
-		for platform_id in {1, 3}}
+		for platform_id in (1, 3)}
 
 	name_records = [
 		NameRecord(nid, pid, ENC_IDS[pid], LANG_IDS[pid], name.encode('cp1252'))
@@ -452,7 +452,7 @@ def component_lib(ufo, font):
 	# check for small cap variants of glyphs found in codepoint glyph set
 	for name in names:
 		if not name.endswith(('.sc', '.smcp', '.c2sc')):
-			for sc_name in [f'{name}.sc', f'{name}.smcp', f'{name}.c2sc']:
+			for sc_name in (f'{name}.sc', f'{name}.smcp', f'{name}.c2sc'):
 				glyph_index = font.FindGlyph(sc_name.encode('cp1252'))
 				if glyph_index > -1:
 					glyph = font[glyph_index]

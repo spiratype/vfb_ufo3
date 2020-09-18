@@ -193,7 +193,7 @@ def _tables(ufo, font):
 	tables['name'] = [line for nid, line in sorted(tables['name'])]
 
 	def scaled_table(table):
-		return [(key, <long>nearbyint(value * SCALE))
+		return [(key, int(nearbyint(value * SCALE)))
 			if key in SCALABLE_TABLE_KEYS and value else (key, value)
 			for (key, value) in table]
 

@@ -233,6 +233,7 @@ def psautohint_command(ufo, batch=0):
 		args.append(f'-g {",".join(ufo.opts.psautohint_glyphs_list)}')
 	elif ufo.opts.psautohint_glyphs_omit_list:
 		args.append(f'-x {",".join(ufo.opts.psautohint_glyphs_omit_list)}')
+
 	if ufo.opts.psautohint_log:
 		log_path = ufo.paths.instance.psautohint_cmd.replace('.bat', '.log')
 		args.append(f'--log {log_path}')

@@ -223,7 +223,7 @@ def _check_attributes(user_attributes):
 			if not isinstance(value, unicode):
 				raise ValueError(b"'%s' is not a valid value for UFO attribute '%s'\n"
 					b"'%s' must be a string value not a {type(value)} value."
-						% (value, attr, attr, type(value)))
+					% (value, attr, attr, type(value)))
 
 			if attr == 'styleMapStyleName':
 				value = value.lower()
@@ -270,11 +270,10 @@ def _check_attributes(user_attributes):
 			if not isinstance(value, list):
 				raise ValueError(b"'%s' is not a valid value for UFO attribute '%s'\n"
 					b"'%s' must be a list." % (value, attr, attr))
-			for item in value:
-				if not isinstance(item, int):
+			for i in value:
+				if not isinstance(i, int):
 					raise ValueError(b"'%s' contains an valid value ('%s') for UFO "
-						b"attribute '%s'\n'%s' items must be integers."
-						% (value, item, attr, attr))
+						b"attribute '%s'\n'%s' items must be integers." % (value, i, attr, attr))
 
 			if attr == 'openTypeOS2Panose':
 				if len(value) != 10:
@@ -283,20 +282,20 @@ def _check_attributes(user_attributes):
 			elif attr == 'openTypeOS2FamilyClass':
 				if len(value) != 2:
 					raise ValueError(b"'%s' must be a list of 2 integers." % attr)
-				for item in value:
-					if item > 0 or item < 14:
+				for i in value:
+					if i > 0 or i < 14:
 						raise ValueError(b"'%s' integers for openTypeOS2FamilyClass must be"
 							b" values between 0 and 14." % attr)
 
 			elif attr == 'openTypeOS2CodePageRanges':
-				for item in value:
-					if item not in CODE_PAGES:
+				for i in value:
+					if i not in CODE_PAGES:
 						raise ValueError(b"'%s' requires codepages from the ulCodePageRange1-2"
 							b" OS/2 specification." % attr)
 
 			elif attr == 'openTypeOS2UnicodeRanges':
-				for item in value:
-					if item not in range(123):
+				for i in value:
+					if i not in range(123):
 						raise ValueError(b"'%s' requires codepages from the ulCodePageRange1-4"
 							b" OS/2 specification." % attr)
 
@@ -304,11 +303,11 @@ def _check_attributes(user_attributes):
 			if not isinstance(value, list):
 				raise ValueError(b"'%s' is not a valid value for UFO attribute '%s'\n"
 				b"'%s' must be a list." % (value, attr, attr))
-			for item in value:
-				if not isinstance(item, (int, float)):
+			for num in value:
+				if not isinstance(num, (int, float)):
 					raise ValueError(b"'%s' contains an invalid value ('%s') for UFO"
 						b" attribute '%s'.\n'%s' items must be integers or floats."
-						% (value, item, attr, attr))
+						% (value, num, attr, attr))
 
 	return user_attributes
 

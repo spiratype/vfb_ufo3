@@ -110,4 +110,4 @@ def build(designspace):
 		'<designspace format="3">',
 		*doc,
 		'</designspace>\n',
-		))
+		)).encode('utf_8')

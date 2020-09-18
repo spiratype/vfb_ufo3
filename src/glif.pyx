@@ -214,25 +214,18 @@ cdef cpp_contours glif_contours(glyph_nodes):
 				add_contour_point(contour, node.points[1].x * SCALE, node.points[1].y * SCALE, 4)
 				add_contour_point(contour, node.points[2].x * SCALE, node.points[2].y * SCALE, 4)
 				add_contour_point(contour, node.x * SCALE, node.y * SCALE, 1, node.alignment)
-			continue
-
-		if node.type == 65:
+		elif node.type == 65:
 			off = 1
 			cubic = 0
 			add_contour_point(contour, node.x * SCALE, node.y * SCALE, 4)
-			continue
-
-		if cubic:
+		elif cubic:
 			add_contour_point(contour, node.x * SCALE, node.y * SCALE, 3, node.alignment)
-			continue
-
-		if off:
+		elif off:
 			add_contour_point(contour, node.x * SCALE, node.y * SCALE, 2)
 			off = 0
 		else:
 			add_contour_point(contour, node.x * SCALE, node.y * SCALE, 3)
 
-	contour.shrink_to_fit()
 	contours.push_back(contour)
 	contours.shrink_to_fit()
 	return contours
