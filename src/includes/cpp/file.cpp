@@ -18,10 +18,6 @@ class cpp_file {
 		}
 	};
 
-void add_file(cpp_files &files, const std::string &path, const std::string &data) {
-	files.emplace_back(path, data);
-	}
-
 void write_file(const std::string &path, const std::string &data) {
 	std::ofstream f(path);
 	f << data;

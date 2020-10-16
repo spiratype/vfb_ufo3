@@ -74,6 +74,5 @@ RGB mark_to_srgb_1_0(const int mark_color) {
 			break;
 		}
 
-	RGB rgb = {r, g, b};
-	return rgb;
+	return RGB(r, g, b);
 	}

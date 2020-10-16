@@ -2,9 +2,9 @@
 
 #pragma once
 
-static const std::string zip_deflate_str(const std::string &data) {
+static std::string zip_deflate_str(const std::string &data) {
 	z_stream stream;
-	u_char out[data.size() + 1024];
+	auto out = std::make_unique<u_char[]>(data.size() + 512);
 
 	stream.opaque = Z_NULL;
 	stream.zalloc = Z_NULL;
@@ -12,17 +12,17 @@ static const std::string zip_deflate_str(const std::string &data) {
 	stream.avail_in = data.size();
 	stream.next_in = (u_char*)data.c_str();
 	stream.avail_out = data.size();
-	stream.next_out = (u_char*)&out;
+	stream.next_out = out.get();
 
 	// provides a raw deflate (no zlib header and trailer)
 	deflateInit2(&stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED, -15, 9, Z_DEFAULT_STRATEGY);
 	deflate(&stream, Z_FINISH);
 	deflateEnd(&stream);
 
-	return std::string((const char*)&out, stream.total_out);
+	return std::string((const char*)out.get(), stream.total_out);
 	}
 
-static const std::string zip_compress_str(const std::string &data, u_int compression_method) {
+static std::string zip_compress_str(const std::string &data, u_int compression_method) {
 	if (compression_method == ZIP_DEFLATED)
 		return zip_deflate_str(data);
 	return data;

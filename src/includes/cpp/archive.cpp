@@ -2,6 +2,7 @@
 
 #include <ctime>
 #include <fstream>
+#include <memory>
 #include <vector>
 #include <unordered_map>
 #include <zlib.h>
@@ -41,35 +42,34 @@ class zip_file {
 		}
 	void write_str(const std::string &arc_name, const std::string &data) {
 		std::string compressed;
-		size_t uncompressed_size = data.size();
-		size_t compressed_size = data.size();
 		u_long crc = crc32_z(0, (const u_char*)data.c_str(), data.size());
 		u_int header_offset = this->tellp();
 
-		if (this->compression_method) {
+		if (this->compression_method)
 			compressed = zip_compress_str(data, this->compression_method);
-			compressed_size = compressed.size();
-			}
 
 		zip_info zinfo = this->zinfo_list.emplace_back(
 			arc_name,
 			this->compression_method,
 			this->time,
 			this->date,
-			uncompressed_size,
-			compressed_size,
+			data.size(),
+			compressed.size(),
 			crc,
 			header_offset
 			);
 		this->write_local_file_header(zinfo);
 
 		if (this->compression_method)
-			this->write(compressed.data(), compressed_size);
+			this->write(compressed);
 		else
-			this->write(data.data(), uncompressed_size);
+			this->write(data);
 
 		}
 	private:
+	void write(const std::string &data) {
+		this->archive.write(data.c_str(), data.size());
+		}
 	void write(const char* data, size_t size) {
 		this->archive.write(data, size);
 		}
@@ -109,4 +109,3 @@ void write_archive(std::string &filename, std::unordered_map<std::string, std::s
 		archive.write_str(arc_name, file);
 	archive.close();
 	}
-

@@ -11,11 +11,11 @@ std::string number_str(double n) {
 	return float_str(n);
 	}
 
-std::string attr(const std::string name, const std::string value) {
+std::string attr(const std::string &name, const std::string &value) {
 	return fmt::format("{}=\"{}\" ", name, value);
 	}
 
-std::string attrs_str(const std::vector<std::string> attrs) {
+std::string attrs_str(const std::vector<std::string> &attrs) {
 	std::string out;
 	out.reserve(140);
 	for (const auto &str : attrs)
