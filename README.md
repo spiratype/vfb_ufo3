@@ -2,7 +2,7 @@
 ## Description
 Multiple master-compatible **Unified Font Object** (UFO) version 3 font writer API for Windows FontLab 5.2
 
-**VFB2UFO3** is primarily intended to create scaled UFO instances from a > 1000 UPM multiple master FontLab `.vfb` font with PostScript outlines for use with the AFDKO tools for creating binary fonts while still working with Windows FontLab 5.2. The most significant non-trivial change that will occur in export is the renaming of kerning glyph groups (FontLab *classes*). Providing a `.flc` (FontLab-class) file can speed up conversion significantly when font groups are not identifiable as first/second from their name. All glyph hints/links are ignored. A batch command can be created for use with `psautohint`, which supports hinting outlines with decimal coordinates.
+**VFB2UFO3** is primarily intended to create scaled UFO instances from a > 1000 UPM multiple master FontLab `.vfb` font with PostScript outlines for use with the AFDKO tools for creating binary fonts while still working with Windows FontLab 5.2. The most significant non-trivial change that will occur in export is the renaming of kerning glyph groups (FontLab *classes*). Providing a `.flc` (FontLab-class) file can speed up conversion significantly when font groups are not identifiable as first/second from their name. All glyph hints/links are ignored by default; a batch command can be created for use with `psautohint`, which supports hinting outlines with decimal coordinates.
 
 ## Installation
 #### PyPi
@@ -59,13 +59,20 @@ Extension modules compiled from C++ require several DLLs from the GCC which are 
 **pip install afdko**  
 <https://github.com/adobe-type-tools/afdko>  
 
+* psautohint  
+**pip install psautohint**  
+<https://github.com/adobe-type-tools/psautohint>  
+
 * MinGW 32-bit/i686 GCC >= 9.3.0  
 <http://winlibs.com>  
 <https://www.msys2.org>  
 <http://mingw.org>  
 
+* SHA512  
+<https://github.com/pr0f3ss/SHA512>  
+
 ### Functionality
-UFO output is produced without changes to the source font. The source font will be copied and UFOs will be created from the copy. If the font is multiple master, instances will be generated from the copy. If a specific `layer` or `instance_values` are not provided for a multiple master source font, a UFO will be generated for each master in the font.
+UFO output is produced without changes to the source font. If a specific `layer` or `instance_values` are not provided for a multiple master source font, a UFO will be generated for each master in the font.
 
 Fonts with a large number of glyphs benefit greatly from supplying additional glyph names to be optimized when removing overlaps (`glyphs_optimize_names`) and/or glyph names and suffixes which can be omitted from the final UFO instance (`glyphs_omit_names`, `glyphs_omit_suffixes`). See **GLYPHS OPTIONS** below.
 
@@ -183,7 +190,7 @@ To disable the optimizations outlined above, set the `glyphs_optimize` option to
 
 * The code points from the default code point list can be shown by running the `vfb2ufo3.show_default_optimize_code_points()` function. The code points will print to the FontLab output window and can then be copied into a text editor and edited as needed.  
 
-* A user-supplied code point list (`glyphs_optimize_code_points`) can be a list of `'0x00ac'`-format strings, integers in hexadecimal-form (`0x00ac`), or numeric integers (`172`); values which cannot be converted to an integer will raise a `ValueError`. Only the first code point in each glyph's list of code points (FontLab *unicodes* attribute) is checked for code point set membership.  
+* A user-supplied code point list (`glyphs_optimize_code_points`) can be a list of `'0x00ac'`-format strings, integers in hexadecimal-form (`0x00ac`), or numeric integers (`172`); values which cannot be converted to an integer will raise a `ValueError`. Only the first code point in each glyph's list of code points (FontLab glyph *unicodes* attribute) is checked for code point set membership.  
 
 * A user-supplied glyph name list (`glyphs_optimize_names`) can be supplied to supplement the code point list for glyphs. Any glyphs containing components that do not overlap should be added to this list.  
 
@@ -269,6 +276,11 @@ Greek Mono- and Polytonic
 #### Features options
 Font groups can be added to the `features.fea` file on export by setting `features_import_groups` to `True`. The font's features are neither formatted nor checked for correctness. Users are responsible for moving referenced feature files from `include()` statements to the chosen output directory. Also see **KERN FEATURE OPTIONS** and **MARK FEATURE OPTIONS** below for `kern` and `mark` feature options.
 
+#### Hint options
+If enabled, the `glyph_hints` option converts hints on export (glyph links are converted to hints). By default, hints will be created following the UFO3 [public.postscript.hints](https://unifiedfontobject.org/versions/ufo3/glyphs/glif/#publicpostscripthints) specification.  The `glyphs_hints_afdko_v1` and `glyphs_hints_afdko_v2` options enables hints compatible with MakeOTF. [SHA512](https://github.com/pr0f3ss/SHA512) provides the hashing algorithm for computing the glyph hint ids according to the UFO3 PostScript hint specification.
+
+`glyphs_hints_vertical_only` ignored horizontal hints/links
+
 #### Kern feature options
 Kern values will be scaled in parity with the output UFO. This scaling is independent from the created `.vfb` instance. A minimum value can be set using `kern_min_value`. This value should be a positive integer and when set, all kern values (negative and positive) not above the threshold will be omitted from the `kern` feature.
 
@@ -350,7 +362,7 @@ A `.designspace` document can be created in place of individual UFO instances. A
 #### Benchmarks
 For reference, testing was performed on a Windows 10 machine with an Intel Xeon E5 1650v3 @ 3.5 GHz CPU and a solid-state hard drive; CPUs with fewer cores and/or a hard disk drive increases file write times considerably.
 
-Times are per-instance (±.5 sec) and do not include time to load and parse user options, then copy the original font and prepare the copy for conversion to the UFO format. This prep time increases when not providing a FontLab-class (`.flc`) or `groups.plist` file.
+Times are per-instance (±.5 sec) and do not include time to load and parse user options, then copy the information from the original font to prepare for conversion to the UFO format. This prep time increases when not providing a FontLab-class (`.flc`) or `groups.plist` file.
 
 The `ufoz` option reduces build time considerably.
 
@@ -470,10 +482,16 @@ Generally, no assumptions are made about the correctness of the input. When `adf
 #### Author
 Jameson R Spires
 
-#### License
+#### Licenses
 Source files are covered under the [MIT License](https://opensource.org/licenses/MIT).
 
 #### Version history
+* version 0.8.0  
+a copy of the original font is no longer created, decreasing master processing overhead by a considerable amount  
+re-inclusion of glyph hints/links  
+`.glif` file creation performance improvements  
+corrections to `mark` feature generation  
+
 * version 0.7.5  
 small changes/corrections  
 
