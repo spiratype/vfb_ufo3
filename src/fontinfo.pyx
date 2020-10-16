@@ -4,7 +4,7 @@
 # cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
-# distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
+# distutils: extra_compile_args=[-O2, -fno-strict-aliasing]
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 
@@ -151,7 +151,7 @@ def _fontinfo(ufo, font, user_attributes):
 				if key in STRING_ATTRS:
 					new_value = value.encode('cp1252', 'ignore')
 					if len(new_value) != len(value):
-						new_value = value.encode('ascii')
+						new_value = value.encode('ascii', 'ignore')
 					setattr(*mapping[key], new_value)
 				elif key in CONFIGURABLE_ATTRS:
 					setattr(*mapping[key], value)

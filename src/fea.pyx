@@ -7,7 +7,7 @@
 # cython: c_string_type=unicode
 # cython: c_string_encoding=utf_8
 # distutils: language=c++
-# distutils: extra_compile_args=[-O3, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
+# distutils: extra_compile_args=[-O2, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 
@@ -90,13 +90,11 @@ def _copy_opentype(ufo, master):
 	# copy opentype features
 	if master.features:
 		ufo.master.ot_features = features = ordered_dict()
-		if ufo.opts.kern_feature_passthrough:
-			for feature in master.features:
+		for feature in master.features:
+			if feature.tag == b'kern':
+				if not ufo.opts.kern_feature_passthrough:
+					continue
 				features[feature.tag.decode('cp1252')] = feature.value.decode('cp1252').strip()
-		else:
-			for feature in master.features:
-				if feature.tag != b'kern':
-					features[feature.tag.decode('cp1252')] = feature.value.decode('cp1252').strip()
 
 	# copy opentype prefix
 	if master.ot_classes:
@@ -105,23 +103,14 @@ def _copy_opentype(ufo, master):
 			ufo.master.ot_prefix = '\n'.join(ot_prefix.splitlines())
 
 
-def _load_opentype(ufo, font, master=0):
+def _load_opentype(ufo, font):
 
-	if master:
-		if ufo.master.ot_prefix:
-			font.ot_classes = ufo.master.ot_prefix.encode('cp1252', 'ignore')
-		if ufo.master.ot_features:
-			font.features.clean()
-			for tag, value in items(ufo.master.ot_features):
-				font.features.append(Feature(tag.encode('cp1252'), value.encode('cp1252')))
-		return
-
-	master_copy = fl[ufo.master_copy.ifont]
-	if master_copy.ot_classes:
-		font.ot_classes = master_copy.ot_classes
-	if master_copy.features:
+	master = fl[ufo.master.ifont]
+	if master.ot_classes:
+		font.ot_classes = master.ot_classes
+	if master.features:
 		font.features.clean()
-		for feature in master_copy.features:
+		for feature in master.features:
 			if feature.tag == b'kern':
 				if ufo.opts.kern_omit_kern_feature:
 					continue

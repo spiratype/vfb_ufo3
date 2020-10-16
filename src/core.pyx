@@ -7,7 +7,7 @@
 # cython: c_string_type=unicode
 # cython: c_string_encoding=utf_8
 # distutils: language=c++
-# distutils: extra_compile_args=[-O3, -Wno-register, -fno-strict-aliasing, -std=c++17]
+# distutils: extra_compile_args=[-O2, -Wno-register, -fno-strict-aliasing, -std=c++17]
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 
@@ -50,7 +50,7 @@ include 'includes/core.pxi'
 def write_ufo(options):
 
 	ufo = parse_options(options)
-	add_master_copy(ufo)
+	copy_master_info(ufo)
 
 	for instance in ufo.instances:
 
@@ -213,7 +213,7 @@ def parse_options(options):
 		opts.glyphs_optimize_names = encode_string_list(opts.glyphs_optimize_names)
 
 	if opts.glyphs_omit_suffixes:
-		opts.glyphs_omit_suffixes = list(encode_string_list(opts.glyphs_omit_suffixes))
+		opts.glyphs_omit_suffixes = tuple(encode_string_list(opts.glyphs_omit_suffixes))
 
 	if opts.glyphs_omit_names:
 		opts.glyphs_omit_names = encode_string_list(opts.glyphs_omit_names)
@@ -263,7 +263,7 @@ def parse_code_points(code_point_list):
 
 	return code_points
 
-def add_master_copy(ufo):
+def copy_master_info(ufo):
 
 	'''
 	add a copy of the user's master font and begin build process
@@ -277,45 +277,22 @@ def add_master_copy(ufo):
 			return f'<Font: {fullname!r} filename={filename!r} axes={axes}>'
 		return f'<Font: {fullname!r} filename={filename!r}>'
 
-	master = fl[fl.ifont]
+	master = fl[ufo.master.ifont]
 
 	if ufo.opts.report:
 		print(f'Processing {font_repr(master)}..\n')
 
-	print(b' Processing master copy..')
-
-	master_copy = Font(master)
-	fl.Add(master_copy)
-	ufo.master_copy.ifont = fl.ifont
-	fl.SetFontWindow(ufo.master_copy.ifont, Rect(0, 0, 0, 0), 1)
-	fl.SetFontWindow(ufo.master_copy.ifont, Rect(0, 0, 0, 0), 1)
-
-	master_copy = fl[ufo.master_copy.ifont]
-	master_copy.modified = 0
-
-	fea.load_opentype(ufo, master_copy, master=1)
-	load_encoding(ufo, master_copy)
+	print(b' Processing master..')
 
 	if ufo.opts.afdko_makeotf_release:
-		vfb.check_glyph_unicodes(master_copy)
+		vfb.check_glyph_unicodes(master)
 
-	master_copy.full_name = f'{ufo.master.family_name} - master'.encode('cp1252')
-
-	vfb.process_master_copy(ufo, master_copy)
+	vfb.process_master(ufo, master)
 
 	groups(ufo)
 
 	if ufo.opts.afdko_parts:
-		vfb.build_goadb(ufo, master_copy)
-
-	filename = f'{ufo.master.family_name}_master.vfb'
-	ufo.paths.vfb = os_path_join(ufo.paths.out, filename)
-	if not ufo.opts.vfb_save:
-		ufo.paths.vfb = unique_path(ufo.paths.vfb, 1)
-
-	if ufo.opts.vfb_save or not ufo.opts.vfb_close:
-		ufo.paths.vfbs.append(ufo.paths.vfb)
-
+		vfb.build_goadb(ufo, master)
 
 def build_paths(ufo, master=0):
 
@@ -430,7 +407,7 @@ def set_designspace_values(ufo, master):
 	ufo.opts.instance_names = []
 	ufo.opts.instance_attributes = []
 	ufo.opts.glyphs_omit_names = []
-	ufo.opts.glyphs_omit_suffixes = []
+	ufo.opts.glyphs_omit_suffixes = ()
 	set_master_values(ufo, master, designspace=1)
 	ufo.designspace.instances = zip(values, names, attributes)
 	filename = ufo.master.filename.replace('.vfb', '.designspace')

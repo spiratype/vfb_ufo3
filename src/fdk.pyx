@@ -7,7 +7,7 @@
 # cython: c_string_type=unicode
 # cython: c_string_encoding=utf_8
 # distutils: language=c++
-# distutils: extra_compile_args=[-O3, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
+# distutils: extra_compile_args=[-O2, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 

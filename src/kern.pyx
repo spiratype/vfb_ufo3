@@ -4,7 +4,7 @@
 # cython: infer_types=True
 # cython: cdivision=True
 # cython: auto_pickle=False
-# distutils: extra_compile_args=[-O3, -fno-strict-aliasing]
+# distutils: extra_compile_args=[-O2, -fno-strict-aliasing]
 from __future__ import division, unicode_literals
 include 'includes/future.pxi'
 

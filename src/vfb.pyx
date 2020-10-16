@@ -7,11 +7,11 @@
 # cython: c_string_type=unicode
 # cython: c_string_encoding=utf_8
 # distutils: language=c++
-# distutils: extra_compile_args=[-O3, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
-# distutils: extra_link_args=[-lbcrypt]
+# distutils: extra_compile_args=[-O2, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 
+cimport cython
 from libc.math cimport nearbyint
 from libcpp.string cimport string
 
@@ -41,8 +41,8 @@ include 'includes/defaults.pxi'
 include 'includes/glifname.pxi'
 include 'includes/nameid.pxi'
 
-def process_master_copy(ufo, master_copy):
-	_process_master_copy(ufo, master_copy)
+def process_master(ufo, master):
+	_process_master(ufo, master)
 
 def add_instance(ufo, *instance):
 	_add_instance(ufo, *instance)
@@ -56,43 +56,67 @@ def font_names(ufo, font):
 def check_glyph_unicodes(font):
 	_check_glyph_unicodes(font)
 
-def _process_master_copy(ufo, master_copy):
+def _process_master(ufo, master):
 
-	ufo.glifs = {}
-	ufo.kern.firsts = set()
-	ufo.kern.seconds = set()
-	ufo.glyph_names = {}
-	ufo.glyph_sets.bases = set()
-	ufo.glyph_sets.omit = {-1}
+	ufo.glyph_names = glyph_names = {}
+	ufo.glifs = glifs = {}
+	ufo.kern.firsts = kern_firsts = set()
+	ufo.kern.seconds = kern_seconds = set()
+	ufo.glyph_sets.bases = glyph_sets_bases = set()
+	ufo.glyph_sets.omit = glyph_sets_omit = {-1}
 	anchors = set()
-	ufo.mark_classes = set()
-	ufo.mark_bases = set()
-	for i, glyph in enumerate(master_copy.glyphs):
+	ufo.mark_classes = mark_classes = set()
+	ufo.mark_bases = mark_bases = set()
+	ufo.len_code_points = len_code_points = 0
+	ufo.len_anchors = len_anchors = 0
+	ufo.len_components = len_components = 0
+	ufo.len_contours = len_contours = 0
+	ufo.len_vhints = len_vhints = 0
+	ufo.len_hhints = len_hhints = 0
+	ufo.len_hint_replacements = len_hint_replacements = 0
+	glyphs_omit_suffixes = ufo.opts.glyphs_omit_suffixes
 
-		ufo.glyph_names[i] = glyph_name = glyph.name.decode('cp1252')
+	for i, glyph in enumerate(master.glyphs):
+
+		glyph_names[i] = glyph_name = glyph.name.decode('cp1252')
+
+		if glyph.unicodes:
+			len_code_points += 1
+		if glyph.anchors:
+			len_anchors += 1
+		if glyph.components:
+			len_components += 1
+		if glyph.nodes:
+			len_contours += 1
+		if glyph.vhints or glyph.vlinks:
+			len_vhints += 1
+		if glyph.hhints or glyph.hlinks:
+			len_hhints += 1
+		if glyph.replace_table:
+			len_hint_replacements += 1
 
 		if glyph.kerning:
-			ufo.kern.firsts.add(glyph_name)
+			kern_firsts.add(glyph_name)
 			for kerning_pair in glyph.kerning:
-				ufo.kern.seconds.add(master_copy[kerning_pair.key].name.decode('cp1252'))
-
-		for anchor in glyph.anchors:
-			if anchor.name:
-				anchors.add(anchor.name)
-
-		for component in glyph.components:
-			ufo.glyph_sets.bases.add(component.index)
+				kern_seconds.add(master[kerning_pair.key].name.decode('cp1252'))
 
 		if glyph.name in ufo.opts.glyphs_omit_names:
-			ufo.glyph_sets.omit.add(i)
+			glyph_sets_omit.add(i)
 
-		if b'.' in glyph.name:
-			for suffix in ufo.opts.glyphs_omit_suffixes:
-				if glyph.name.endswith(suffix):
-					ufo.glyph_sets.omit.add(i)
-					break
+		if b'.' in glyph.name and glyphs_omit_suffixes:
+			if glyph.name.endswith(glyphs_omit_suffixes):
+				glyph_sets_omit.add(i)
 
-	if anchors and ufo.opts.mark_feature_generate:
+		if i not in ufo.glyph_sets.omit:
+			for anchor in glyph.anchors:
+				if anchor.name:
+					anchors.add(anchor.name)
+
+		for component in glyph.components:
+			glyph_sets_bases.add(component.index)
+
+
+	if ufo.opts.mark_feature_generate and anchors:
 		if ufo.opts.mark_anchors_omit:
 			omit_anchors = set()
 			for anchor in ufo.opts.mark_anchors_omit:
@@ -116,7 +140,7 @@ def _process_master_copy(ufo, master_copy):
 			if anchor in ufo.mark_bases}
 
 
-	for i, glyph in enumerate(master_copy.glyphs):
+	for i, glyph in enumerate(master.glyphs):
 		omit = i in ufo.glyph_sets.omit
 		ufo.glifs[i] = Glif(ufo, i, glyph, ufo.opts.afdko_makeotf_release, omit)
 
@@ -124,9 +148,9 @@ def _process_master_copy(ufo, master_copy):
 		ufo.glyph_sets.omit = ufo.glyph_sets.omit - ufo.glyph_sets.bases
 
 	if ufo.opts.glyphs_optimize or ufo.opts.glyphs_decompose:
-		component_lib(ufo, master_copy)
+		component_lib(ufo, master)
 
-	glyph_order(ufo, master_copy)
+	glyph_order(ufo, master)
 
 
 def master_instance(ufo, name, attributes, path):
@@ -134,8 +158,8 @@ def master_instance(ufo, name, attributes, path):
 	ufo.instance_times.total = time.clock()
 	print(b'\nBuilding UFO ..\n')
 
-	instance = fl[ufo.master_copy.ifont]
-	ufo.instance.ifont = ufo.master_copy.ifont
+	instance = fl[ufo.master.ifont]
+	ufo.instance.ifont = ufo.master.ifont
 
 	if ufo.master.ot_prefix or ufo.master.ot_features:
 		fea.load_opentype(ufo, instance)
@@ -170,17 +194,19 @@ def _add_instance(ufo, index, value, name, attributes, path):
 		ufo.last = 1
 
 	ufo.instance_times.total = time.clock()
-	master_copy = fl[ufo.master_copy.ifont]
-	instance = Font(master_copy, value)
+	master = fl[ufo.master.ifont]
+	instance = Font(master, value)
 	fl.Add(instance)
-	ufo.instance.ifont = fl.ifont
-	fl.SetFontWindow(ufo.instance.ifont, Rect(0, 0, 0, 0), 1)
-	fl.SetFontWindow(ufo.instance.ifont, Rect(0, 0, 0, 0), 1)
+	ufo.instance.ifont = ifont = fl.ifont
+	rect = Rect(0, 0, 0, 0)
+	fl.SetFontWindow(ifont, rect, 1)
+	fl.SetFontWindow(ifont, rect, 1)
 
-	instance = fl[ufo.instance.ifont]
+	instance = fl[ifont]
 	instance.modified = 0
-	instance.full_name = f'{ufo.master.family_name} {name}'.encode('cp1252')
-	instance.family_name = ufo.master.family_name.encode('cp1252')
+	family_name = ufo.master.family_name.encode('cp1252', 'ignore')
+	instance.full_name = b'%s %s' % (family_name, name)
+	instance.family_name = family_name
 
 	ufo.instance.index = index
 
@@ -413,7 +439,7 @@ def _check_glyph_unicodes(font):
 		raise GlyphUnicodeError('\n'.join(message))
 
 
-def component_lib(ufo, font):
+def component_lib(ufo, master):
 
 	'''
 	build component library
@@ -425,14 +451,14 @@ def component_lib(ufo, font):
 
 	# add all components to optimized glyph set if not removing overlaps
 	if ufo.opts.glyphs_decompose and not ufo.opts.glyphs_remove_overlaps:
-		ufo.glyph_sets.optimized = {i for i, glyph in enumerate(font.glyphs)
+		ufo.glyph_sets.optimized = {i for i, glyph in enumerate(master.glyphs)
 			if glyph.components}
 		return
 
 	names = []
 	ufo.glyph_sets.optimized = set()
 	# check glyphs in codepoint glyph set and user glyph name set
-	for i, glyph in enumerate(font.glyphs):
+	for i, glyph in enumerate(master.glyphs):
 		optimize = (
 			glyph.unicode and
 			glyph.unicode in ufo.code_points.optimize and
@@ -443,9 +469,9 @@ def component_lib(ufo, font):
 			names.append(ufo.glyph_names[i])
 			continue
 		if glyph.name in ufo.opts.glyphs_optimize_names:
-			glyph_index = font.FindGlyph(glyph.name)
+			glyph_index = master.FindGlyph(glyph.name)
 			if glyph_index > -1:
-				glyph = font[glyph_index]
+				glyph = master[glyph_index]
 				ufo.glyph_sets.optimized.add(glyph_index)
 				names.append(ufo.glyph_names[i])
 
@@ -453,9 +479,9 @@ def component_lib(ufo, font):
 	for name in names:
 		if not name.endswith(('.sc', '.smcp', '.c2sc')):
 			for sc_name in (f'{name}.sc', f'{name}.smcp', f'{name}.c2sc'):
-				glyph_index = font.FindGlyph(sc_name.encode('cp1252'))
+				glyph_index = master.FindGlyph(sc_name.encode('cp1252'))
 				if glyph_index > -1:
-					glyph = font[glyph_index]
+					glyph = master[glyph_index]
 					if glyph.components:
 						ufo.glyph_sets.optimized.add(glyph_index)
 
@@ -465,4 +491,4 @@ def Glif(ufo, i, glyph, release, omit):
 	glif_name = GLIFNAMES.get(glyph_name)
 	if glif_name is None:
 		glif_name = glifname(glyph_name, release, omit)
-	return ufo.glyph_names[i].encode('utf_8'), glif_name, glyph.mark, list(glyph.unicodes), omit
+	return ufo.glyph_names[i].encode('utf_8'), glif_name.encode('utf_8'), glyph.mark, list(glyph.unicodes), omit

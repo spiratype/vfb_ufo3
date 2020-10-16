@@ -7,14 +7,14 @@
 # cython: c_string_type=unicode
 # cython: c_string_encoding=utf_8
 # distutils: language=c++
-# distutils: extra_compile_args=[-O3, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
+# distutils: extra_compile_args=[-O2, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 
 cimport cython
+from vector cimport vector
 from cpython.dict cimport PyDict_SetItem
 from libcpp.string cimport string
-from libcpp.vector cimport vector
 
 import os
 import shutil
@@ -48,12 +48,13 @@ def _groups(ufo):
 	ufo.kern.key_glyph_from_group = {}
 	ufo.kern.glyphs_len = {}
 
+	master = fl[ufo.master.ifont]
 	if ufo.opts.groups_flc_path is not None:
-		import_flc(ufo)
+		import_flc(ufo, master)
 	elif ufo.opts.groups_plist_path is not None:
-		import_groups_plist(ufo)
+		import_groups_plist(ufo, master)
 	else:
-		rename_groups(ufo)
+		rename_groups(ufo, master)
 
 	finish_groups(ufo)
 
@@ -78,15 +79,14 @@ def finish_groups(ufo):
 			else:
 				ufo.kern.firsts.update(glyphs)
 
+
 	if ufo.opts.vfb_save:
 		update_groups(ufo)
 
 
-def rename_groups(ufo):
+def rename_groups(ufo, font):
 
 	print(b' Processing font groups..')
-
-	font = fl[ufo.master_copy.ifont]
 
 	font_groups, firsts, seconds = groups_from_kern_feature(font)
 	firsts_seconds = firsts | seconds
@@ -119,13 +119,18 @@ def rename_groups(ufo):
 
 		if no_kerning:
 			ufo.groups.no_kerning = set(no_kerning.keys())
+			fl.BeginProgress(b'Processing groups for master.vfb...', len(no_kerning))
 			for i, key_glyph in items(no_kerning):
+				if not i % 4:
+					fl.TickProgress(i)
 				name, glyphs = font_groups[i]
 				lc_name = name.lower()
 				first = PREFIX_1 in lc_name or 'mmk_l' in lc_name or lc_name.endswith('_l')
 				second = PREFIX_2 in lc_name or 'mmk_r' in lc_name or lc_name.endswith('_r')
 				if not first and not second:
 					first, second = font.GetClassLeft(i), font.GetClassRight(i)
+					if not first and not second:
+						ClassMarkerWarning(name)
 				if first:
 					name = PREFIX_1 + key_glyph
 					ufo.groups.kerning[name] = (0, glyphs)
@@ -136,12 +141,14 @@ def rename_groups(ufo):
 					ufo.groups.kerning[name] = (1, glyphs)
 					ufo.kern.seconds_by_key_glyph[key_glyph] = name
 					ufo.kern.key_glyph_from_group[name] = key_glyph
+			fl.EndProgress()
 
 
 def groups_from_kern_feature(font):
 
 	font_groups = {i: group.decode('cp1252').split(': ')
-		for i, group in enumerate(font.classes)}
+		for i, group in enumerate(font.classes)
+		if not group.startswith(('_', '.mtrx'))}
 
 	firsts, seconds = set(), set()
 	kern_feature = font.MakeKernFeature().value.decode('cp1252').replace('enum ', '')
@@ -157,11 +164,10 @@ def groups_from_kern_feature(font):
 	return font_groups, firsts, seconds
 
 
-def import_flc(ufo):
+def import_flc(ufo, font):
 
 	print(f' Importing groups from {os_path_basename(ufo.paths.flc)}..')
 
-	font = fl[ufo.master_copy.ifont]
 	flc_file = read_file(ufo.paths.flc).decode('cp1252')
 	flc_groups = parse_flc(flc_file)
 
@@ -189,11 +195,10 @@ def import_flc(ufo):
 	ufo.groups.imported = 1
 
 
-def import_groups_plist(ufo):
+def import_groups_plist(ufo, font):
 
 	print(f' Importing groups from {os_path_basename(ufo.paths.groups_plist)}..')
 
-	font = fl[ufo.master_copy.ifont]
 	plist = read_file(ufo.paths.groups_plist).decode('utf_8')
 
 	if '@MMK' in plist:
@@ -221,9 +226,9 @@ def import_groups_plist(ufo):
 	ufo.groups.imported = 1
 
 
-def update_groups(ufo):
+def update_groups(ufo, font):
 
-	font = fl[ufo.master_copy.ifont]
+	font = fl[ufo.master.ifont]
 
 	if ufo.groups.imported:
 		ufo.opts.groups_ignore_no_kerning = 0

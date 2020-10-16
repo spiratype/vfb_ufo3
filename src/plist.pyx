@@ -7,15 +7,15 @@
 # cython: c_string_type=unicode
 # cython: c_string_encoding=utf_8
 # distutils: language=c++
-# distutils: extra_compile_args=[-O3, -fopenmp, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
+# distutils: extra_compile_args=[-O2, -fopenmp, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
 # distutils: extra_link_args=[-fopenmp]
 from __future__ import division, unicode_literals
 include 'includes/future.pxi'
 
 cimport cython
+from vector cimport vector
 from cpython.dict cimport PyDict_SetItem
 from libcpp.string cimport string
-from libcpp.vector cimport vector
 
 import os
 import shutil
@@ -58,6 +58,10 @@ def _plists(ufo):
 
 cdef metainfo(ufo, cpp_files &files):
 
+	cdef:
+		string path = ufo.paths.instance.metainfo
+		bytes plist
+
 	if ufo.plists.metainfo:
 		copy_file(ufo.plists.metainfo, ufo.paths.instance.metainfo)
 		return
@@ -69,23 +73,31 @@ cdef metainfo(ufo, cpp_files &files):
 	plist = plist_doc(metainfo)
 
 	if ufo.opts.ufoz:
-		ufo.archive[ufo.paths.instance.metainfo] = plist
+		ufo.archive[path] = plist
 	else:
-		add_file(files, ufo.paths.instance.metainfo, plist)
+		files.emplace_back(path, plist)
 		ufo.plists.metainfo = ufo.paths.instance.metainfo
 
 
 cdef fontinfo(ufo, cpp_files &files):
 
+	cdef:
+		string path = ufo.paths.instance.fontinfo
+		bytes plist
+
 	plist = plist_doc(ufo.instance.fontinfo)
 
 	if ufo.opts.ufoz:
-		ufo.archive[ufo.paths.instance.fontinfo] = plist
+		ufo.archive[path] = plist
 	else:
-		add_file(files, ufo.paths.instance.fontinfo, plist)
+		files.emplace_back(path, plist)
 
 
 cdef groups(ufo, cpp_files &files):
+
+	cdef:
+		string path = ufo.paths.instance.groups
+		bytes plist
 
 	if ufo.groups.all and ufo.plists.groups:
 		copy_file(ufo.plists.groups, ufo.paths.instance.groups)
@@ -94,23 +106,31 @@ cdef groups(ufo, cpp_files &files):
 	plist = plist_doc(ufo.groups.all)
 
 	if ufo.opts.ufoz:
-		ufo.archive[ufo.paths.instance.groups] = plist
+		ufo.archive[path] = plist
 	else:
-		add_file(files, ufo.paths.instance.groups, plist)
+		files.emplace_back(path, plist)
 		ufo.plists.groups = ufo.paths.instance.groups
 
 
 cdef kerning(ufo, cpp_files &files):
 
+	cdef:
+		string path = ufo.paths.instance.kerning
+		bytes plist
+
 	if ufo.instance.kerning:
 		plist = plist_doc(ufo.instance.kerning)
 		if ufo.opts.ufoz:
-			ufo.archive[ufo.paths.instance.kerning] = plist
+			ufo.archive[path] = plist
 		else:
-			add_file(files, ufo.paths.instance.kerning, plist)
+			files.emplace_back(path, plist)
 
 
 cdef lib(ufo, cpp_files &files):
+
+	cdef:
+		string path = ufo.paths.instance.lib
+		bytes plist
 
 	if ufo.plists.lib:
 		copy_file(ufo.plists.lib, ufo.paths.instance.lib)
@@ -125,35 +145,43 @@ cdef lib(ufo, cpp_files &files):
 	plist = plist_doc(lib)
 
 	if ufo.opts.ufoz:
-		ufo.archive[ufo.paths.instance.lib] = plist
+		ufo.archive[path] = plist
 	else:
-		add_file(files, ufo.paths.instance.lib, plist)
+		files.emplace_back(path, plist)
 		ufo.plists.lib = ufo.paths.instance.lib
 
 
 cdef glyphs_contents(ufo, cpp_files &files):
 
+	cdef:
+		string path = ufo.paths.instance.glyphs_contents
+		bytes plist
+
 	if ufo.plists.glyphs_contents:
 		copy_file(ufo.plists.glyphs_contents, ufo.paths.instance.glyphs_contents)
 		return
 
-	master_copy = fl[ufo.master_copy.ifont]
+	master = fl[ufo.master.ifont]
 
 	glyph_contents = ordered_dict()
-	for i, glyph in enumerate(master_copy.glyphs):
+	for i, glyph in enumerate(master.glyphs):
 		if i not in ufo.glyph_sets.omit:
-			glyph_contents[glyph.name.decode('cp1252')] = ufo.glifs[i][1]
+			glyph_contents[ufo.glyph_names[i]] = ufo.glifs[i][1]
 
 	plist = plist_doc(glyph_contents)
 
 	if ufo.opts.ufoz:
-		ufo.archive[ufo.paths.instance.glyphs_contents] = plist
+		ufo.archive[path] = plist
 	else:
-		add_file(files, ufo.paths.instance.glyphs_contents, plist)
+		files.emplace_back(path, plist)
 		ufo.plists.glyphs_contents = ufo.paths.instance.glyphs_contents
 
 
 cdef layercontents(ufo, cpp_files &files):
+
+	cdef:
+		string path = ufo.paths.instance.layercontents
+		bytes plist
 
 	if ufo.plists.layercontents:
 		copy_file(ufo.plists.layercontents, ufo.paths.instance.layercontents)
@@ -164,7 +192,7 @@ cdef layercontents(ufo, cpp_files &files):
 	plist = plist_doc(layercontents)
 
 	if ufo.opts.ufoz:
-		ufo.archive[ufo.paths.instance.layercontents] = plist
+		ufo.archive[path] = plist
 	else:
-		add_file(files, ufo.paths.instance.layercontents, plist)
+		files.emplace_back(path, plist)
 		ufo.plists.layercontents = ufo.paths.instance.layercontents

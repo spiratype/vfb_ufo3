@@ -7,7 +7,7 @@
 # cython: c_string_type=unicode
 # cython: c_string_encoding=utf_8
 # distutils: language=c++
-# distutils: extra_compile_args=[-O3, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
+# distutils: extra_compile_args=[-O2, -fconcepts, -Wno-register, -fno-strict-aliasing, -std=c++17]
 from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 
@@ -78,10 +78,6 @@ def finish(ufo, instance=0):
 		return
 
 	remove_file(ufo.paths.encoding)
-
-	if ufo.opts.vfb_save or not ufo.opts.vfb_close:
-		fl[ufo.master_copy.ifont].Save(ufo.paths.vfb.encode('cp1252'))
-	fl.Close(ufo.master_copy.ifont)
 
 	total_time = time_str(time.clock() - ufo.total_times.start)
 	if ufo.instance.completed > 1:
