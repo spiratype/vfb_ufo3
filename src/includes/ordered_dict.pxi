@@ -5,7 +5,7 @@ cdef class ordered_dict(dict):
 
 	cdef list mapping
 
-	def __cinit__(self):
+	def __init__(self):
 		self.mapping = []
 
 	def __setitem__(self, key, value):

@@ -11,15 +11,15 @@ cdef class c_archive:
 		bint compress
 		unordered_map[string, string] files
 
-	def __cinit__(self, string &filename, bint compress):
+	def __init__(self, string &filename, bint compress):
 		self.filename = filename
 		self.compress = compress
 
-	def __setitem__(self, string &arc_name, string &text):
-		self.files[arc_name] = text
-
 	def __reduce__(self):
 		return self.__class__
+
+	def __setitem__(self, string &arc_name, string &text):
+		self.files.emplace(arc_name, move(text))
 
 	def reserve(self, size_t n):
 		self.files.reserve(n)

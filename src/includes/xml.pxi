@@ -7,7 +7,7 @@ def elem_attrs(attrs):
 	name='top'
 	'''
 
-	return ' '.join(f'{key}="{val}"' for key, val in attrs if val is not None)
+	return ' '.join(f'{key}="{val}"' for key, val in attrs if val is not None).strip()
 
 
 def xml_elems(elements, indents=0):
@@ -207,20 +207,20 @@ def element(value, indents=0):
 	if isinstance(value, bool):
 		return empty_elem(str(value).lower(), indents)
 
-	elif isinstance(value, bytes):
+	if isinstance(value, bytes):
 		return text_elem('string', value.decode('cp1252'), indents)
 
-	elif isinstance(value, unicode):
+	if isinstance(value, unicode):
 		return text_elem('string', value, indents)
 
-	elif isinstance(value, int):
+	if isinstance(value, int):
 		return text_elem('integer', str(value), indents)
 
-	elif isinstance(value, float):
+	if isinstance(value, float):
 		return text_elem('real', str(value), indents)
 
-	elif isinstance(value, dict):
+	if isinstance(value, dict):
 		return dict_elem(value, indents)
 
-	elif isinstance(value, list):
+	if isinstance(value, list):
 		return list_elem(value, indents)

@@ -39,6 +39,8 @@ def parse_flc(flc_file):
 			kern_group = 1
 			kerning_flag = line.split()[1]
 		if line.startswith('%%E'):
+			if name.startswith('_') and not kern_group:
+				ClassMarkerWarning(name)
 			if kern_group:
 				parsed[name] = [kerning_flag, glyphs]
 			else:

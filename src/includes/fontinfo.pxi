@@ -3,7 +3,7 @@
 @cython.final
 cdef class fontinfo_dict(dict):
 
-	def __cinit__(self):
+	def __init__(self):
 		for key in FONTINFO_ATTRS:
 			PyDict_SetItem(self, key, None)
 

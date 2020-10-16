@@ -5,7 +5,7 @@ cdef class ordered_set(set):
 
 	cdef list mapping
 
-	def __cinit__(self, other=None):
+	def __init__(self, other=None):
 		self.mapping = []
 		if isinstance(other, list):
 			self.update(other)

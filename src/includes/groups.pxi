@@ -3,15 +3,20 @@
 PREFIX_1 = 'public.kern1.'
 PREFIX_2 = 'public.kern2.'
 
-def KeyGlyphWarning(group, key_glyph):
-	print(f"  A key glyph was not found in kerning group '{group}'.\n"
-		f"  '{key_glyph}' was marked as the key glyph.")
 
+def ClassMarkerWarning(group):
+	print(f'ClassMarkerWarning: Found kerning group {group!r} without kerning '
+		f'class side marker.\nCheck kerning classes in FontLab to ensure classes '
+		f'are all marked left, right, or both.')
+
+def KeyGlyphWarning(group, key_glyph):
+	print(f'KeyGlyphWarning: A key glyph was not found in kerning group {group!r}.'
+		f'\n{key_glyph!r} was marked as the key glyph.')
 
 def FontLabClassWarning(name, glyphs):
 	glyphs = "', '".join(glyphs)
-	print(f"  Font contains more than 1 FontLab class named '{name}'.'\n"
-		f"  glyphs = ['{glyphs}']")
+	print(f'FontLabClassWarning: Font contains more than 1 FontLab class named '
+		f'{name!r}.\nglyphs = [{glyphs!r}]')
 
 
 def insert_key_glyph(glyphs, key_glyph):
@@ -25,11 +30,7 @@ def insert_key_glyph(glyphs, key_glyph):
 	>>> "A AA AE' Aacute Agrave Acircumflex"
 	'''
 
-	_glyphs = glyphs[:]
-	index = glyphs.index(key_glyph)
-	_glyphs[index] = key_glyph + "'"
-
-	return ' '.join(_glyphs)
+	return ' '.join(glyph if glyph != key_glyph else f"{key_glyph}'" for glyph in glyphs)
 
 
 def group_key_glyph(glyphs_string, has_key_glyph):

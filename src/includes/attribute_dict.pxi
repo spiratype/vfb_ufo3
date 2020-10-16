@@ -7,7 +7,7 @@ from cpython.dict cimport PyDict_SetItem
 @cython.final
 cdef class attribute_dict(dict):
 
-	def __cinit__(self, args=None):
+	def __init__(self, args=None):
 		if args:
 			self.update(args)
 

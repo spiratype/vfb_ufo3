@@ -2,25 +2,33 @@
 
 DEFAULT_OPTIONS = (
 	('output_path', None),
+
 	('layer', None),
+
 	('scale_to_upm', 1000),
 	('scale_auto', True),
+
 	('instance_values', []),
 	('instance_names', []),
 	('instance_attributes', []),
+
 	('features_import_groups', False),
+
 	('kern_feature_generate', True),
 	('kern_feature_file_path', None),
 	('kern_feature_passthrough', False),
 	('kern_min_value', None),
+
 	('mark_feature_generate', False),
 	('mark_anchors_include', []),
 	('mark_anchors_omit', []),
+
 	('groups_export_flc', False),
 	('groups_export_flc_path', None),
 	('groups_flc_path', None),
 	('groups_plist_path', None),
 	('groups_ignore_no_kerning', False),
+
 	('afdko_parts', False),
 	('afdko_makeotf_cmd', False),
 	('afdko_makeotf_batch_cmd', False),
@@ -38,6 +46,7 @@ DEFAULT_OPTIONS = (
 	('afdko_makeotf_addDSIG', True),
 	('afdko_makeotf_suppress_unhinted_glyph_warnings', True),
 	('afdko_makeotf_args', []),
+
 	('psautohint_cmd', False),
 	('psautohint_batch_cmd', False),
 	('psautohint_write_to_default_layer', True),
@@ -52,20 +61,31 @@ DEFAULT_OPTIONS = (
 	('psautohint_extra_verbose', False),
 	('psautohint_glyphs_list', []),
 	('psautohint_glyphs_omit_list', []),
+
 	('glyphs_decompose', False),
 	('glyphs_remove_overlaps', False),
 	('glyphs_omit_names', []),
-	('glyphs_omit_suffixes', []),
+	('glyphs_omit_suffixes', ()),
 	('glyphs_optimize', True),
 	('glyphs_optimize_code_points', []),
 	('glyphs_optimize_names', []),
+
+	('glyphs_hints', False),
+	('glyphs_hints_vertical_only', False),
+	('glyphs_hints_afdko_v1', False),
+	('glyphs_hints_afdko_v2', False),
+
 	('ufoz', False),
 	('ufoz_compress', True),
+
 	('designspace_export', False),
 	('designspace_default', []),
+
 	('vfb_save', False),
 	('vfb_close', True),
+
 	('force_overwrite', False),
+
 	('report', True),
 	('report_verbose', False),
 	)
