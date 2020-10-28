@@ -10,41 +10,41 @@ FLC_END_MARKER =           '%%END'
 
 def parse_flc(flc_file):
 
-	'''
-	flc_file = """
-	%%FONTLAB CLASSES
+  '''
+  flc_file = """
+  %%FONTLAB CLASSES
 
-	%%CLASS _A
-	%%GLYPHS  A' Agrave Aacute Acircumflex Atilde
-	%%KERNING L 0
-	%%END
-	"""
+  %%CLASS _A
+  %%GLYPHS  A' Agrave Aacute Acircumflex Atilde
+  %%KERNING L 0
+  %%END
+  """
 
-	parsed = parse_flc(flc_file)
-	>>> {'_A': ('L', "A' Agrave Aacute Acircumflex Atilde")}
-	'''
+  parsed = parse_flc(flc_file)
+  >>> {'_A': ('L', "A' Agrave Aacute Acircumflex Atilde")}
+  '''
 
-	parsed = {}
-	kern_group = 0
+  parsed = {}
+  kern_group = 0
 
-	flc_file = flc_file.replace('@', '')
-	flc_file = [line for line in flc_file.splitlines() if line]
-	for line in flc_file:
-		if line.startswith('%%C'):
-			kern_group = 0
-			name = line.split()[1]
-		if line.startswith('%%G'):
-			glyphs = line[8:].strip()
-		if line.startswith('%%K'):
-			kern_group = 1
-			kerning_flag = line.split()[1]
-		if line.startswith('%%E'):
-			if name.startswith('_') and not kern_group:
-				ClassMarkerWarning(name)
-			if kern_group:
-				parsed[name] = [kerning_flag, glyphs]
-			else:
-				parsed[name] = [None, glyphs]
+  flc_file = flc_file.replace('@', '')
+  flc_file = [line for line in flc_file.splitlines() if line]
+  for line in flc_file:
+    if line.startswith('%%C'):
+      kern_group = 0
+      name = line.split()[1]
+    if line.startswith('%%G'):
+      glyphs = line[8:].strip()
+    if line.startswith('%%K'):
+      kern_group = 1
+      kerning_flag = line.split()[1]
+    if line.startswith('%%E'):
+      if name.startswith('_') and not kern_group:
+        ClassMarkerWarning(name)
+      if kern_group:
+        parsed[name] = [kerning_flag, glyphs]
+      else:
+        parsed[name] = [None, glyphs]
 
-	return parsed
+  return parsed
 
