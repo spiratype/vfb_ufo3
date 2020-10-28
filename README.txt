@@ -13,6 +13,10 @@ not identifiable as first/second from their name. All glyph hints/links are
 ignored by default; a batch command can be created for use with psautohint,
 which supports hinting outlines with decimal coordinates.
 
+VFB2UFO3 also quickly creates UFO masters from multiple master .vfb fonts.
+This is the default export option when the instance_values option is not
+supplied.
+
 INSTALLATION
 PyPi
 pip install vfb2ufo3
@@ -29,33 +33,33 @@ below.
 
 
 [user folder]
-    └── Documents
-        └── Fontlab
-            └── Studio 5
-                └── Macros
-                    └── System
-                        └── Modules
-                            └── vfb2ufo3
-                                ├── resources
-                                │   ├── libgcc_s_dw2-1.dll
-                                │   ├── libgomp-1.dll
-                                │   ├── libstdc++-6.dll
-                                │   ├── libwinpthread-1.dll
-                                │   └── zlib1.dll
-                                ├── __init__.py
-                                ├── core.pyd
-                                ├── designspace.pyd
-                                ├── fdk.pyd
-                                ├── fea.pyd
-                                ├── fontinfo.pyd
-                                ├── glif.pyd
-                                ├── groups.pyd
-                                ├── kern.pyd
-                                ├── mark.pyd
-                                ├── plist.pyd
-                                ├── tools.pyd
-                                ├── user.py
-                                └── vfb.pyd
+  └─ Documents
+     └─ Fontlab
+        └─ Studio 5
+           └─ Macros
+              └─ System
+                 └─ Modules
+                    └─ vfb2ufo3
+                       ├─ resources
+                       │  ├─ libgcc_s_dw2-1.dll
+                       │  ├─ libgomp-1.dll
+                       │  ├─ libstdc++-6.dll
+                       │  ├─ libwinpthread-1.dll
+                       │  └─ zlib1.dll
+                       ├─ __init__.py
+                       ├─ core.pyd
+                       ├─ designspace.pyd
+                       ├─ fdk.pyd
+                       ├─ fea.pyd
+                       ├─ fontinfo.pyd
+                       ├─ glif.pyd
+                       ├─ groups.pyd
+                       ├─ kern.pyd
+                       ├─ mark.pyd
+                       ├─ plist.pyd
+                       ├─ tools.pyd
+                       ├─ user.py
+                       └─ vfb.pyd
 
 
 REQUIREMENTS
@@ -85,8 +89,8 @@ OPTIONAL
   https://www.msys2.org
   http://mingw.org
 
-  SHA512
-  https://github.com/pr0f3ss/SHA512
+  {fmt}
+  https://github.com/fmtlib/fmt
 
 FUNCTIONALITY
 UFO output is produced without changes to the source font. If a specific
@@ -98,11 +102,6 @@ glyph names to be optimized when removing overlaps (glyphs_optimize_names)
 and/or glyph names and suffixes which can be omitted from the final UFO
 instance (glyphs_omit_names, glyphs_omit_suffixes). See GLYPHS OPTIONS
 below.
-
-Generated instances/layers can be saved and/or left open after generation via
-the vfb_save and vfb_close options. If vfb_save is set to True, the
-resulting .vfb instance will be updated during UFO creation. This includes
-glyph outline changes (overlap removal and decomposition).
 
 All path options must be absolute paths; folder and file paths which are not
 absolute will be ignored. The default output path is the user's Desktop.
@@ -131,35 +130,35 @@ user_profile_folder = os.environ['USERPROFILE']
 output_path = os.path.join(user_profile_folder, 'Documents', 'test_font')
 
 instances = [
-	0,
-	200,
-	400,
-	650,
-	1000,
-	]
+  0,
+  200,
+  400,
+  650,
+  1000,
+  ]
 names = [
-	'Thin',
-	'Light',
-	'Regular',
-	'SemiBold',
-	'Bold',
-	]
+  'Thin',
+  'Light',
+  'Regular',
+  'SemiBold',
+  'Bold',
+  ]
 attributes = [
-	{'openTypeOS2WeightClass': 200},
-	{'openTypeOS2WeightClass': 300},
-	{'openTypeOS2WeightClass': 400},
-	{'openTypeOS2WeightClass': 600},
-	{'openTypeOS2WeightClass': 700},
-	]
+  {'openTypeOS2WeightClass': 200},
+  {'openTypeOS2WeightClass': 300},
+  {'openTypeOS2WeightClass': 400},
+  {'openTypeOS2WeightClass': 600},
+  {'openTypeOS2WeightClass': 700},
+  ]
 
 write_ufo(
-	output_path=output_path,
-	instance_values=instances,
-	instance_names=names,
-	instance_attributes=attributes,
-	glyphs_decompose=True,
-	glyphs_remove_overlaps=True,
-	)
+  output_path=output_path,
+  instance_values=instances,
+  instance_names=names,
+  instance_attributes=attributes,
+  glyphs_decompose=True,
+  glyphs_remove_overlaps=True,
+  )
 
 -------------------------------------------------------------------------------
 
@@ -171,9 +170,7 @@ scale_to_upm option is ignored if it is lower than 1000. Scaling can be
 turned off by setting scale_auto to False; this does not reduce conversion
 times.
 
-All scaling operations are performed independently from FontLab; if the .vfb
-instance(s)/master copy are being saved, the .vfb font and glyph values will
-be the original un-scaled values.
+All scaling operations are performed independently from FontLab.
 
 INSTANCE OPTIONS
 When creating instances from a multiple master source font, lists of values,
@@ -220,8 +217,7 @@ instance_names = ['Light Display']
 
 
 GLYPH OPTIONS
-Glyph scaling is independent from the .vfb instance itself; if the .vfb
-instance is being saved, the glyphs in the .vfb will remain un-scaled.
+Glyph scaling is independent from the .vfb instance itself.
 
 Glyph decomposition and overlap removal is optional and occurs after instances
 are generated. This option is intended for final output when a binary font will
@@ -234,10 +230,14 @@ contours from each component's base contours.
 When decomposing only, the optimization outlined above will be used for all
 glyphs containing components.
 
-The generated .vfb instance(s) will leave components in component-form.
-
 To disable the optimizations outlined above, set the glyphs_optimize option
 to False.
+
+To specify explicitly which glyphs to decompose and/or remove overlaps, the
+glyphs_decompose_names and glyphs_remove_overlap_names options should be
+supplied. The supplied names must match exactly with the glyph names in the
+target font. The glyphs_optimize option should be disabled if using either of
+these options.
 
 Omit glyphs from instance
   A list of glyph suffixes and/or glyph names can be supplied that should be
@@ -245,10 +245,18 @@ Omit glyphs from instance
   glyphs_omit_names options, respectively.
 
 Optimize glyph name and code point lists
+  For output intended for makeOTF where construction glyphs are being omitted
+  via glyphs_omit_list or glyphs_omit_suffixes_list, enabling
+  glyphs_optimize_makeotf will decompose and remove overlaps for the omitted
+  glyphs where needed. Overlaps will be removed for all other base components
+  but remain in component-form. This will decrease UFO creation time and allow
+  makeOTF to more efficiently subroutinize the outlines and reduce .otf
+  compilation time.
+
   If removing overlaps, the default list of code points for glyphs to be
   constructed in the above manner is composed of glyphs that normally have no
-  overlapping components. The list is located in the ufo.pxi source file with
-  the character representations for these code points shown below.
+  overlapping components. The list is located in the core.pxi source file
+  with the character representations for these code points shown below.
 
   The code points from the default code point list can be shown by running the
   vfb2ufo3.show_default_optimize_code_points() function. The code points will
@@ -350,19 +358,17 @@ Greek Mono- and Polytonic
 
 Features options
 Font groups can be added to the features.fea file on export by setting
-features_import_groups to True. The font's features are neither formatted
-nor checked for correctness. Users are responsible for moving referenced
-feature files from include() statements to the chosen output directory. Also
-see KERN FEATURE OPTIONS and MARK FEATURE OPTIONS below for kern and mark
-feature options.
+features_import_groups to True (if afdko_parts is enabled, this will also
+be enabled). The font's features are neither formatted nor checked for
+correctness. Users are responsible for moving referenced feature files from
+include() statements to the chosen output directory. Also see KERN FEATURE
+OPTIONS and MARK FEATURE OPTIONS below for kern and mark feature options.
 
 Hint options
 If enabled, the glyph_hints option converts hints on export (glyph links are
 converted to hints). By default, hints will be created following the UFO3
 public.postscript.hints specification. The glyphs_hints_afdko_v1 and
-glyphs_hints_afdko_v2 options enables hints compatible with MakeOTF. SHA512
-provides the hashing algorithm for computing the glyph hint ids according to
-the UFO3 PostScript hint specification.
+glyphs_hints_afdko_v2 options enables hints compatible with MakeOTF.
 
 glyphs_hints_vertical_only ignored horizontal hints/links
 
@@ -442,27 +448,27 @@ _public.kern2.A: A' AE Agrave Aacute Acircumflex Atilde Adieresis Aring...
 Final output (UFO groups.plist):
 <key>public.kern1.A</key>
 <array>
-	<string>A</string>
-	<string>Agrave</string>
-	<string>Aacute</string>
-	<string>Acircumflex</string>
-	<string>Atilde</string>
-	<string>Adieresis</string>
-	<string>Aring</string>
-	...
+  <string>A</string>
+  <string>Agrave</string>
+  <string>Aacute</string>
+  <string>Acircumflex</string>
+  <string>Atilde</string>
+  <string>Adieresis</string>
+  <string>Aring</string>
+  ...
 </array>
 
 <key>public.kern2.A</key>
 <array>
-	<string>A</string>
-	<string>AE</string>
-	<string>Agrave</string>
-	<string>Aacute</string>
-	<string>Acircumflex</string>
-	<string>Atilde</string>
-	<string>Adieresis</string>
-	<string>Aring</string>
-	...
+  <string>A</string>
+  <string>AE</string>
+  <string>Agrave</string>
+  <string>Aacute</string>
+  <string>Acircumflex</string>
+  <string>Atilde</string>
+  <string>Adieresis</string>
+  <string>Aring</string>
+  ...
 </array>
 
 
@@ -491,6 +497,8 @@ There are several explicit keyword options to enable specific MakeOTF switches.
 For those not available via a keyword option, they should be defined as a list
 of strings and passed to the afdko_makeotf_args option.
 
+Note: afdko for Python 2.7 is no longer developed.
+
 psautohint options
 psautohint can be utilized for generating glyph hints after UFO generation.
 Commands to run psautohint for each generated instance separately or all
@@ -498,6 +506,8 @@ instances as a batch using the options psautohint_cmd and
 psautohint_batch_cmd, respectively. The default options are -d (write
 decimal (float) hint coordinates) and -w (write hints directly to the .glif
 lib for each glyph).
+
+Note: psautohint for Python 2.7 is no longer developed.
 
 UFOZ options
 UFO instances can be written as a .ufoz archive. If you are planning on any
@@ -534,10 +544,10 @@ Test (~3200 glyphs @ 10,000 UPM -> 1,000 UPM), <10 sec
 flc_path = <path to .flc file>
 
 vfb2ufo3.write_ufo(
-	glyphs_decompose=True,
-	glyphs_remove_overlaps=True,
-	groups_flc_path=flc_path,
-	)
+  glyphs_decompose=True,
+  glyphs_remove_overlaps=True,
+  groups_flc_path=flc_path,
+  )
 
 
 Test (~2900 glyphs @ 10,000 UPM -> 1,000 UPM), ≈9 sec
@@ -545,19 +555,19 @@ Test (~2900 glyphs @ 10,000 UPM -> 1,000 UPM), ≈9 sec
 
 flc_path = <path to .flc file>
 glyphs_omit_list = [
-	<glyph names to be omitted go here>
-	]
+  <glyph names to be omitted go here>
+  ]
 glyphs_omit_suffixes_list = [
-	<glyph name suffixes to be omitted go here>
-	]
+  <glyph name suffixes to be omitted go here>
+  ]
 
 vfb2ufo3.write_ufo(
-	glyphs_decompose=True,
-	glyphs_remove_overlaps=True,
-	glyphs_omit_list=glyphs_omit_list,
-	glyphs_omit_suffixes_list=glyphs_omit_suffixes_list,
-	groups_flc_path=flc_path,
-	)
+  glyphs_decompose=True,
+  glyphs_remove_overlaps=True,
+  glyphs_omit_list=glyphs_omit_list,
+  glyphs_omit_suffixes_list=glyphs_omit_suffixes_list,
+  groups_flc_path=flc_path,
+  )
 
 
 Test (~2900 glyphs @ 10,000 UPM -> 1,000 UPM), ≈7 sec
@@ -565,23 +575,23 @@ Test (~2900 glyphs @ 10,000 UPM -> 1,000 UPM), ≈7 sec
 
 flc_path = <path to .flc file>
 glyphs_optimize_names = [
-	<glyph names with no overlapping components go here>
-	]
+  <glyph names with no overlapping components go here>
+  ]
 glyphs_omit_list = [
-	<glyph names to be omitted go here>
-	]
+  <glyph names to be omitted go here>
+  ]
 glyphs_omit_suffixes_list = [
-	<glyph name suffixes to be omitted go here>
-	]
+  <glyph name suffixes to be omitted go here>
+  ]
 
 vfb2ufo3.write_ufo(
-	glyphs_decompose=True,
-	glyphs_remove_overlaps=True,
-	glyphs_optimize_names=glyphs_optimize_names,
-	glyphs_omit_list=glyphs_omit_list,
-	glyphs_omit_suffixes_list=glyphs_omit_suffixes_list,
-	groups_flc_path=flc_path,
-	)
+  glyphs_decompose=True,
+  glyphs_remove_overlaps=True,
+  glyphs_optimize_names=glyphs_optimize_names,
+  glyphs_omit_list=glyphs_omit_list,
+  glyphs_omit_suffixes_list=glyphs_omit_suffixes_list,
+  groups_flc_path=flc_path,
+  )
 
 
 Test (~2900 glyphs @ 10,000 UPM -> 1,000 UPM), ≈4 sec
@@ -589,9 +599,9 @@ Test (~2900 glyphs @ 10,000 UPM -> 1,000 UPM), ≈4 sec
 
 flc_path = <path to .flc file>
 vfb2ufo3.write_ufo(
-	glyphs_decompose=True,
-	groups_flc_path=flc_path,
-	)
+  glyphs_decompose=True,
+  groups_flc_path=flc_path,
+  )
 
 
 Test (~2900 glyphs @ 10,000 UPM -> 1,000 UPM), ≈3-4 sec
@@ -599,18 +609,18 @@ Test (~2900 glyphs @ 10,000 UPM -> 1,000 UPM), ≈3-4 sec
 
 flc_path = <path to .flc file>
 glyphs_omit_list = [
-	<glyph names to be omitted go here>
-	]
+  <glyph names to be omitted go here>
+  ]
 glyphs_omit_suffixes_list = [
-	<glyph name suffixes to be omitted go here>
-	]
+  <glyph name suffixes to be omitted go here>
+  ]
 
 vfb2ufo3.write_ufo(
-	glyphs_decompose=True,
-	glyphs_omit_list=glyphs_omit_list,
-	glyphs_omit_suffixes_list=glyphs_omit_suffixes_list,
-	groups_flc_path=flc_path,
-	)
+  glyphs_decompose=True,
+  glyphs_omit_list=glyphs_omit_list,
+  glyphs_omit_suffixes_list=glyphs_omit_suffixes_list,
+  groups_flc_path=flc_path,
+  )
 
 
 Test (~3200 glyphs @ 10,000 UPM -> 1,000 UPM), ≈3 sec
@@ -619,8 +629,8 @@ Test (~3200 glyphs @ 10,000 UPM -> 1,000 UPM), ≈3 sec
 flc_path = <path to .flc file>
 
 vfb2ufo3.write_ufo(
-	groups_flc_path=flc_path,
-	)
+  groups_flc_path=flc_path,
+  )
 
 
 Test (~3200 glyphs @ 10,000 UPM -> 1,000 UPM), <1.5 sec
@@ -629,9 +639,9 @@ Test (~3200 glyphs @ 10,000 UPM -> 1,000 UPM), <1.5 sec
 flc_path = <path to .flc file>
 
 vfb2ufo3.write_ufo(
-	groups_flc_path=flc_path,
-	ufoz=True,
-	)
+  groups_flc_path=flc_path,
+  ufoz=True,
+  )
 
 
 Test (~3200 glyphs @ 10,000 UPM -> 1,000 UPM), <1.5 sec
@@ -640,10 +650,10 @@ Test (~3200 glyphs @ 10,000 UPM -> 1,000 UPM), <1.5 sec
 flc_path = <path to .flc file>
 
 vfb2ufo3.write_ufo(
-	groups_flc_path=flc_path,
-	ufoz=True,
-	ufoz_compress=False,
-	)
+  groups_flc_path=flc_path,
+  ufoz=True,
+  ufoz_compress=False,
+  )
 
 
 Notes
@@ -657,9 +667,22 @@ Author
 Jameson R Spires
 
 Licenses
-Source files are covered under the MIT License.
+Source files are covered under the MIT License. SHA512 hash algorithm is a
+modification of an implementation from Olivier Gay's SHA2 library, which is
+covered under a BSD License.
 
 Version history
+version 0.8.1
+added glyphs_optimize_makeotf option for use with makeOTF
+added glyphs_decompose_names and glyphs_remove_overlap_names options
+correction to SHA512 hint ID hashing
+correction to font groups parsing when not using .flc or groups.plist group
+files
+correction to features.fea copy
+UFO glyph order derivation from encoding now checks for and includes glyphs
+missing from FontLab .enc file
+removed option to save VFB instances/copies
+
 version 0.8.0
 a copy of the original font is no longer created, decreasing master processing
 overhead by a considerable amount
