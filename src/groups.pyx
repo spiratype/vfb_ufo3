@@ -35,266 +35,246 @@ include 'includes/ordered_dict.pxi'
 include 'includes/plist.pxi'
 
 def groups(ufo):
-	start = time.clock()
-	_groups(ufo)
-	ufo.total_times.groups = time.clock() - start
+  start = time.clock()
+  _groups(ufo)
+  ufo.total_times.groups = time.clock() - start
 
 def _groups(ufo):
 
-	ufo.groups.opentype = {}
-	ufo.groups.kerning = {}
-	ufo.kern.firsts_by_key_glyph = {}
-	ufo.kern.seconds_by_key_glyph = {}
-	ufo.kern.key_glyph_from_group = {}
-	ufo.kern.glyphs_len = {}
+  ufo.groups.opentype = {}
+  ufo.groups.kerning = {}
+  ufo.kern.firsts_by_key_glyph = {}
+  ufo.kern.seconds_by_key_glyph = {}
+  ufo.kern.key_glyph_from_group = {}
+  ufo.kern.glyphs_len = {}
 
-	master = fl[ufo.master.ifont]
-	if ufo.opts.groups_flc_path is not None:
-		import_flc(ufo, master)
-	elif ufo.opts.groups_plist_path is not None:
-		import_groups_plist(ufo, master)
-	else:
-		rename_groups(ufo, master)
+  master = fl[ufo.master.ifont]
+  if ufo.opts.groups_flc_path is not None:
+    import_flc_groups(ufo, master)
+  elif ufo.opts.groups_plist_path is not None:
+    import_plist_groups(ufo, master)
+  else:
+    import_groups(ufo, master)
 
-	finish_groups(ufo)
+  finish_groups(ufo)
 
-	if ufo.opts.groups_export_flc:
-		write_flc(ufo)
+  if ufo.opts.groups_export_flc:
+    write_flc(ufo)
 
 def finish_groups(ufo):
 
-	if ufo.groups.opentype or ufo.groups.kerning:
-		ufo.groups.all = ordered_dict()
+  if ufo.groups.opentype or ufo.groups.kerning:
+    ufo.groups.all = ordered_dict()
 
-	if ufo.groups.opentype:
-		for name, glyphs in sorted(items(ufo.groups.opentype)):
-			ufo.groups.all[name] = glyphs
+  if ufo.groups.opentype:
+    for name, glyphs in sorted(items(ufo.groups.opentype)):
+      ufo.groups.all[name] = glyphs
 
-	if ufo.groups.kerning:
-		for name, (second, glyphs) in sorted(items(ufo.groups.kerning)):
-			ufo.groups.all[name] = glyphs
-			ufo.kern.glyphs_len[name] = len(glyphs)
-			if second:
-				ufo.kern.seconds.update(glyphs)
-			else:
-				ufo.kern.firsts.update(glyphs)
+  if ufo.groups.kerning:
+    for name, (second, glyphs) in sorted(items(ufo.groups.kerning)):
+      ufo.groups.all[name] = glyphs
+      ufo.kern.glyphs_len[name] = len(glyphs)
+      if second:
+        ufo.kern.seconds.update(glyphs)
+      else:
+        ufo.kern.firsts.update(glyphs)
 
+def import_groups(ufo, font):
 
-	if ufo.opts.vfb_save:
-		update_groups(ufo)
+  print(b' Processing font groups..')
 
+  ufo.groups.opentype, kern_groups, key_glyphs = parse_groups(font)
+  firsts, seconds = parse_kerns(ufo, font)
 
-def rename_groups(ufo, font):
+  no_kerning = {}
+  for name, glyphs in items(kern_groups):
+    lc_name = name.lower()
+    key_glyph = key_glyphs[name]
+    first = (
+      key_glyph in firsts or PREFIX_1 in lc_name or
+      'mmk_l' in lc_name or lc_name.endswith('_l')
+      )
+    second = (
+      key_glyph in seconds or PREFIX_2 in lc_name or
+      'mmk_r' in lc_name or lc_name.endswith('_r')
+      )
+    if first:
+      ufo.groups.kerning[name] = (0, glyphs)
+      ufo.kern.firsts_by_key_glyph[key_glyph] = name
+      ufo.kern.key_glyph_from_group[name] = key_glyph
+    if second:
+      ufo.groups.kerning[name] = (1, glyphs)
+      ufo.kern.seconds_by_key_glyph[key_glyph] = name
+      ufo.kern.key_glyph_from_group[name] = key_glyph
+    if not first and not second:
+      no_kerning[name] = key_glyph
 
-	print(b' Processing font groups..')
-
-	font_groups, firsts, seconds = groups_from_kern_feature(font)
-	firsts_seconds = firsts | seconds
-
-	no_kerning = {}
-	for i, (name, glyphs) in items(font_groups):
-		if not name.startswith('_'):
-			ufo.groups.opentype[name] = glyphs.split()
-			continue
-		name = name[1:]
-		key_glyph, no_key_glyph = group_key_glyph(glyphs, ("'" in glyphs))
-		if no_key_glyph:
-			KeyGlyphWarning(name, key_glyph)
-		glyphs = glyphs.replace("'", '').split()
-		if name in firsts_seconds:
-			if name in firsts:
-				name = PREFIX_1 + key_glyph
-				ufo.groups.kerning[name] = (0, glyphs)
-				ufo.kern.firsts_by_key_glyph[key_glyph] = name
-				ufo.kern.key_glyph_from_group[name] = key_glyph
-			if name in seconds:
-				name = PREFIX_2 + key_glyph
-				ufo.groups.kerning[name] = (1, glyphs)
-				ufo.kern.seconds_by_key_glyph[key_glyph] = name
-				ufo.kern.key_glyph_from_group[name] = key_glyph
-		else:
-			if not ufo.opts.groups_ignore_no_kerning:
-				no_kerning[i] = key_glyph
-				font_groups[i] = (name, glyphs)
-
-		if no_kerning:
-			ufo.groups.no_kerning = set(no_kerning.keys())
-			fl.BeginProgress(b'Processing groups for master.vfb...', len(no_kerning))
-			for i, key_glyph in items(no_kerning):
-				if not i % 4:
-					fl.TickProgress(i)
-				name, glyphs = font_groups[i]
-				lc_name = name.lower()
-				first = PREFIX_1 in lc_name or 'mmk_l' in lc_name or lc_name.endswith('_l')
-				second = PREFIX_2 in lc_name or 'mmk_r' in lc_name or lc_name.endswith('_r')
-				if not first and not second:
-					first, second = font.GetClassLeft(i), font.GetClassRight(i)
-					if not first and not second:
-						ClassMarkerWarning(name)
-				if first:
-					name = PREFIX_1 + key_glyph
-					ufo.groups.kerning[name] = (0, glyphs)
-					ufo.kern.firsts_by_key_glyph[key_glyph] = name
-					ufo.kern.key_glyph_from_group[name] = key_glyph
-				if second:
-					name = PREFIX_2 + key_glyph
-					ufo.groups.kerning[name] = (1, glyphs)
-					ufo.kern.seconds_by_key_glyph[key_glyph] = name
-					ufo.kern.key_glyph_from_group[name] = key_glyph
-			fl.EndProgress()
+  if no_kerning and not ufo.opts.groups_ignore_no_kerning:
+    parse_no_kerns(ufo, font, no_kerning, key_glyphs)
 
 
-def groups_from_kern_feature(font):
+def parse_groups(font):
 
-	font_groups = {i: group.decode('cp1252').split(': ')
-		for i, group in enumerate(font.classes)
-		if not group.startswith(('_', '.mtrx'))}
+  opentype_groups, kern_groups, key_glyphs = {}, {}, {}
+  for group in font.classes:
+    if group.startswith(b'.mtrx'):
+      continue
+    name, glyphs = group.decode('cp1252').split(': ')
+    if name.startswith('_'):
+      name = name[1:]
+      key_glyph, no_key_glyph = group_key_glyph(glyphs, ("'" in glyphs))
+      if no_key_glyph:
+        KeyGlyphWarning(name, key_glyph)
+        key_glyph = glyphs[0]
+      kern_groups[name] = glyphs.replace("'", '').split()
+      key_glyphs[name] = key_glyph
+    else:
+      opentype_groups[name] = glyphs.split()
 
-	firsts, seconds = set(), set()
-	kern_feature = font.MakeKernFeature().value.decode('cp1252').replace('enum ', '')
-	kern_feature_groups = [line.split()[1:3]
-		for line in kern_feature.splitlines()
-		if '@' in line]
-	for first, second in kern_feature_groups:
-		if first.startswith('@'):
-			firsts.add(first[2:])
-		if second.startswith('@'):
-			seconds.add(second[2:])
-
-	return font_groups, firsts, seconds
-
-
-def import_flc(ufo, font):
-
-	print(f' Importing groups from {os_path_basename(ufo.paths.flc)}..')
-
-	flc_file = read_file(ufo.paths.flc).decode('cp1252')
-	flc_groups = parse_flc(flc_file)
-
-	for name, (flag, glyphs) in items(flc_groups):
-		if flag is None:
-			ufo.groups.opentype[name] = glyphs.split()
-			continue
-		key_glyph, no_key_glyph = group_key_glyph(glyphs, ("'" in glyphs))
-		if no_key_glyph:
-			KeyGlyphWarning(name, key_glyph)
-			glyphs = glyphs.split()
-		else:
-			glyphs = glyphs.replace("'", '').split()
-		if 'L' in flag:
-			name = PREFIX_1 + key_glyph
-			ufo.groups.kerning[name] = (0, glyphs)
-			ufo.kern.firsts_by_key_glyph[key_glyph] = name
-			ufo.kern.key_glyph_from_group[name] = key_glyph
-		if 'R' in flag:
-			name = PREFIX_2 + key_glyph
-			ufo.groups.kerning[name] = (1, glyphs)
-			ufo.kern.seconds_by_key_glyph[key_glyph] = name
-			ufo.kern.key_glyph_from_group[name] = key_glyph
-
-	ufo.groups.imported = 1
+  return opentype_groups, kern_groups, key_glyphs
 
 
-def import_groups_plist(ufo, font):
+def parse_kerns(ufo, font):
 
-	print(f' Importing groups from {os_path_basename(ufo.paths.groups_plist)}..')
+  firsts, seconds = set(), set()
+  for i, glyph in enumerate(font.glyphs):
+    if glyph.kerning:
+      firsts.add(ufo.glyph_names[i])
+      for kern in glyph.kerning:
+        seconds.add(ufo.glyph_names[kern.key])
 
-	plist = read_file(ufo.paths.groups_plist).decode('utf_8')
-
-	if '@MMK' in plist:
-		for (ver1, ver2) in (('@MMK_L_', PREFIX_1), ('@MMK_R_', PREFIX_2)):
-			plist = plist.replace(ver1, ver2)
-
-	plist_groups = parse_plist(plist)
-
-	for name, glyphs in items(plist_groups):
-		if 'public.kern' not in name:
-			ufo.groups.opentype[name] = glyphs
-			continue
-		key_glyph = name[13:]
-		if PREFIX_1 in name:
-			name = PREFIX_1 + key_glyph
-			ufo.groups.kerning[name] = (0, glyphs)
-			ufo.kern.firsts_by_key_glyph[key_glyph] = name
-			ufo.kern.key_glyph_from_group[name] = key_glyph
-		else:
-			name = PREFIX_2 + key_glyph
-			ufo.groups.kerning[name] = (1, glyphs)
-			ufo.kern.seconds_by_key_glyph[key_glyph] = name
-			ufo.kern.key_glyph_from_group[name] = key_glyph
-
-	ufo.groups.imported = 1
+  return firsts, seconds
 
 
-def update_groups(ufo, font):
+def parse_no_kerns(ufo, font, no_kerning, key_glyphs):
 
-	font = fl[ufo.master.ifont]
+  print(b' Processing groups with no kerning for master.vfb...')
 
-	if ufo.groups.imported:
-		ufo.opts.groups_ignore_no_kerning = 0
+  ufo.groups.no_kerning = no_kerning = set(no_kerning.keys())
+  for i, group in enumerate(font.classes):
+    if not group.startswith(b'_'):
+      continue
+    name, glyphs = group[1:].decode('cp1252').replace("'", '').split(': ')
+    if name not in no_kerning:
+      continue
+    glyphs = glyphs.split()
+    key_glyph = key_glyphs[name]
+    first, second = font.GetClassLeft(i), font.GetClassRight(i)
+    if not first and not second:
+      ClassMarkerWarning(name)
+      continue
+    if first:
+      name = PREFIX_1 + key_glyph
+      ufo.groups.kerning[name] = (0, glyphs)
+      ufo.kern.firsts_by_key_glyph[key_glyph] = name
+      ufo.kern.key_glyph_from_group[name] = key_glyph
+    if second:
+      name = PREFIX_2 + key_glyph
+      ufo.groups.kerning[name] = (1, glyphs)
+      ufo.kern.seconds_by_key_glyph[key_glyph] = name
+      ufo.kern.key_glyph_from_group[name] = key_glyph
 
-	font_classes = []
-	for name, glyphs in sorted(items(ufo.groups.opentype)):
-		font_classes.append(f'{name}: {" ".join(glyphs)}')
-	for name, (_, glyphs) in sorted(items(ufo.groups.kerning)):
-		key_glyph = ufo.kern.key_glyph_from_group[name]
-		font_classes.append(f'_{name}: {insert_key_glyph(glyphs, key_glyph)}')
 
-	font.classes = '\n'.join(font_classes).encode('cp1252').splitlines()
-	fl.BeginProgress(b'Updating groups for master.vfb...', len(font_classes))
-	for i, group in enumerate(font.classes):
-		if not i % 4:
-			fl.TickProgress(i)
-		if ufo.opts.groups_ignore_no_kerning:
-			if i in ufo.groups.no_kerning:
-				continue
-		if group.startswith(b'_'):
-			if b'.kern1.' in group:
-				font.SetClassFlags(i, 1, 0)
-			elif b'.kern2.' in group:
-				font.SetClassFlags(i, 0, 1)
-	fl.EndProgress()
+def import_flc_groups(ufo, font):
 
+  print(f' Importing groups from {os_path_basename(ufo.paths.flc)}..')
+
+  flc_file = read_file(ufo.paths.flc).decode('cp1252')
+  flc_groups = parse_flc(flc_file)
+
+  for name, (flag, glyphs) in items(flc_groups):
+    if flag is None:
+      ufo.groups.opentype[name] = glyphs.split()
+      continue
+    key_glyph, no_key_glyph = group_key_glyph(glyphs, ("'" in glyphs))
+    if no_key_glyph:
+      KeyGlyphWarning(name, key_glyph)
+      glyphs = glyphs.split()
+    else:
+      glyphs = glyphs.replace("'", '').split()
+    if 'L' in flag:
+      name = PREFIX_1 + key_glyph
+      ufo.groups.kerning[name] = (0, glyphs)
+      ufo.kern.firsts_by_key_glyph[key_glyph] = name
+      ufo.kern.key_glyph_from_group[name] = key_glyph
+    if 'R' in flag:
+      name = PREFIX_2 + key_glyph
+      ufo.groups.kerning[name] = (1, glyphs)
+      ufo.kern.seconds_by_key_glyph[key_glyph] = name
+      ufo.kern.key_glyph_from_group[name] = key_glyph
+
+  ufo.groups.imported = 1
+
+
+def import_plist_groups(ufo, font):
+
+  print(f' Importing groups from {os_path_basename(ufo.paths.groups_plist)}..')
+
+  plist = read_file(ufo.paths.groups_plist).decode('utf_8')
+
+  if '@MMK' in plist:
+    for (ver1, ver2) in (('@MMK_L_', PREFIX_1), ('@MMK_R_', PREFIX_2)):
+      plist = plist.replace(ver1, ver2)
+
+  plist_groups = parse_plist(plist)
+
+  for name, glyphs in items(plist_groups):
+    if 'public.kern' not in name:
+      ufo.groups.opentype[name] = glyphs
+      continue
+    key_glyph = name[13:]
+    if PREFIX_1 in name:
+      name = PREFIX_1 + key_glyph
+      ufo.groups.kerning[name] = (0, glyphs)
+      ufo.kern.firsts_by_key_glyph[key_glyph] = name
+      ufo.kern.key_glyph_from_group[name] = key_glyph
+    else:
+      name = PREFIX_2 + key_glyph
+      ufo.groups.kerning[name] = (1, glyphs)
+      ufo.kern.seconds_by_key_glyph[key_glyph] = name
+      ufo.kern.key_glyph_from_group[name] = key_glyph
+
+  ufo.groups.imported = 1
 
 def write_flc(ufo):
 
-	if ufo.opts.groups_export_flc_path:
-		filename = os_path_basename(ufo.opts.groups_export_flc_path)
-		flc_export_path = ufo.opts.groups_export_flc_path
-	else:
-		version = ufo.master.version.replace('.', '_')
-		if ufo.master.font_style in (1, 33):
-			filename = f'{ufo.master.family_name}_Italic_{version}.flc'
-		else:
-			filename = f'{ufo.master.family_name}_{version}.flc'
-		flc_export_path = os_path_join(ufo.paths.out, filename)
+  if ufo.opts.groups_export_flc_path:
+    filename = os_path_basename(ufo.opts.groups_export_flc_path)
+    flc_export_path = ufo.opts.groups_export_flc_path
+  else:
+    version = ufo.master.version.replace('.', '_')
+    if ufo.master.font_style in (1, 33):
+      filename = f'{ufo.master.family_name}_Italic_{version}.flc'
+    else:
+      filename = f'{ufo.master.family_name}_{version}.flc'
+    flc_export_path = os_path_join(ufo.paths.out, filename)
 
-	if os_path_isfile(flc_export_path):
-		if ufo.opts.force_overwrite:
-			remove_path(flc_export_path, force=1)
-		else:
-			raise RuntimeError(b'%s already exists.\n'
-				b'Please rename or move existing class file' % flc_export_path)
+  if os_path_isfile(flc_export_path):
+    if ufo.opts.force_overwrite:
+      remove_path(flc_export_path, force=1)
+    else:
+      raise RuntimeError(b'%s already exists.\n'
+        b'Please rename or move existing class file' % flc_export_path)
 
-	print(f' Writing {filename}..')
+  print(f' Writing {filename}..')
 
-	flc_file = [f'{FLC_HEADER}\n']
-	flc_end_marker = f'{FLC_END_MARKER}\n'
-	for name, glyphs in sorted(items(ufo.groups.opentype)):
-		flc_file += [
-			f'{FLC_GROUP_MARKER} {name}',
-			f'{FLC_GLYPHS_MARKER} {" ".join(glyphs)}',
-			flc_end_marker,
-			]
-	for name, (second, glyphs) in sorted(items(ufo.groups.kerning)):
-		key_glyph = ufo.kern.key_glyph_from_group[name]
-		glyphs = insert_key_glyph(glyphs, key_glyph)
-		group_marker = FLC_RIGHT_KERNING_MARKER if second else FLC_LEFT_KERNING_MARKER
-		flc_file += [
-			f'{FLC_GROUP_MARKER} _{name}',
-			f'{FLC_GLYPHS_MARKER} {glyphs}',
-			group_marker,
-			flc_end_marker,
-			]
+  flc_file = [f'{FLC_HEADER}\n']
+  flc_end_marker = f'{FLC_END_MARKER}\n'
+  for name, glyphs in sorted(items(ufo.groups.opentype)):
+    flc_file += [
+      f'{FLC_GROUP_MARKER} {name}',
+      f'{FLC_GLYPHS_MARKER} {" ".join(glyphs)}',
+      flc_end_marker,
+      ]
+  for name, (second, glyphs) in sorted(items(ufo.groups.kerning)):
+    key_glyph = ufo.kern.key_glyph_from_group[name]
+    glyphs = insert_key_glyph(glyphs, key_glyph)
+    group_marker = FLC_RIGHT_KERNING_MARKER if second else FLC_LEFT_KERNING_MARKER
+    flc_file += [
+      f'{FLC_GROUP_MARKER} _{name}',
+      f'{FLC_GLYPHS_MARKER} {glyphs}',
+      group_marker,
+      flc_end_marker,
+      ]
 
-	write_file(flc_export_path, '\n'.join(flc_file))
+  write_file(flc_export_path, '\n'.join(flc_file))

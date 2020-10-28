@@ -14,11 +14,10 @@ include 'includes/future.pxi'
 
 cimport cython
 cimport fenv
-from cython.operator cimport postincrement
+from cython.operator cimport postincrement, preincrement
 from vector cimport vector
 from libcpp.string cimport string
-from libcpp.unordered_set cimport unordered_set
-from libcpp.utility cimport move
+from libcpp.utility cimport move, pair
 
 include 'includes/archive.pxi'
 
@@ -27,410 +26,369 @@ import time
 from FL import fl
 
 def glifs(ufo):
-	start = time.clock()
-	_glifs(ufo)
-	ufo.instance_times.glifs = time.clock() - start
+  start = time.clock()
+  _glifs(ufo)
+  ufo.instance_times.glifs = time.clock() - start
 
 def _glifs(ufo):
 
-	'''
-	build and write .glif files
+  '''
+  build and write .glif files
 
-	for glyph decomposition and overlap removal, UFO creation times can be
-	reduced considerably by checking the font for glyphs normally consisting of
-	components which do not overlap and build the contours for these components
+  for glyph decomposition and overlap removal, UFO creation times can be
+  reduced considerably by checking the font for glyphs normally consisting of
+  components which do not overlap and build the contours for these components
 
-	prior to building the contours for the selected components, the overlaps are
-	removed
+  prior to building the contours for the selected components, the overlaps are
+  removed
 
-	the glyphs are selected based on Unicode code point and a user supplied glyph
-	name list; the default list of these code points is located in `core.pxi` as
-	`OPTIMIZE_CODE_POINTS`
+  the glyphs are selected based on Unicode code point and a user supplied glyph
+  name list; the default list of these code points is located in `core.pxi` as
+  `OPTIMIZE_CODE_POINTS`
 
-	during the build process, the components will remain in component-form
-	and the cached contour will be substituted in its place in the outline
-	element of the .glif file, and shifted and/or scaled (if necessary) to match
-	the component being replaced
-	'''
+  during the build process, the components will remain in component-form
+  and the cached contour will be substituted in its place in the outline
+  element of the .glif file, and shifted and/or scaled (if necessary) to match
+  the component being replaced
+  '''
 
-	decompose = ufo.opts.glyphs_decompose
-	remove_overlaps = ufo.opts.glyphs_remove_overlaps
-	optimize_code_points = ufo.code_points.optimize
-	base_glyphs = ufo.glyph_sets.bases
-	optimized_glyphs = ufo.glyph_sets.optimized
-	omit_glyphs = ufo.glyph_sets.omit
+  font = fl[ufo.instance.ifont]
 
-	font = fl[ufo.instance.ifont]
+  base_glyphs = ufo.glyph_sets.bases
+  instance_glifs_path = ufo.paths.instance.glyphs
+  path_sep = '/' if ufo.opts.ufoz else '\\'
 
-	instance_glifs_path = ufo.paths.instance.glyphs
-	path_sep = '/' if ufo.opts.ufoz else '\\'
+  cdef:
+    size_t i = 0
+    size_t len_contours = 0
+    size_t len_points = 0
+    cpp_ufo ufo_lib
+    cpp_glif glif
+    string instance_ufoz_path = ufo.paths.instance.ufoz.encode('utf_8')
+    float ufo_scale = ufo.scale if ufo.scale is not None else 0.0
+    bytes name
+    string glif_path
+    long code_point = 0
+    int mark = 0
+    int width = 0
+    bint base = 0
+    bint omit = 0
+    bint has_hints = 0
+    bint build_hints = 0
+    bint vertical_hints_only = ufo.opts.glyphs_hints_vertical_only
+    bint build_hints_public = ufo.opts.glyphs_hints
+    bint build_hints_afdko_v1 = ufo.opts.glyphs_hints_afdko_v1
+    bint build_hints_afdko_v2 = ufo.opts.glyphs_hints_afdko_v2
+    bint ufoz = ufo.opts.ufoz
 
-	cdef:
-		size_t i = 0
-		size_t len_points = 0
-		size_t len_anchors = 0
-		size_t len_components = 0
-		size_t len_vhints = 0
-		size_t len_hhints = 0
-		size_t len_hint_replacements = 0
-		cpp_ufo ufo_lib
-		cpp_code_points* code_points
-		cpp_anchors* anchors
-		cpp_components* components
-		cpp_contours* contours
-		cpp_hints* vhints
-		cpp_hints* hhints
-		cpp_hint_replacements* hint_replacements
-		string instance_ufoz_path = ufo.paths.instance.ufoz.encode('utf_8')
-		float ufo_scale = ufo.scale if ufo.scale is not None else 0.0
-		bytes name
-		string glif_path
-		long code_point = 0
-		int mark = 0
-		int width = 0
-		bint base = 0
-		bint omit = 0
-		bint ufoz = ufo.opts.ufoz
-		bint ufoz_compress = ufo.opts.ufoz_compress
-		bint optimize = ufo.opts.glyphs_optimize
-		bint build_hints = ufo.opts.glyphs_hints
-		bint build_hints_afdko_v1 = ufo.opts.glyphs_hints_afdko_v1
-		bint build_hints_afdko_v2 = ufo.opts.glyphs_hints_afdko_v2
-		bint vertical_hints_only = ufo.opts.glyphs_hints_vertical_only
+  fenv.set_nearest()
 
-	fenv.set_nearest()
+  if build_hints_public or build_hints_afdko_v1 or build_hints_afdko_v2:
+    build_hints = 1
+    if build_hints_afdko_v1:
+      ufo_lib.hint_type = 1
+    elif build_hints_afdko_v2:
+      ufo_lib.hint_type = 2
+    else:
+      ufo_lib.hint_type = 3
 
-	if build_hints or build_hints_afdko_v1 or build_hints_afdko_v2:
-		if build_hints_afdko_v1:
-			ufo_lib.hint_type = 1
-		elif build_hints_afdko_v2:
-			ufo_lib.hint_type = 2
-		else:
-			ufo_lib.hint_type = 3
-		build_hints = 1
+  ufo_lib.reserve(len(font.glyphs))
+  ufo_lib.optimize = <bint>ufo.opts.glyphs_optimize
+  ufo_lib.ufoz = ufoz
 
-	ufo_lib.reserve(len(font.glyphs), ufo.len_code_points, ufo.len_anchors, ufo.len_components, ufo.len_contours)
-	if build_hints:
-		ufo_lib.hints_reserve(ufo.len_vhints, ufo.len_hhints, ufo.len_hint_replacements)
+  prep_font(ufo, font)
 
-	if optimize and remove_overlaps:
-		for i, glyph in enumerate(font.glyphs):
-			if i in base_glyphs:
-				glyph.RemoveOverlap()
-			if glyph.unicode not in optimize_code_points and i not in optimized_glyphs:
-				if glyph.components:
-					glyph.Decompose()
-				if i not in base_glyphs:
-					glyph.RemoveOverlap()
+  for i, m_glif in sorted(items(ufo.glifs)):
+    glif_path = f'{instance_glifs_path}{path_sep}{m_glif.glif_name}'.encode('utf_8')
+    glyph = font[i]
+    width = max(glyph.width * ufo_scale, 0)
+    len_contours = 0
+    for node in glyph.nodes:
+      if node.type == 17:
+        postincrement(len_contours)
+    len_points = len(glyph.Layer(0))
 
-	elif decompose and remove_overlaps:
-		for i, glyph in enumerate(font.glyphs):
-			if glyph.components:
-				glyph.Decompose()
-			if i not in base_glyphs:
-				glyph.RemoveOverlap()
+    glif = cpp_glif(m_glif.name, glif_path, m_glif.mark, width, i, len_points, m_glif.omit, m_glif.base)
 
-	elif decompose:
-		for glyph in font.glyphs:
-			if glyph.components:
-				glyph.Decompose()
+    if m_glif.code_points:
+      glif.code_points = m_glif.code_points
 
-	elif remove_overlaps:
-		for i, glyph in enumerate(font.glyphs):
-			if i not in base_glyphs:
-				glyph.RemoveOverlap()
+    if glyph.anchors:
+      glif_anchors(glyph.anchors, glif.anchors)
 
-	for i, (name, glif_name, mark, glyph_code_points, omit) in items(ufo.glifs):
-		base = i in base_glyphs
-		omit = i in omit_glyphs
-		glif_path = f'{instance_glifs_path}{path_sep}{glif_name}'.encode('utf_8')
-		glyph = font[i]
-		width = glyph.width * ufo_scale
-		len_code_points = len(glyph_code_points)
-		len_anchors = len(glyph.anchors)
-		len_components = len(glyph.components)
-		len_points = len(glyph.Layer(0))
-		len_vhints = 0
-		len_hhints = 0
-		len_hint_replacements = 0
-		code_points = NULL
-		anchors = NULL
-		components = NULL
-		contours = NULL
-		vhints = NULL
-		hhints = NULL
-		hint_replacements = NULL
+    if glyph.components:
+      glif_components(glyph.components, ufo, glif.components)
 
-		if len_code_points:
-			ufo_lib.code_points[i] = glif_code_points(glyph_code_points)
-			code_points = &ufo_lib.code_points[i]
-		if len_anchors:
-			ufo_lib.anchors[i] = glif_anchors(glyph.anchors)
-			anchors = &ufo_lib.anchors[i]
-		if len_components:
-			ufo_lib.components[i] = glif_components(glyph.components, ufo)
-			components = &ufo_lib.components[i]
-		if len_points and not build_hints:
-			ufo_lib.contours[i] = glif_contours(glyph.nodes)
-			contours = &ufo_lib.contours[i]
-		if build_hints:
-			len_hint_replacements = 0
-			had_replace_table = bool(glyph.replace_table)
-			if vertical_hints_only:
-				glyph.hlinks.clean()
-				glyph.hhints.clean()
-			if glyph.vlinks or glyph.hlinks:
-				convert_links_to_hints(glyph)
-			len_vhints = len(glyph.vhints)
-			len_hhints = len(glyph.hhints)
-			if len_vhints:
-				ufo_lib.vhints[i] = glif_hints(glyph.vhints, 1)
-				vhints = &ufo_lib.vhints[i]
-			if len_hhints:
-				ufo_lib.hhints[i] = glif_hints(glyph.hhints)
-				hhints = &ufo_lib.hhints[i]
-			if had_replace_table:
-				rebuild_replace_table(glyph)
-				len_hint_replacements = len(glyph.replace_table)
-				ufo_lib.hint_replacements[i] = glif_hint_replacements(glyph.replace_table)
-				hint_replacements = &ufo_lib.hint_replacements[i]
-			ufo_lib.contours[i] = glif_contours_hints(glyph.nodes, glyph.replace_table)
-			contours = &ufo_lib.contours[i]
+    if build_hints and (glyph.hhints or glyph.vhints or glyph.hlinks or glyph.vlinks):
+      had_replace_table = bool(glyph.replace_table)
+      prep_glyph_hints(glyph, vertical_hints_only, had_replace_table)
+      if glyph.vhints:
+        glif_hints(glyph.vhints, glif.vhints, 1)
+      if glyph.hhints:
+        glif_hints(glyph.hhints, glif.hhints)
+      if had_replace_table:
+        glif_hint_replacements(glyph.replace_table, glif.hint_replacements)
 
-		ufo_lib.glifs.emplace_back(
-			name,
-			glif_path,
-			code_points,
-			anchors,
-			components,
-			contours,
-			vhints,
-			hhints,
-			hint_replacements,
-			mark,
-			width,
-			i,
-			len_code_points,
-			len_anchors,
-			len_components,
-			len_points,
-			len_vhints,
-			len_hhints,
-			len_hint_replacements,
-			omit,
-			base,
-			)
+    if len_points and has_hints:
+      glif_contours_hints(glyph, glif, ufo_lib, len_contours, len_points)
+    elif len_points:
+      glif_contours(glyph, glif, ufo_lib, len_contours, len_points)
 
-	if ufo_scale:
-		for glif in ufo_lib.glifs:
-			glif.scale(ufo_scale)
+    if ufo_scale:
+      glif.scale(ufo_scale)
 
-	if ufoz:
-		ufo.archive = c_archive(instance_ufoz_path, ufoz_compress)
-		ufo.archive.reserve(ufo_lib.glifs.size() + 7)
-		for glif in ufo_lib.glifs:
-			ufo.archive[glif.path] = glif.build(ufo_lib, optimize, 1)
-	else:
-		write_glifs(ufo_lib, optimize)
+    ufo_lib.glifs.push_back(move(glif))
+
+  if ufoz:
+    ufo.archive = c_archive(instance_ufoz_path, <bint>ufo.opts.ufoz_compress)
+    ufo.archive.reserve(ufo_lib.glifs.size() + 10)
+    for glif in ufo_lib.glifs:
+      ufo.archive[glif.path] = glif.repr(ufo_lib)
+  else:
+    write_glifs(ufo_lib)
 
 def convert_links_to_hints(glyph):
-	fl.TransformGlyph(glyph, 10, b'')
+  fl.TransformGlyph(glyph, 10, b'')
 
 def rebuild_replace_table(glyph):
-	fl.TransformGlyph(glyph, 8, b'')
+  fl.TransformGlyph(glyph, 8, b'')
 
-cdef cpp_code_points glif_code_points(glyph_code_points):
+def prep_glyph_hints(glyph, vertical_hints_only, had_replace_table):
+  if vertical_hints_only:
+    glyph.hlinks.clean()
+    glyph.hhints.clean()
+  if glyph.vlinks or glyph.hlinks:
+    convert_links_to_hints(glyph)
+  if had_replace_table:
+    rebuild_replace_table(glyph)
 
-	cdef cpp_code_points code_points
+def prep_font(ufo, font):
 
-	code_points.reserve(len(glyph_code_points))
-	for code_point in glyph_code_points:
-		code_points.push_back(code_point)
-	return code_points
+  decompose = ufo.opts.glyphs_decompose
+  remove_overlaps = ufo.opts.glyphs_remove_overlaps
+  optimize_code_points = ufo.code_points.optimize
+  base_glyphs = ufo.glyph_sets.bases
+  omit_glyphs = ufo.glyph_sets.omit
+  optimized_glyphs = ufo.glyph_sets.optimized
+  decompose_glyphs = ufo.glyph_sets.decompose
+  remove_overlap_glyphs = ufo.glyph_sets.remove_overlap
+  optimize_makeotf = ufo.opts.glyphs_optimize_makeotf
+  glyphs_omit_names = ufo.opts.glyphs_omit_names
+  glyphs_omit_suffixes = ufo.opts.glyphs_omit_suffixes
+  vertical_hints_only = ufo.opts.glyphs_hints_vertical_only
+  optimize = ufo.opts.glyphs_optimize
 
-cdef cpp_hints glif_hints(glyph_hints, bint vertical=0):
+  if optimize_makeotf:
+    for i in sorted(decompose_glyphs):
+      font[i].Decompose()
+    glyphs = remove_overlap_glyphs | base_glyphs
+    for i in sorted(glyphs):
+      font[i].RemoveOverlap()
+    glyphs |= optimized_glyphs
+    for i, glyph in enumerate(font.glyphs):
+      if i not in glyphs:
+        glyph.RemoveOverlap()
 
-	cdef:
-		cpp_hints hints
-		long position = 0, width = 0
+  elif decompose_glyphs or remove_overlap_glyphs:
+    if decompose_glyphs:
+      for i in sorted(decompose_glyphs):
+        font[i].Decompose()
+    if remove_overlap_glyphs:
+      for i in sorted(remove_overlap_glyphs):
+        font[i].RemoveOverlap()
 
-	hints.reserve(len(glyph_hints))
-	for hint in glyph_hints:
-		position, width = hint.position, hint.width
-		hints.emplace_back(position, width, vertical)
-	return hints
+  elif optimize and remove_overlaps:
+    for i in sorted(base_glyphs):
+      font[i].RemoveOverlap()
+    for i, glyph in enumerate(font.glyphs):
+      if glyph.unicode not in optimize_code_points and i not in optimized_glyphs:
+        if glyph.components:
+          glyph.Decompose()
+        if i not in base_glyphs:
+          glyph.RemoveOverlap()
 
-cdef cpp_hint_replacements glif_hint_replacements(glyph_replace_table):
+  elif decompose and remove_overlaps:
+    for i, glyph in enumerate(font.glyphs):
+      if glyph.components:
+        glyph.Decompose()
+      if i not in base_glyphs:
+        glyph.RemoveOverlap()
 
-	cdef:
-		cpp_hint_replacements hint_replacements
-		int replacement_type = 0
-		size_t replacement_index = 0
+  elif decompose:
+    for glyph in font.glyphs:
+      if glyph.components:
+        glyph.Decompose()
 
-	hint_replacements.reserve(len(glyph_replace_table))
-	for replacement in glyph_replace_table:
-		replacement_type, replacement_index = replacement.type, replacement.index
-		hint_replacements.emplace_back(replacement_type, replacement_index)
-	return hint_replacements
+  elif remove_overlaps:
+    for i, glyph in enumerate(font.glyphs):
+      if i not in base_glyphs:
+        glyph.RemoveOverlap()
 
-cdef cpp_anchors glif_anchors(glyph_anchors):
 
-	cdef:
-		cpp_anchors anchors
-		string name
-		long x = 0, y = 0
+cdef glif_anchors(glyph_anchors, vector[cpp_anchor] &anchors):
 
-	anchors.reserve(len(glyph_anchors))
-	for anchor in glyph_anchors:
-		name = anchor.name.decode('cp1252').encode('utf_8')
-		x, y = anchor.x, anchor.y
-		anchors.emplace_back(name, x, y)
-	return anchors
+  cdef string name
 
-cdef cpp_components glif_components(glyph_components, ufo):
+  anchors.reserve(len(glyph_anchors))
+  for anchor in glyph_anchors:
+    name = anchor.name.decode('cp1252').encode('utf_8')
+    anchors.emplace_back(name, <float>anchor.x, <float>anchor.y)
 
-	cdef:
-		cpp_components components
-		size_t i = 0
-		long offset_x = 0, offset_y = 0
-		long scale_x = 0, scale_y = 0
-		string base
 
-	components.reserve(len(glyph_components))
-	for component in glyph_components:
-		offset_x, offset_y = component.delta.x, component.delta.y
-		scale_x, scale_y = component.scale.x, component.scale.y
-		i = component.index
-		base = ufo.glyph_names[i].encode('utf_8')
-		components.emplace_back(base, i, offset_x, offset_y, scale_x, scale_y)
-	return components
+cdef glif_components(glyph_components, ufo, vector[cpp_component] &components):
 
-cdef cpp_contours glif_contours(glyph_nodes):
+  cdef:
+    long offset_x = 0, offset_y = 0
+    long scale_x = 0, scale_y = 0
+    string base
 
-	cdef:
-		cpp_contours contours
-		cpp_contour contour
-		bint off = 0
-		bint cubic = 1
-		size_t n_nodes = len(glyph_nodes)
-		long x0 = 0, x1 = 0, x2 = 0
-		long y0 = 0, y1 = 0, y2 = 0
-		int alignment = 0
+  components.reserve(len(glyph_components))
+  for component in glyph_components:
+    offset_x, offset_y = component.delta.x, component.delta.y
+    scale_x, scale_y = component.scale.x, component.scale.y
+    i = component.index
+    base = ufo.glyph_names[i].encode('utf_8')
+    components.emplace_back(base, <size_t>i, offset_x, offset_y, scale_x, scale_y)
 
-	contours.reserve(n_nodes // 2)
-	contour.reserve(n_nodes)
-	for node in glyph_nodes:
 
-		if node.type == 17:
-			start_node = node[0]
-			if not contour.empty():
-				contours.push_back(contour)
-				contour.clear()
+cdef glif_hints(glyph_hints, vector[cpp_hint] &hints, bint vertical=0):
 
-		if node.count > 1:
-			cubic = 1
-			x0, y0 = node.points[1].x, node.points[1].y
-			x1, y1 = node.points[2].x, node.points[2].y
-			x2, y2 = node.x, node.y
-			alignment = node.alignment
-			contour.emplace_back(x0, y0)
-			contour.emplace_back(x1, y1)
-			if start_node == node[0]:
-				contour[0] = cpp_contour_point(x2, y2, 1, alignment)
-			else:
-				contour.emplace_back(x2, y2, 1, alignment)
-		elif node.type == 65:
-			off = 1
-			cubic = 0
-			x0, y0 = node.x, node.y
-			contour.emplace_back(x0, y0)
-		elif cubic:
-			x0, y0 = node.x, node.y
-			alignment = node.alignment
-			contour.emplace_back(x0, y0, 3, alignment)
-		elif off:
-			x0, y0 = node.x, node.y
-			contour.emplace_back(x0, y0, 2)
-			off = 0
-		else:
-			x0, y0 = node.x, node.y
-			contour.emplace_back(x0, y0, 3)
+  cdef:
+    long hint_width
+    bint ghost = 0
 
-	contours.push_back(contour)
-	contours.shrink_to_fit()
-	return contours
+  hints.reserve(len(glyph_hints))
+  for hint in glyph_hints:
+    hint_width = hint.width
+    ghost = bool(hint_width == -20 or hint_width == -21)
+    hints.emplace_back(<long>hint.position, hint_width, vertical, ghost)
 
-cdef cpp_contours glif_contours_hints(glyph_nodes, glyph_hint_replacements):
 
-	cdef:
-		cpp_contours contours
-		cpp_contour contour
-		cpp_contour_point point
-		string name
-		bint off = 0
-		bint cubic = 1
-		size_t n_nodes = len(glyph_nodes)
-		long x0 = 0, x1 = 0, x2 = 0
-		long y0 = 0, y1 = 0, y2 = 0
-		int alignment = 0
+cdef glif_hint_replacements(glyph_replace_table, vector[cpp_hint_replacement] &hint_replacements):
 
-	replacement_nodes = {0}
-	if glyph_hint_replacements:
-		for replacement in glyph_hint_replacements:
-			if replacement.type == 255:
-				replacement_nodes.add(replacement.index)
+  hint_replacements.reserve(len(glyph_replace_table))
+  for replacement in glyph_replace_table:
+    hint_replacements.emplace_back(<int>replacement.type, <size_t>replacement.index)
 
-	contours.reserve(n_nodes // 2)
-	contour.reserve(n_nodes)
-	for i, node in enumerate(glyph_nodes):
 
-		if node.type == 17:
-			start_node = node[0]
-			if not contour.empty():
-				contours.push_back(contour)
-				contour.clear()
+cdef glif_contours(glyph, cpp_glif &glif, cpp_ufo &ufo, size_t n_contours, size_t n_points):
 
-		if node.count > 1:
-			cubic = 1
-			x0, y0 = node.points[1].x, node.points[1].y
-			x1, y1 = node.points[2].x, node.points[2].y
-			x2, y2 = node.x, node.y
-			alignment = node.alignment
-			contour.emplace_back(x0, y0)
-			contour.emplace_back(x1, y1)
-			if start_node == node[0]:
-				contour[0] = move(cpp_contour_point(x2, y2, 1, alignment, contour[0].name))
-			else:
-				if i in replacement_nodes:
-					name = f'hintSet{i:04}'
-					contour.emplace_back(x2, y2, 1, alignment, name)
-				else:
-					contour.emplace_back(x2, y2, 1, alignment)
-		elif node.type == 65:
-			off = 1
-			cubic = 0
-			x0, y0 = node.x, node.y
-			contour.emplace_back(x0, y0)
-		elif cubic:
-			x0, y0 = node.x, node.y
-			alignment = node.alignment
-			if i in replacement_nodes:
-				name = f'hintSet{i:04}'
-				contour.emplace_back(x0, y0, 3, alignment, name)
-			else:
-				contour.emplace_back(x0, y0, 3, alignment)
-		elif off:
-			x0, y0 = node.x, node.y
-			contour.emplace_back(x0, y0, 2)
-			off = 0
-		else:
-			x0, y0 = node.x, node.y
-			if i in replacement_nodes:
-				name = f'hintSet{i:04}'
-				contour.emplace_back(x0, y0, 3, name)
-			else:
-				contour.emplace_back(x0, y0, 3)
+  cdef:
+    cpp_contour contour
+    bint off = 0, cubic = 1
+    int j = 0, k = 0
+    long x0 = 0, x1 = 0, x2 = 0
+    long y0 = 0, y1 = 0, y2 = 0
+    int alignment = 0
 
-	contours.push_back(contour)
-	contours.shrink_to_fit()
-	return contours
+  glif.contours.reserve(n_contours+1)
+  contour.reserve(n_points+2)
+  for node in glyph.nodes:
+
+    if node.type == 17:
+      start_node = node[0]
+      if not contour.empty():
+        glif.contours.push_back(contour)
+        contour.clear()
+
+    if node.count > 1:
+      cubic = 1
+      x0, y0 = node.points[1].x, node.points[1].y
+      x1, y1 = node.points[2].x, node.points[2].y
+      x2, y2 = node.x, node.y
+      alignment = node.alignment
+      contour.emplace_back(x0, y0)
+      contour.emplace_back(x1, y1)
+      if start_node == node[0]:
+        contour[0] = cpp_contour_point(x2, y2, 1, alignment)
+      else:
+        contour.emplace_back(x2, y2, 1, alignment)
+    else:
+      x0, y0 = node.x, node.y
+      if node.type == 65:
+        off = 1
+        cubic = 0
+        glif.contours[j].emplace_back(x0, y0)
+      elif cubic:
+        alignment = node.alignment
+        contour.emplace_back(x0, y0, 3, alignment)
+      elif off:
+        contour.emplace_back(x0, y0, 2)
+        off = 0
+      else:
+        contour.emplace_back(x0, y0, 3)
+
+  glif.contours.push_back(contour)
+  ufo.contours[glif.index] = &glif.contours
+
+
+cdef glif_contours_hints(glyph, cpp_glif &glif, cpp_ufo &ufo, size_t n_contours, size_t n_points):
+
+  cdef:
+    cpp_contour contour
+    string name
+    size_t j = 0, k = 0
+    bint off = 0, cubic = 1
+    long x0 = 0, x1 = 0, x2 = 0
+    long y0 = 0, y1 = 0, y2 = 0
+    int alignment = 0
+
+  replacement_nodes = {0}
+  if glyph.replace_table:
+    for replacement in glyph.replace_table:
+      if replacement.type == 255:
+        replacement_nodes.add(replacement.index)
+
+  glif.contours.reserve(n_contours+1)
+  contour.reserve(n_points+2)
+  for i, node in enumerate(glyph.nodes):
+
+    if node.type == 17:
+      start_node = node[0]
+      if not contour.empty():
+        glif.contours.push_back(contour)
+        contour.clear()
+
+    if node.count > 1:
+      cubic = 1
+      x0, y0 = node.points[1].x, node.points[1].y
+      x1, y1 = node.points[2].x, node.points[2].y
+      x2, y2 = node.x, node.y
+      alignment = node.alignment
+      contour.emplace_back(x0, y0)
+      contour.emplace_back(x1, y1)
+      if start_node == node[0]:
+        if i in replacement_nodes:
+          contour[0] = cpp_contour_point(x2, y2, 1, alignment, <int>i)
+        else:
+          contour[0] = cpp_contour_point(x2, y2, 1, alignment, contour[0].name)
+      else:
+        if i in replacement_nodes:
+          contour.emplace_back(x2, y2, 1, alignment, <int>i)
+        else:
+          contour.emplace_back(x2, y2, 1, alignment)
+    elif node.type == 65:
+      off = 1
+      cubic = 0
+      x0, y0 = node.x, node.y
+      contour.emplace_back(x0, y0)
+    elif cubic:
+      x0, y0 = node.x, node.y
+      alignment = node.alignment
+      if i in replacement_nodes:
+        contour.emplace_back(x0, y0, 3, alignment, <int>i)
+      else:
+        contour.emplace_back(x0, y0, 3, alignment)
+    elif off:
+      x0, y0 = node.x, node.y
+      contour.emplace_back(x0, y0, 2)
+      off = 0
+    else:
+      x0, y0 = node.x, node.y
+      if i in replacement_nodes:
+        contour.emplace_back(x0, y0, 3, 0, <int>i)
+      else:
+        contour.emplace_back(x0, y0, 3)
+
+  glif.contours.push_back(contour)
+  ufo.contours[glif.index] = &glif.contours
