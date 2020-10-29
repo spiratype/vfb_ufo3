@@ -1,6 +1,6 @@
 # string.pxi
 
-def uni_name(code_point):
+cdef inline unicode uni_name(long code_point):
 
   '''
   convert hex string or integer into a glyph name
@@ -19,7 +19,7 @@ def uni_name(code_point):
   return f'u{code_point:05X}'
 
 
-def hex_code_point(code_point):
+cdef inline unicode hex_code_point(long code_point):
 
   '''
   convert integer to a zero-filled, uppercase hexadecimal value string
@@ -36,20 +36,7 @@ def hex_code_point(code_point):
   return f'{code_point:05X}'
 
 
-def float_str(n, precision):
-
-  '''
-  return float to `precision` decimal places
-
-  >>> number_str(4.053154, 2)
-  4.05
-  >>> number_str(4.053154, 1)
-  4.1
-  '''
-
-  return f'{n:.{precision}}'
-
-def number_str(double n):
+cdef inline unicode number_str(double n):
 
   '''
   return str(int) if int(number) ≈ number

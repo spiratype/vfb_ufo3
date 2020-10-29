@@ -3,11 +3,6 @@
 @cython.final
 cdef class c_archive:
 
-  cdef:
-    string filename
-    bint compress
-    unordered_map[string, string] files
-
   def __init__(self, string &filename, bint compress):
     self.filename = filename
     self.compress = compress

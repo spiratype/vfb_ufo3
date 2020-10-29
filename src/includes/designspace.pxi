@@ -27,10 +27,6 @@ INSTANCE_ATTRS = (
 @cython.final
 cdef class c_designspace:
 
-  cdef public:
-    string path, text
-    list rules, axes, sources, instances
-
   def __init__(self, parent):
     self.path = parent.paths.designspace
     self.rules = [dspace_rule(glyph, glyph=1)
@@ -70,7 +66,7 @@ def dspace_axis(tag, default):
 def dspace_labelname(text):
   return f'\t\t\t<labelname xml:lang="en">{text}</labelname>'
 
-def dspace_dimension(name, value):
+def dspace_dimension(name, double value):
   attrs = elem_attrs((
     ('name', name.lower()),
     ('xvalue', number_str(value)),

@@ -59,7 +59,7 @@ def os_path_isfile(path):
 
 def os_path_isabs(path):
   if path.replace('/', os_sep).startswith('\\\\?\\'):
-    return True
+    return 1
   path = os_path_splitdrive(path)[1]
   return len(path) > 0 and path[0] in '\\/'
 

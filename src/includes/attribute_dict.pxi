@@ -1,9 +1,5 @@
 # attribute_dict.pxi
 
-cimport cython
-
-from cpython.dict cimport PyDict_SetItem
-
 @cython.final
 cdef class attribute_dict(dict):
 
