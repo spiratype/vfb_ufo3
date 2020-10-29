@@ -14,10 +14,11 @@ include 'includes/future.pxi'
 
 cimport cython
 cimport fenv
-from cython.operator cimport postincrement, preincrement
-from vector cimport vector
+from .vfb cimport c_master_glif
+from cython.operator cimport postincrement
 from libcpp.string cimport string
-from libcpp.utility cimport move, pair
+from libcpp.utility cimport move
+from libcpp_vector cimport vector
 
 include 'includes/archive.pxi'
 
@@ -59,6 +60,7 @@ def _glifs(ufo):
   path_sep = '/' if ufo.opts.ufoz else '\\'
 
   cdef:
+    c_master_glif master_glif
     size_t i = 0
     size_t len_contours = 0
     size_t len_points = 0
@@ -68,8 +70,6 @@ def _glifs(ufo):
     float ufo_scale = ufo.scale if ufo.scale is not None else 0.0
     bytes name
     string glif_path
-    long code_point = 0
-    int mark = 0
     int width = 0
     bint base = 0
     bint omit = 0
@@ -98,20 +98,30 @@ def _glifs(ufo):
 
   prep_font(ufo, font)
 
-  for i, m_glif in sorted(items(ufo.glifs)):
-    glif_path = f'{instance_glifs_path}{path_sep}{m_glif.glif_name}'.encode('utf_8')
+  for i, master_glif in sorted(items(ufo.glifs)):
+    glif_path = f'{instance_glifs_path}{path_sep}{master_glif.glif_name}'.encode('utf_8')
     glyph = font[i]
     width = max(glyph.width * ufo_scale, 0)
+    has_hints = bool(glyph.hhints or glyph.vhints or glyph.hlinks or glyph.vlinks)
     len_contours = 0
     for node in glyph.nodes:
       if node.type == 17:
         postincrement(len_contours)
     len_points = len(glyph.Layer(0))
 
-    glif = cpp_glif(m_glif.name, glif_path, m_glif.mark, width, i, len_points, m_glif.omit, m_glif.base)
+    glif = cpp_glif(
+      master_glif.name,
+      glif_path,
+      master_glif.mark,
+      width,
+      i,
+      len_points,
+      master_glif.omit,
+      master_glif.base,
+      )
 
-    if m_glif.code_points:
-      glif.code_points = m_glif.code_points
+    if master_glif.code_points.size():
+      glif.code_points = master_glif.code_points
 
     if glyph.anchors:
       glif_anchors(glyph.anchors, glif.anchors)
@@ -119,7 +129,7 @@ def _glifs(ufo):
     if glyph.components:
       glif_components(glyph.components, ufo, glif.components)
 
-    if build_hints and (glyph.hhints or glyph.vhints or glyph.hlinks or glyph.vlinks):
+    if build_hints and has_hints:
       had_replace_table = bool(glyph.replace_table)
       prep_glyph_hints(glyph, vertical_hints_only, had_replace_table)
       if glyph.vhints:
@@ -129,7 +139,7 @@ def _glifs(ufo):
       if had_replace_table:
         glif_hint_replacements(glyph.replace_table, glif.hint_replacements)
 
-    if len_points and has_hints:
+    if len_points and build_hints and has_hints:
       glif_contours_hints(glyph, glif, ufo_lib, len_contours, len_points)
     elif len_points:
       glif_contours(glyph, glif, ufo_lib, len_contours, len_points)
@@ -140,7 +150,7 @@ def _glifs(ufo):
     ufo_lib.glifs.push_back(move(glif))
 
   if ufoz:
-    ufo.archive = c_archive(instance_ufoz_path, <bint>ufo.opts.ufoz_compress)
+    ufo.archive = c_archive(instance_ufoz_path, ufo.opts.ufoz_compress)
     ufo.archive.reserve(ufo_lib.glifs.size() + 10)
     for glif in ufo_lib.glifs:
       ufo.archive[glif.path] = glif.repr(ufo_lib)
@@ -276,7 +286,6 @@ cdef glif_contours(glyph, cpp_glif &glif, cpp_ufo &ufo, size_t n_contours, size_
   cdef:
     cpp_contour contour
     bint off = 0, cubic = 1
-    int j = 0, k = 0
     long x0 = 0, x1 = 0, x2 = 0
     long y0 = 0, y1 = 0, y2 = 0
     int alignment = 0
@@ -308,7 +317,7 @@ cdef glif_contours(glyph, cpp_glif &glif, cpp_ufo &ufo, size_t n_contours, size_
       if node.type == 65:
         off = 1
         cubic = 0
-        glif.contours[j].emplace_back(x0, y0)
+        contour.emplace_back(x0, y0)
       elif cubic:
         alignment = node.alignment
         contour.emplace_back(x0, y0, 3, alignment)
@@ -327,7 +336,6 @@ cdef glif_contours_hints(glyph, cpp_glif &glif, cpp_ufo &ufo, size_t n_contours,
   cdef:
     cpp_contour contour
     string name
-    size_t j = 0, k = 0
     bint off = 0, cubic = 1
     long x0 = 0, x1 = 0, x2 = 0
     long y0 = 0, y1 = 0, y2 = 0

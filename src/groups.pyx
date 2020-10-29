@@ -12,9 +12,9 @@ from __future__ import division, unicode_literals, print_function
 include 'includes/future.pxi'
 
 cimport cython
-from vector cimport vector
 from cpython.dict cimport PyDict_SetItem
 from libcpp.string cimport string
+from libcpp_vector cimport vector
 
 import os
 import shutil
@@ -31,8 +31,8 @@ include 'includes/unique.pxi'
 include 'includes/file.pxi'
 include 'includes/flc.pxi'
 include 'includes/groups.pxi'
-include 'includes/ordered_dict.pxi'
 include 'includes/plist.pxi'
+include 'includes/ordered_dict.pxi'
 
 def groups(ufo):
   start = time.clock()

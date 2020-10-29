@@ -13,9 +13,9 @@ from __future__ import division, unicode_literals
 include 'includes/future.pxi'
 
 cimport cython
-from vector cimport vector
 from cpython.dict cimport PyDict_SetItem
 from libcpp.string cimport string
+from libcpp_vector cimport vector
 
 import os
 import shutil
@@ -29,8 +29,8 @@ include 'includes/thread.pxi'
 include 'includes/path.pxi'
 include 'includes/files.pxi'
 include 'includes/plist.pxi'
-include 'includes/ordered_dict.pxi'
 include 'includes/xml.pxi'
+include 'includes/ordered_dict.pxi'
 
 def plists(ufo):
   start = time.clock()
@@ -39,7 +39,7 @@ def plists(ufo):
 
 def _plists(ufo):
 
-  cdef cpp_files files
+  cdef vector[cpp_file] files
 
   if not ufo.opts.ufoz:
     files.reserve(7)
@@ -56,7 +56,7 @@ def _plists(ufo):
     write_files(files)
 
 
-cdef metainfo(ufo, cpp_files &files):
+cdef metainfo(ufo, vector[cpp_file] &files):
 
   cdef:
     string path = ufo.paths.instance.metainfo
@@ -79,7 +79,7 @@ cdef metainfo(ufo, cpp_files &files):
     ufo.plists.metainfo = ufo.paths.instance.metainfo
 
 
-cdef fontinfo(ufo, cpp_files &files):
+cdef fontinfo(ufo, vector[cpp_file] &files):
 
   cdef:
     string path = ufo.paths.instance.fontinfo
@@ -93,7 +93,7 @@ cdef fontinfo(ufo, cpp_files &files):
     files.emplace_back(path, plist)
 
 
-cdef groups(ufo, cpp_files &files):
+cdef groups(ufo, vector[cpp_file] &files):
 
   cdef:
     string path = ufo.paths.instance.groups
@@ -112,7 +112,7 @@ cdef groups(ufo, cpp_files &files):
     ufo.plists.groups = ufo.paths.instance.groups
 
 
-cdef kerning(ufo, cpp_files &files):
+cdef kerning(ufo, vector[cpp_file] &files):
 
   cdef:
     string path = ufo.paths.instance.kerning
@@ -126,7 +126,7 @@ cdef kerning(ufo, cpp_files &files):
       files.emplace_back(path, plist)
 
 
-cdef lib(ufo, cpp_files &files):
+cdef lib(ufo, vector[cpp_file] &files):
 
   cdef:
     string path = ufo.paths.instance.lib
@@ -151,7 +151,7 @@ cdef lib(ufo, cpp_files &files):
     ufo.plists.lib = ufo.paths.instance.lib
 
 
-cdef glyphs_contents(ufo, cpp_files &files):
+cdef glyphs_contents(ufo, vector[cpp_file] &files):
 
   cdef:
     string path = ufo.paths.instance.glyphs_contents
@@ -177,7 +177,7 @@ cdef glyphs_contents(ufo, cpp_files &files):
     ufo.plists.glyphs_contents = ufo.paths.instance.glyphs_contents
 
 
-cdef layercontents(ufo, cpp_files &files):
+cdef layercontents(ufo, vector[cpp_file] &files):
 
   cdef:
     string path = ufo.paths.instance.layercontents

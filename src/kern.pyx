@@ -60,15 +60,15 @@ def _kerning(ufo, font):
 
 def _instance_kerning(ufo, font, scale):
 
-  def kern_pair(pair):
+  def kern_pair(kern):
     if scale is not None:
-      return ufo.glyph_names[pair.key], int(pair.value * scale)
-    return ufo.glyph_names[pair.key], pair.value
+      return ufo.glyph_names[kern.key], int(kern.value * scale)
+    return ufo.glyph_names[kern.key], kern.value
 
   kerning = {}
   for i, glyph in enumerate(font.glyphs):
     if glyph.kerning:
-      kerning[ufo.glyph_names[i]] = [kern_pair(pair) for pair in glyph.kerning]
+      kerning[ufo.glyph_names[i]] = [kern_pair(kern) for kern in glyph.kerning]
 
   return kerning
 
@@ -78,7 +78,7 @@ def _kern_feature(ufo):
   cdef:
     long CHECK_LIMIT = 700_000
     long BLOCK_LIMIT = 720_000 # first subtable
-    long STEP = 208_000 # step down for subsequent subtables
+    long STEP = 208_000        # step down for subsequent subtables
     long new_kerns = 0
     int MIN_VALUE = 0
     int value = 0

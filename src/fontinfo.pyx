@@ -393,20 +393,20 @@ def _gasp_records(font):
 
 def _name_records(ufo, font):
 
-  def _name_record(name_id, platform_id, string):
+  def _name_record(name_id, platform_id, val):
     record = ordered_dict()
     record['nameID'] = name_id
     record['platformID'] = platform_id
     record['encodingID'] = ENC_IDS[platform_id]
     record['languageID'] = LANG_IDS[platform_id]
-    record['string'] = nameid_str(string, platform_id, 0)
+    record['string'] = nameid_str(val, platform_id, 0)
     return record
 
   records = []
   for key, name_id in items(NAME_RECORDS_ATTRS):
-    string = ufo.instance.fontinfo[key]
-    if string:
+    val = ufo.instance.fontinfo[key]
+    if val:
       for platform_id in (1, 3):
-        records.append(_name_record(name_id, platform_id, string))
+        records.append(_name_record(name_id, platform_id, val))
 
   return records

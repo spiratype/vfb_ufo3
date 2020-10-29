@@ -41,11 +41,11 @@ include 'includes/thread.pxi'
 include 'includes/path.pxi'
 include 'includes/unique.pxi'
 include 'includes/dict.pxi'
-include 'includes/attribute_dict.pxi'
-include 'includes/ordered_set.pxi'
 include 'includes/options.pxi'
 include 'includes/defaults.pxi'
 include 'includes/core.pxi'
+include 'includes/attribute_dict.pxi'
+include 'includes/ordered_set.pxi'
 
 def write_ufo(options):
 
@@ -57,7 +57,7 @@ def write_ufo(options):
     add_instance(ufo, *instance)
     glifs(ufo)
     plists(ufo)
-    fea.features(ufo)
+    features(ufo)
 
     if ufo.opts.ufoz:
       ufo.archive.write()
@@ -140,11 +140,10 @@ def parse_options(options):
 
   if opts.instance_values:
     set_instance_values(ufo)
+  elif opts.layer is not None:
+    set_master_values(ufo, master, layer=opts.layer)
   else:
-    if opts.layer is not None:
-      set_master_values(ufo, master, layer=opts.layer)
-    else:
-      set_master_values(ufo, master)
+    set_master_values(ufo, master)
 
   if opts.mark_anchors_include:
     opts.mark_anchors_include = encode_string_list(opts.mark_anchors_include)
