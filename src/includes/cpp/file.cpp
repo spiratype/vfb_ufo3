@@ -7,11 +7,7 @@
 #include <string>
 #include <vector>
 
-class cpp_file;
-typedef std::vector<cpp_file> cpp_files;
-
-class cpp_file {
-  public:
+struct cpp_file {
   std::string path;
   std::string data;
   cpp_file(const std::string &path, const std::string &data) {
@@ -21,15 +17,15 @@ class cpp_file {
   };
 
 void write_file(const std::string &path, const std::string &data) {
-  std::ofstream f(path);
-  f << data;
-  f.close();
+  std::ofstream file(path);
+  file << data;
+  file.close();
   }
 
 std::string read_file(const std::string &path) {
-  std::ifstream f(path, std::ios::binary);
+  std::ifstream file(path, std::ios::binary);
   std::stringstream data;
-  data << f.rdbuf();
-  f.close();
+  data << file.rdbuf();
+  file.close();
   return data.str();
   }
