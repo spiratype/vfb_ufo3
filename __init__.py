@@ -13,7 +13,7 @@ from . import core
 
 show_default_optimize_code_points = core.show_default_optimize_code_points
 
-__version__ = '0.8.1'
+__version__ = '0.8.2'
 __doc__ = """
 VFB2UFO3
 DESCRIPTION
@@ -31,8 +31,7 @@ ignored by default; a batch command can be created for use with `psautohint`,
 which supports hinting outlines with decimal coordinates.
 
 VFB2UFO3 also quickly creates UFO masters from multiple master `.vfb` fonts.
-This is the default export option when the `instance_values` option is not
-supplied.
+This is the default behavior when the `instance_values` option is not supplied.
 
 INSTALLATION
 PyPi
@@ -387,7 +386,7 @@ converted to hints). By default, hints will be created following the UFO3
 public.postscript.hints specification. The `glyphs_hints_afdko_v1` and
 `glyphs_hints_afdko_v2` options enables hints compatible with MakeOTF.
 
-`glyphs_hints_vertical_only` ignored horizontal hints/links
+`glyphs_hints_vertical_only` ignores horizontal hints/links
 
 Kern feature options
 Kern values will be scaled in parity with the output UFO. This scaling is
@@ -689,6 +688,9 @@ modification of an implementation from Olivier Gay's SHA2 library, which is
 covered under a BSD License.
 
 Version history
+version 0.8.2
+small changes and corrections
+
 version 0.8.1
 added `glyphs_optimize_makeotf` option for use with makeOTF
 added `glyphs_decompose_names` and `glyphs_remove_overlap_names` options
