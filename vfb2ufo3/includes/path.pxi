@@ -1,6 +1,6 @@
 # path.pxi
 
-cdef extern from 'includes/cpp/path.cpp' nogil:
+cdef extern from 'src/path.cpp' nogil:
   string os_path_normpath(string)
 
 DESKTOP = f'{os.environ["USERPROFILE"]}\\Desktop'

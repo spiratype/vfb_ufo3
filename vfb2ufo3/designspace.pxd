@@ -3,7 +3,6 @@
 from libcpp.string cimport string
 
 cdef class c_designspace:
-
   cdef public:
     string path
     string text

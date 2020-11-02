@@ -2,9 +2,9 @@
 ## Description
 Multiple master-compatible **Unified Font Object** (UFO) version 3 font writer API for Windows FontLab 5.2
 
-**VFB2UFO3** is primarily intended to create scaled UFO instances from a > 1000 UPM multiple master FontLab `.vfb` font with PostScript outlines for use with the AFDKO tools for creating binary fonts while still working with Windows FontLab 5.2. The most significant non-trivial change that will occur in export is the renaming of kerning glyph groups (FontLab *classes*). Providing a `.flc` (FontLab-class) file can speed up conversion significantly when font groups are not identifiable as first/second from their name. All glyph hints/links are ignored by default; a batch command can be created for use with `psautohint`, which supports hinting outlines with decimal coordinates.
+**VFB2UFO3** is primarily intended to create scaled UFO instances from a > 1000 UPM multiple master FontLab `.vfb` font with PostScript outlines for use with the AFDKO tools for creating binary fonts while still working with Windows FontLab 5.2. The most significant non-trivial change that will occur in export is the renaming of kerning glyph groups (FontLab *classes*). Providing an `.flc` (FontLab-class) file can speed up conversion significantly when font groups are not identifiable as first/second from their name. Glyph hints/links can be exported using 1 of 3 formats; the UFO3 specification, Adobe AutoHint v1, or Adobe AutoHint v2. The hinting information is the same, however makeOTF does not support the UFO3 specification.
 
-**VFB2UFO3** also quickly creates UFO masters from multiple master `.vfb` fonts. This is the default behavior when the `instance_values` option is not supplied.
+**VFB2UFO3** also quickly creates UFO masters from multiple master `.vfb` fonts. This is the default behavior when the `instance_values` option is not supplied, or building a `.designspace` file for use in building a variable font.
 
 ## Installation
 #### PyPi
@@ -492,6 +492,9 @@ Jameson R Spires
 Source files are covered under the [MIT License](https://opensource.org/licenses/MIT). SHA512 hash algorithm is a modification of an implementation from Olivier Gay's [SHA2 library](https://github.com/ogay/sha2), which is covered under a [BSD License](https://opensource.org/licenses/BSD-3-Clause).
 
 #### Version history
+* version 0.8.3  
+reorganization  
+
 * version 0.8.2  
 small changes and corrections  
 

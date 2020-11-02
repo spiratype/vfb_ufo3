@@ -23,9 +23,10 @@ void write_file(const std::string &path, const std::string &data) {
   }
 
 std::string read_file(const std::string &path) {
-  std::ifstream file(path, std::ios::binary);
+  std::ifstream file(path);
   std::stringstream data;
   data << file.rdbuf();
   file.close();
   return data.str();
   }
+

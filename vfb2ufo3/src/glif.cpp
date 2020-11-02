@@ -5,271 +5,209 @@
 #include <fmt/compile.h>
 
 #include <cmath>
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
-#include <ctime>
 #include <fstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 #include <omp.h>
-#include <zlib.h>
 
 #include "glif.hpp"
 #include "mark.hpp"
 #include "string.cpp"
 #include "sha512.cpp"
-#include "archive.cpp"
 
-struct cpp_point {
-  float x = 0.0;
-  float y = 0.0;
-  cpp_point() {}
-  cpp_point(float x, float y) {
-    this->x = x;
-    this->y = y;
-    }
-  void scale(const float scale) {
-    this->x *= scale;
-    this->y *= scale;
-    }
-  void scale(const cpp_point &scale) {
-    this->x *= scale.x;
-    this->y *= scale.y;
-    }
-  void offset(const cpp_point &offset) {
-    this->x += offset.x;
-    this->y += offset.y;
-    }
-  void scale_offset(const cpp_point &scale, const cpp_point &offset) {
-    this->scale(scale);
-    this->offset(offset);
-    }
-  inline bool operator ==(const cpp_point &other) const {
-    return (this->x == other.x and this->y == other.y);
-    }
-  inline bool operator !=(const cpp_point &other) const {
-    return (this->x != other.x or this->y != other.y);
-    }
-  };
+cpp_point::cpp_point(float x, float y) {
+  this->x = x;
+  this->y = y;
+  }
+void cpp_point::scale(const float scale) {
+  this->x *= scale;
+  this->y *= scale;
+  }
+void cpp_point::scale(const cpp_point &scale) {
+  this->x *= scale.x;
+  this->y *= scale.y;
+  }
+void cpp_point::offset(const cpp_point &offset) {
+  this->x += offset.x;
+  this->y += offset.y;
+  }
+void cpp_point::scale_offset(const cpp_point &scale, const cpp_point &offset) {
+  this->scale(scale);
+  this->offset(offset);
+  }
 
-struct cpp_anchor : public cpp_point {
-  std::string name;
-  cpp_anchor() {}
-  cpp_anchor(const std::string &name, float x, float y) {
-    this->name = name;
-    this->x = x;
-    this->y = y;
-    }
-  std::vector<std::string> attrs() const {
+
+cpp_anchor::cpp_anchor(const std::string &name, float x, float y) {
+  this->name = name;
+  this->x = x;
+  this->y = y;
+  }
+std::vector<std::string> cpp_anchor::attrs() const {
+  return {
+    attr("name", this->name),
+    attr("x", number_str(this->x)),
+    attr("y", number_str(this->y)),
+    };
+  }
+std::string cpp_anchor::repr() const {
+  return fmt::format(FMT_COMPILE("\t<anchor {}/>\n"), attrs_str(this->attrs()));
+  }
+
+
+cpp_contour_point::cpp_contour_point(float x, float y) {
+  this->x = x;
+  this->y = y;
+  }
+cpp_contour_point::cpp_contour_point(float x, float y, int type) {
+  this->x = x;
+  this->y = y;
+  this->type = type;
+  }
+cpp_contour_point::cpp_contour_point(float x, float y, int type, int alignment) {
+  this->x = x;
+  this->y = y;
+  this->type = type;
+  this->alignment = alignment;
+  }
+cpp_contour_point::cpp_contour_point(float x, float y, int type, int alignment, std::string &name) {
+  this->x = x;
+  this->y = y;
+  this->type = type;
+  this->alignment = alignment;
+  this->name = name;
+  }
+cpp_contour_point::cpp_contour_point(float x, float y, int type, int alignment, int hintset_index) {
+  this->x = x;
+  this->y = y;
+  this->type = type;
+  this->alignment = alignment;
+  this->name = fmt::format(FMT_COMPILE("hintSet{:04}"), hintset_index);
+  }
+std::vector<std::string> cpp_contour_point::attrs() const {
+  if (not this->type)
     return {
-      attr("name", this->name),
       attr("x", number_str(this->x)),
       attr("y", number_str(this->y)),
       };
-    }
-  std::string repr() const {
-    return fmt::format(FMT_COMPILE("\t<anchor {}/>\n"), attrs_str(this->attrs()));
-    }
-  };
-
-struct cpp_contour_point : public cpp_point {
-  std::string name;
-  int type = 0;
-  int alignment = 0;
-  cpp_contour_point() {}
-  cpp_contour_point(float x, float y) {
-    this->x = x;
-    this->y = y;
-    }
-  cpp_contour_point(float x, float y, int type, int alignment=0) {
-    this->x = x;
-    this->y = y;
-    this->type = type;
-    this->alignment = alignment;
-    }
-  cpp_contour_point(float x, float y, int type, int alignment, std::string &name) {
-    this->x = x;
-    this->y = y;
-    this->type = type;
-    this->alignment = alignment;
-    this->name = name;
-    }
-  cpp_contour_point(float x, float y, int type, int alignment, int hintset_index) {
-    this->x = x;
-    this->y = y;
-    this->type = type;
-    this->alignment = alignment;
-    this->name = fmt::format(FMT_COMPILE("hintSet{:04}"), hintset_index);
-    }
-  std::vector<std::string> attrs() const {
-    if (not this->type)
-      return {
-        attr("x", number_str(this->x)),
-        attr("y", number_str(this->y)),
-        };
-    if (not this->name.empty()) {
-      if (this->alignment > 0)
-        return {
-          attr("x", number_str(this->x)),
-          attr("y", number_str(this->y)),
-          attr("type", POINT_TYPES[this->type]),
-          attr("smooth", "yes"),
-          attr("name", this->name),
-          };
-      return {
-        attr("x", number_str(this->x)),
-        attr("y", number_str(this->y)),
-        attr("type", POINT_TYPES[this->type]),
-        attr("name", this->name),
-        };
-      }
+  if (not this->name.empty()) {
     if (this->alignment > 0)
       return {
         attr("x", number_str(this->x)),
         attr("y", number_str(this->y)),
         attr("type", POINT_TYPES[this->type]),
         attr("smooth", "yes"),
+        attr("name", this->name),
         };
     return {
-        attr("x", number_str(this->x)),
-        attr("y", number_str(this->y)),
-        attr("type", POINT_TYPES[this->type]),
-        };
-    }
-  std::string repr() const {
-    return fmt::format(FMT_COMPILE("\t\t\t<point {}/>\n"), attrs_str(this->attrs()));
-    }
-  };
-
-struct cpp_component {
-  std::string base;
-  cpp_point offset;
-  cpp_point scale;
-  size_t index = 0;
-  cpp_component() {}
-  cpp_component(
-      const std::string &base,
-      size_t index,
-      float offset_x,
-      float offset_y,
-      float scale_x,
-      float scale_y
-      ) {
-    this->base = base;
-    this->index = index;
-    this->offset = cpp_point(offset_x, offset_y);
-    this->scale = cpp_point(scale_x, scale_y);
-    }
-  std::vector<std::string> attrs() const {
-    return {
-      attr("base", this->base),
-      attr("xOffset", number_str(this->offset.x)),
-      attr("yOffset", number_str(this->offset.y)),
-      attr("xScale", float_str(this->scale.x, 2)),
-      attr("yScale", float_str(this->scale.y, 2)),
+      attr("x", number_str(this->x)),
+      attr("y", number_str(this->y)),
+      attr("type", POINT_TYPES[this->type]),
+      attr("name", this->name),
       };
     }
-  std::string repr() const {
-    return fmt::format(FMT_COMPILE("\t\t<component {}/>\n"), attrs_str(this->attrs()));
-    }
-  };
-
-struct cpp_hint {
-  float width = 0.0;
-  float position = 0.0;
-  bool vertical = false;
-  bool ghost = false;
-  cpp_hint() {}
-  cpp_hint(float width, float position, bool vertical, bool ghost) {
-    this->width = width;
-    this->position = position;
-    this->vertical = vertical;
-    this->ghost = ghost;
-    }
-  void scale(float scale) {
-    this->position *= scale;
-    if (not this->ghost)
-      this->width *= scale;
-    }
-  std::vector<std::string> attrs() const {
+  if (this->alignment > 0)
     return {
-      attr("pos", number_str(this->position)),
-      attr("width", number_str(this->width)),
+      attr("x", number_str(this->x)),
+      attr("y", number_str(this->y)),
+      attr("type", POINT_TYPES[this->type]),
+      attr("smooth", "yes"),
       };
-    }
-  std::string repr() const {
-    return fmt::format(FMT_COMPILE("\t\t\t\t\t\t\t<string>{} {} {}</string>\n"),
-      this->vertical ? "vstem" : "hstem",
-      number_str(this->width),
-      number_str(this->position)
-      );
-    }
-  std::string repr2() const {
-    return fmt::format(FMT_COMPILE("\t\t\t\t\t<{} {}/>\n"),
-      this->vertical ? "vstem" : "hstem", attrs_str(this->attrs()));
-    }
-  };
+  return {
+      attr("x", number_str(this->x)),
+      attr("y", number_str(this->y)),
+      attr("type", POINT_TYPES[this->type]),
+      };
+  }
+std::string cpp_contour_point::repr() const {
+  return fmt::format(FMT_COMPILE("\t\t\t<point {}/>\n"), attrs_str(this->attrs()));
+  }
 
-struct cpp_hint_replacement {
-  int type = 0;
-  size_t index = 0;
-  cpp_hint_replacement() {}
-  cpp_hint_replacement(int type, size_t index) {
-    this->type = type;
-    this->index = index;
-    }
-  };
 
-struct cpp_glif {
-  std::string name;
-  std::string path;
-  std::vector<long> code_points;
-  std::vector<cpp_anchor> anchors;
-  std::vector<cpp_component> components;
-  std::vector<cpp_hint> vhints;
-  std::vector<cpp_hint> hhints;
-  std::vector<cpp_hint_replacement> hint_replacements;
-  cpp_contours contours;
-  int mark;
-  float width;
-  size_t index;
-  size_t len_points;
-  bool omit;
-  bool base;
-  cpp_glif() {}
-  cpp_glif(
-      const std::string &name,
-      const std::string &path,
-      int mark,
-      float width,
-      size_t index,
-      size_t len_points,
-      bool omit,
-      bool base
-      ) {
-    this->name = name;
-    this->path = path;
-    this->mark = mark;
-    this->width = width;
-    this->index = index;
-    this->len_points = len_points;
-    this->omit = omit;
-    this->base = base;
-    }
-  void scale(float scale);
-  size_t size() const;
-  std::string repr(auto &ufo) const;
-  std::string hint_id() const;
-  std::string hints_repr(auto hint_type) const;
-  std::string hints_public_repr(std::string &hints_repr, std::string &hintsets_str) const;
-  std::string hints_adobe_v1_repr(std::string &hints_repr, std::string &hintsets_str) const;
-  std::string hints_adobe_v2_repr(std::string &hints_repr, std::string &hintsets_str) const;
-  void build_contours(auto &ufo) const;
-  void write(auto &ufo) const;
-  };
+cpp_component::cpp_component(
+    const std::string &base,
+    size_t index,
+    float offset_x,
+    float offset_y,
+    float scale_x,
+    float scale_y
+    ) {
+  this->base = base;
+  this->index = index;
+  this->offset = cpp_point(offset_x, offset_y);
+  this->scale = cpp_point(scale_x, scale_y);
+  }
+std::vector<std::string> cpp_component::attrs() const {
+  return {
+    attr("base", this->base),
+    attr("xOffset", number_str(this->offset.x)),
+    attr("yOffset", number_str(this->offset.y)),
+    attr("xScale", float_str(this->scale.x, 2)),
+    attr("yScale", float_str(this->scale.y, 2)),
+    };
+  }
+std::string cpp_component::repr() const {
+  return fmt::format(FMT_COMPILE("\t\t<component {}/>\n"), attrs_str(this->attrs()));
+  }
+
+
+cpp_hint::cpp_hint(float width, float position, bool vertical, bool ghost) {
+  this->width = width;
+  this->position = position;
+  this->vertical = vertical;
+  this->ghost = ghost;
+  }
+void cpp_hint::scale(float scale) {
+  this->position *= scale;
+  if (not this->ghost)
+    this->width *= scale;
+  }
+std::vector<std::string> cpp_hint::attrs() const {
+  return {
+    attr("pos", number_str(this->position)),
+    attr("width", number_str(this->width)),
+    };
+  }
+std::string cpp_hint::repr() const {
+  return fmt::format(FMT_COMPILE("\t\t\t\t\t\t\t<string>{} {} {}</string>\n"),
+    this->vertical ? "vstem" : "hstem",
+    number_str(this->width),
+    number_str(this->position)
+    );
+  }
+std::string cpp_hint::repr2() const {
+  return fmt::format(FMT_COMPILE("\t\t\t\t\t<{} {}/>\n"),
+    this->vertical ? "vstem" : "hstem", attrs_str(this->attrs()));
+  }
+
+
+cpp_hint_replacement::cpp_hint_replacement(int type, size_t index) {
+  this->type = type;
+  this->index = index;
+  }
+
+
+cpp_glif::cpp_glif(
+    const std::string &name,
+    const std::string &path,
+    int mark,
+    float width,
+    size_t index,
+    size_t len_points,
+    bool omit,
+    bool base
+    ) {
+  this->name = name;
+  this->path = path;
+  this->mark = mark;
+  this->width = width;
+  this->index = index;
+  this->len_points = len_points;
+  this->omit = omit;
+  this->base = base;
+  }
+
 
 std::string contour_repr(const auto &contour) {
   return fmt::format(FMT_COMPILE("\t\t<contour>\n{}\t\t</contour>\n"), items_repr(contour));
@@ -380,7 +318,7 @@ std::string cpp_glif::hint_id() const {
       id += fmt::format(FMT_COMPILE("{}{},{}"), POINT_TYPES[point.type][0], number_str(point.x), number_str(point.y));
     }
   if (id.size() > 128)
-    return sha512::sha512_hash(id);
+    return sha512::hash(id);
   return id;
   }
 
@@ -586,11 +524,10 @@ void cpp_glif::write(auto &ufo) const {
   file.close();
   }
 
-void write_glifs(auto &ufo) {
+void write_glifs(cpp_ufo &ufo) {
   #pragma omp parallel for
   for (const auto &glif : ufo.glifs)
     if (not glif.omit)
       glif.write(ufo);
   }
 
-// int main() {}

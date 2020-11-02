@@ -1,7 +1,5 @@
 // sha512.cpp
 
-#pragma once
-
 /*
 Original conversion from C to C++ by zedwood.com 2012
 http://www.zedwood.com/article/cpp-sha512-function
@@ -44,9 +42,11 @@ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 SUCH DAMAGE.
 */
 
+#include "sha512.hpp"
+
 namespace sha512 {
 
-typedef unsigned char u_char;
+typedef unsigned char byte;
 
 static const int BLOCK_SIZE = 128;
 static const int DIGEST_SIZE = 64;
@@ -105,32 +105,20 @@ static inline void unpack32(auto x, auto y) {
     y[i] = std::uint32_t(x >> M[i]);
   }
 
-struct sha512 {
-  std::uint32_t tot_len = 0;
-  std::uint32_t len = 0;
-  u_char block[256] = {};
-  std::array<std::uint64_t, 8> h = {
-    0x6a09e667f3bcc908, 0xbb67ae8584caa73b, 0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1,
-    0x510e527fade682d1, 0x9b05688c2b3e6c1f, 0x1f83d9abfb41bd6b, 0x5be0cd19137e2179
-    };
-  void transform(const u_char* message, std::uint32_t block_nb);
-  void update(const u_char* message, std::uint32_t len);
-  void finish();
-  std::string str() {
-    std::string out;
-    out.reserve(130);
-    for (size_t i = 0; i < 8; i++)
-      out += fmt::format(FMT_COMPILE("{:016x}"), this->h[i]);
-    return out;
-    }
-  };
+std::string sha512::str() {
+  std::string out;
+  out.reserve(130);
+  for (size_t i = 0; i < 8; i++)
+    out += fmt::format(FMT_COMPILE("{:016x}"), this->h[i]);
+  return out;
+  }
 
-void sha512::transform(const u_char* message, std::uint32_t block_nb) {
+void sha512::transform(const byte* message, std::uint32_t block_nb) {
   std::array<std::uint64_t, 8> h = {};
   std::array<std::uint64_t, 80> k = {};
   std::uint64_t t1 = 0, t2 = 0;
   size_t j = 0;
-  const u_char* sub_block;
+  const byte* sub_block;
 
   for (size_t i = 0; i < block_nb; i++) {
     sub_block = message + (i << 7);
@@ -161,7 +149,7 @@ void sha512::transform(const u_char* message, std::uint32_t block_nb) {
     }
   }
 
-void sha512::update(const u_char* message, std::uint32_t len) {
+void sha512::update(const byte* message, std::uint32_t len) {
   std::uint32_t tmp_len = BLOCK_SIZE - this->len;
   std::uint32_t rem_len = len < tmp_len ? len : tmp_len;
 
@@ -174,7 +162,7 @@ void sha512::update(const u_char* message, std::uint32_t len) {
 
   std::uint32_t new_len = len - rem_len;
   std::uint32_t block_nb = new_len / BLOCK_SIZE;
-  const u_char* shifted_message = message + rem_len;
+  const byte* shifted_message = message + rem_len;
   rem_len = new_len % BLOCK_SIZE;
 
   this->transform(this->block, 1);
@@ -196,10 +184,9 @@ void sha512::finish() {
   this->transform(this->block, block_nb);
   }
 
-std::string sha512_hash(const std::string &input) {
+std::string hash(const std::string &input) {
   sha512 context;
-
-  context.update((u_char*)input.c_str(), input.size());
+  context.update((byte*)input.c_str(), input.size());
   context.finish();
   return context.str();
   }

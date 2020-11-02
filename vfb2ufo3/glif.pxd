@@ -5,15 +5,15 @@ from libcpp_unordered_map cimport unordered_map
 from libcpp_vector cimport vector
 
 cdef class c_archive:
-
   cdef:
     string filename
     bint compress
     unordered_map[string, string] files
 
-cdef extern from 'includes/cpp/glif.cpp' nogil:
+cdef extern from 'src/archive.cpp' namespace 'zip' nogil:
   cdef void write_archive(string, unordered_map[string, string], bint)
 
+cdef extern from 'src/glif.cpp' nogil:
   cdef cppclass cpp_hint
   cdef cppclass cpp_hint_replacement
   cdef cppclass cpp_anchor
@@ -51,10 +51,10 @@ cdef extern from 'includes/cpp/glif.cpp' nogil:
     vector[cpp_hint_replacement] hint_replacements
     vector[cpp_contour] contours
     size_t index
-    size_t len_hint_replacements
     cpp_glif()
     cpp_glif(string, string, int, float, size_t, size_t, bint, bint)
     void scale(float)
     string repr(...)
 
   cdef void write_glifs(...)
+

@@ -64,8 +64,9 @@ def _mark_feature(ufo):
   feature = [mark_classes, *mark_lookups, lookups]
   return fea_feature('mark', feature) if mark_bases else ''
 
-def int_anchor_coords(x, y):
-  return int(nearbyint(x * SCALE)), int(nearbyint(y * SCALE))
+def int_anchor_coords(double x, double y):
+  x, y = nearbyint(x * SCALE), nearbyint(y * SCALE)
+  return int(x), int(y)
 
 def mark_class(parent, anchor):
   x, y = int_anchor_coords(anchor.x, anchor.y)
